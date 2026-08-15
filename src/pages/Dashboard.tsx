@@ -1,4 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge"
+﻿import { Link } from "react-router-dom"
+
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { commonMessages, icons, messages } from "@/constants"
+import { commonMessages, icons, messages, ROUTES } from "@/constants"
 import {
   activityEvents,
   dashboardStats,
@@ -44,24 +46,26 @@ export function Dashboard() {
         {dashboardStats.map((stat) => {
           const Icon = icons[stat.icon]
           return (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.label}
-                </CardTitle>
-                <Icon className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold">{stat.value}</span>
+            <Card key={stat.label} className="relative overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-accent-soft">
+                    <Icon className="size-5" />
+                  </div>
                   <Badge
                     variant="secondary"
-                    className="flex items-center gap-0.5"
+                    className="flex items-center gap-0.5 rounded-full"
                   >
                     <icons.trendUp className="size-3" />
                     {stat.delta}
                   </Badge>
                 </div>
+                <p className="mt-5 text-3xl font-semibold tracking-tight tabular-nums">
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {stat.label}
+                </p>
               </CardContent>
             </Card>
           )
@@ -70,11 +74,19 @@ export function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{messages.dashboard.recentDossiers.title}</CardTitle>
-            <CardDescription>
-              {messages.dashboard.recentDossiers.description}
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>{messages.dashboard.recentDossiers.title}</CardTitle>
+              <CardDescription>
+                {messages.dashboard.recentDossiers.description}
+              </CardDescription>
+            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link to={ROUTES.dossiers}>
+                {messages.dashboard.recentDossiers.viewAll}
+                <icons.arrowRight />
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <Table>
@@ -125,23 +137,24 @@ export function Dashboard() {
             <CardTitle>{messages.dashboard.activity.title}</CardTitle>
             <CardDescription>{messages.dashboard.activity.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {activityEvents.map((event, i) => {
-              const Icon = icons[event.icon]
-              return (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm">{event.text}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {event.time}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
+          <CardContent>
+            <ol className="space-y-5">
+              {activityEvents.map((event, i) => {
+                return (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-accent-soft">
+                      <div className="size-1.5 rounded-full bg-brand-accent" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm">{event.text}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {event.time}
+                      </p>
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
           </CardContent>
         </Card>
       </div>

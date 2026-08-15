@@ -11,6 +11,7 @@ export const dashboard = {
   recentDossiers: {
     title: "Recent Dossiers",
     description: "Latest updates across your workspace.",
+    viewAll: "View all",
   },
   activity: {
     title: "Activity",

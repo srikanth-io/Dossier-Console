@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { Suspense, lazy, useState } from "react"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
 import { SplashScreen } from "@/components/splash-screen"
@@ -8,9 +8,15 @@ import { Auth } from "@/pages/Auth"
 import { Dashboard } from "@/pages/Dashboard"
 import { Dossiers } from "@/pages/Dossiers"
 import { Landing } from "@/pages/Landing"
-import { Reports } from "@/pages/Reports"
 import { Settings } from "@/pages/Settings"
-import { Users } from "@/pages/Users"
+import { Templates } from "@/pages/Templates"
+import { ResumeLibraryProvider } from "@/store/resumes"
+
+const ResumeCreator = lazy(() =>
+  import("@/pages/ResumeCreator").then((module) => ({
+    default: module.ResumeCreator,
+  }))
+)
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
@@ -21,23 +27,32 @@ function App() {
         <SplashScreen onFinished={() => setShowSplash(false)} />
       )}
       <BrowserRouter>
-        <Routes>
-          <Route path={ROUTES.landing} element={<Landing />} />
-          <Route path={ROUTES.login} element={<Auth />} />
-          <Route path={ROUTES.register} element={<Auth />} />
-          <Route path={ROUTES.app} element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="dossiers" element={<Dossiers />} />
-            <Route path="users" element={<Users />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="settings" element={<Settings />} />
-            <Route
-              path="*"
-              element={<Navigate to={ROUTES.dashboard} replace />}
-            />
-          </Route>
-          <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
-        </Routes>
+        <ResumeLibraryProvider>
+          <Routes>
+            <Route path={ROUTES.landing} element={<Landing />} />
+            <Route path={ROUTES.login} element={<Auth />} />
+            <Route path={ROUTES.register} element={<Auth />} />
+            <Route path={ROUTES.app} element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="dossiers" element={<Dossiers />} />
+              <Route path="dossiers/templates" element={<Templates />} />
+              <Route
+                path="dossiers/creator"
+                element={
+                  <Suspense fallback={null}>
+                    <ResumeCreator />
+                  </Suspense>
+                }
+              />
+              <Route path="settings" element={<Settings />} />
+              <Route
+                path="*"
+                element={<Navigate to={ROUTES.dashboard} replace />}
+              />
+            </Route>
+            <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
+          </Routes>
+        </ResumeLibraryProvider>
       </BrowserRouter>
     </>
   )

@@ -8,7 +8,7 @@ export const commonMessages = {
   download: "Download",
   new: "New",
   search: "Search",
-  searchPlaceholder: "Search dossiers, users...",
+  searchPlaceholder: "Search everything...",
   back: "Back",
   loading: "Loading...",
   retry: "Retry",

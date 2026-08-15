@@ -22,4 +22,7 @@ export const errorMessages = {
     "The username or password you entered is incorrect.",
   termsRequired: "Please accept the terms to continue.",
   passwordMismatch: "Passwords do not match.",
+  uploadFailed: "Upload failed. Please check your connection and try again.",
+  uploadTooLarge: "This file is too large. The maximum size is 10 MB.",
+  unsupportedType: "Please choose a PDF or DOCX file.",
 } as const

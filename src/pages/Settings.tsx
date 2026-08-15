@@ -26,7 +26,7 @@ export function Settings() {
   const [notifications, setNotifications] = useState(true)
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           {messages.settings.title}
@@ -36,89 +36,87 @@ export function Settings() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{messages.settings.workspace.title}</CardTitle>
-            <CardDescription>
-              {messages.settings.workspace.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="workspace-name">
-                {messages.settings.workspace.workspaceName}
-              </Label>
-              <Input
-                id="workspace-name"
-                defaultValue={APP.defaultWorkspaceName}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="default-department">
-                {messages.settings.workspace.defaultDepartment}
-              </Label>
-              <Select defaultValue="legal">
-                <SelectTrigger id="default-department" className="w-full">
-                  <SelectValue
-                    placeholder={messages.settings.workspace.selectDepartment}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="legal">{departmentLabels.legal}</SelectItem>
-                  <SelectItem value="finance">
-                    {departmentLabels.finance}
-                  </SelectItem>
-                  <SelectItem value="compliance">
-                    {departmentLabels.compliance}
-                  </SelectItem>
-                  <SelectItem value="audit">{departmentLabels.audit}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button>
-              <icons.save /> {commonMessages.save}
-            </Button>
-          </CardFooter>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{messages.settings.workspace.title}</CardTitle>
+          <CardDescription>
+            {messages.settings.workspace.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="workspace-name">
+              {messages.settings.workspace.workspaceName}
+            </Label>
+            <Input
+              id="workspace-name"
+              defaultValue={APP.defaultWorkspaceName}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="default-department">
+              {messages.settings.workspace.defaultDepartment}
+            </Label>
+            <Select defaultValue="legal">
+              <SelectTrigger id="default-department" className="w-full">
+                <SelectValue
+                  placeholder={messages.settings.workspace.selectDepartment}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="legal">{departmentLabels.legal}</SelectItem>
+                <SelectItem value="finance">
+                  {departmentLabels.finance}
+                </SelectItem>
+                <SelectItem value="compliance">
+                  {departmentLabels.compliance}
+                </SelectItem>
+                <SelectItem value="audit">{departmentLabels.audit}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{messages.settings.workflow.title}</CardTitle>
-            <CardDescription>
-              {messages.settings.workflow.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <Label>{messages.settings.workflow.reviewRequired}</Label>
-                <p className="text-sm text-muted-foreground">
-                  {messages.settings.workflow.reviewRequiredHint}
-                </p>
-              </div>
-              <Switch
-                checked={reviewRequired}
-                onCheckedChange={setReviewRequired}
-              />
+      <Card>
+        <CardHeader>
+          <CardTitle>{messages.settings.workflow.title}</CardTitle>
+          <CardDescription>
+            {messages.settings.workflow.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label>{messages.settings.workflow.reviewRequired}</Label>
+              <p className="text-sm text-muted-foreground">
+                {messages.settings.workflow.reviewRequiredHint}
+              </p>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <Label>{messages.settings.workflow.notifications}</Label>
-                <p className="text-sm text-muted-foreground">
-                  {messages.settings.workflow.notificationsHint}
-                </p>
-              </div>
-              <Switch
-                checked={notifications}
-                onCheckedChange={setNotifications}
-              />
+            <Switch
+              checked={reviewRequired}
+              onCheckedChange={setReviewRequired}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label>{messages.settings.workflow.notifications}</Label>
+              <p className="text-sm text-muted-foreground">
+                {messages.settings.workflow.notificationsHint}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Switch
+              checked={notifications}
+              onCheckedChange={setNotifications}
+            />
+          </div>
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Button>
+            <icons.save /> {commonMessages.save}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

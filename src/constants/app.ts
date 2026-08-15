@@ -14,8 +14,8 @@ export const ROUTES = {
   app: "/app",
   dashboard: "/app",
   dossiers: "/app/dossiers",
-  users: "/app/users",
-  reports: "/app/reports",
+  templates: "/app/dossiers/templates",
+  resumeCreator: "/app/dossiers/creator",
   settings: "/app/settings",
 } as const
 

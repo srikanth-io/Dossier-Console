@@ -1,17 +1,8 @@
 import { Outlet } from "react-router-dom"
 
 import { icons, messages } from "@/constants"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { AppSidebar } from "@/components/app-sidebar"
 
 export function AppLayout() {
@@ -20,17 +11,19 @@ export function AppLayout() {
       <AppSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur">
-          <div className="relative w-full max-w-sm">
-            <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={messages.layout.searchPlaceholder}
-              className="pl-8"
-            />
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 bg-brand-accent-soft px-6 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-2xl justify-center">
+            <div className="relative w-full">
+              <icons.search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={messages.layout.searchPlaceholder}
+                className="w-full pl-9"
+              />
+            </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -38,33 +31,13 @@ export function AppLayout() {
             >
               <icons.notifications className="size-4" />
             </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 px-1.5">
-                  <Avatar className="size-7">
-                    <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{messages.layout.userName}</span>
-                  <icons.chevronDown className="size-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{messages.layout.signedInAs}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <icons.settings /> {messages.nav.items.settings}
-                </DropdownMenuItem>
-                <DropdownMenuItem variant="destructive">
-                  <icons.signOut /> {messages.layout.signOut}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </header>
 
-        <main className="flex-1 p-6">
-          <Outlet />
+        <main className="flex-1">
+          <div className="w-full px-6 py-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

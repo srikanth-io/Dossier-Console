@@ -1,6 +1,26 @@
-import { NavLink } from "react-router-dom"
+import { useState } from "react"
+import { NavLink, useNavigate } from "react-router-dom"
 
-import { APP, ROUTES, icons, messages } from "@/constants"
+import { ROUTES, icons, messages } from "@/constants"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 const navSections: {
@@ -27,22 +47,17 @@ const navSections: {
     label: messages.nav.sections.workspace,
     items: [
       { label: messages.nav.items.dossiers, to: ROUTES.dossiers, icon: "dossiers" },
-      { label: messages.nav.items.users, to: ROUTES.users, icon: "users" },
-      { label: messages.nav.items.reports, to: ROUTES.reports, icon: "reports" },
-    ],
-  },
-  {
-    label: messages.nav.sections.system,
-    items: [
-      { label: messages.nav.items.settings, to: ROUTES.settings, icon: "settings" },
+      { label: messages.nav.items.templates, to: ROUTES.templates, icon: "templates" },
     ],
   },
 ]
 
 export function AppSidebar() {
+  const navigate = useNavigate()
+  const [signOutOpen, setSignOutOpen] = useState(false)
   return (
-    <aside className="sticky top-0 flex h-svh w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
+    <aside className="sticky top-0 flex h-svh w-64 shrink-0 flex-col bg-brand-accent-soft text-sidebar-foreground">
+      <div className="flex h-14 items-center gap-2 px-4">
         <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <icons.brand className="size-4" />
         </div>
@@ -70,7 +85,7 @@ export function AppSidebar() {
                         cn(
                           "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                           isActive &&
-                            "bg-accent text-accent-foreground font-medium"
+                            "bg-primary font-medium text-primary-foreground shadow-sm"
                         )
                       }
                     >
@@ -85,9 +100,69 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="border-t p-3">
-        <p className="px-2 text-xs text-muted-foreground">{APP.version}</p>
+      <div className="mt-auto p-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex w-full items-center gap-2 px-2 py-2">
+              <Avatar className="size-8">
+                <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
+              </Avatar>
+              <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+                <span className="text-sm font-medium">{messages.layout.userName}</span>
+                <span className="text-xs text-muted-foreground">
+                  {messages.layout.userEmail}
+                </span>
+              </span>
+              <icons.chevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" side="top" className="w-56">
+            <DropdownMenuLabel>{messages.layout.signedInAs}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <NavLink to={ROUTES.settings}>
+                <icons.settings /> {messages.nav.items.settings}
+              </NavLink>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setSignOutOpen(true)}
+            >
+              <icons.signOut /> {messages.layout.signOut}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <Dialog
+        open={signOutOpen}
+        onOpenChange={(open) => {
+          if (!open) setSignOutOpen(false)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{messages.layout.signOutTitle}</DialogTitle>
+            <DialogDescription>
+              {messages.layout.signOutDescription}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{messages.common.cancel}</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setSignOutOpen(false)
+                navigate(ROUTES.login)
+              }}
+            >
+              <icons.signOut /> {messages.layout.signOut}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   )
 }

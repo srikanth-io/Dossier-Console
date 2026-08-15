@@ -92,7 +92,7 @@
   --sidebar-border: rgb(187 191 202 / 0.85);
   --sidebar-ring: #bbbfca;
   --brand-accent: #bbbfca;
-  --brand-accent-soft: rgb(187 191 202 / 0.2);
+  --brand-accent-soft: rgb(187 191 202 / 0.08);
 }
 
 .dark {
@@ -128,7 +128,7 @@
   --sidebar-border: rgb(187 191 202 / 0.16);
   --sidebar-ring: #bbbfca;
   --brand-accent: #bbbfca;
-  --brand-accent-soft: rgb(187 191 202 / 0.14);
+  --brand-accent-soft: rgb(187 191 202 / 0.06);
 }
 
 @layer base {
@@ -138,6 +138,29 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-accent) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--brand-accent);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ring);
   }
 }
 

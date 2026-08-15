@@ -1,6 +1,7 @@
 ﻿import * as React from "react"
 import { Slot } from "radix-ui"
-import { ChevronRight, MoreHorizontal } from "lucide-react"
+import { ChevronRightIcon } from "@/components/icons/chevron-right"
+import { GripHorizontalIcon } from "@/components/icons/grip-horizontal"
 
 import { cn } from "@/lib/utils"
 
@@ -83,7 +84,7 @@ function BreadcrumbSeparator({
       {...props}
     >
       {children ?? (
-        <ChevronRight className="cn-rtl-flip" />
+        <ChevronRightIcon className="cn-rtl-flip" />
       )}
     </li>
   )
@@ -104,7 +105,7 @@ function BreadcrumbEllipsis({
       )}
       {...props}
     >
-      <MoreHorizontal />
+      <GripHorizontalIcon />
       <span className="sr-only">More</span>
     </span>
   )
