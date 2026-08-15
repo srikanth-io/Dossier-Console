@@ -46,8 +46,12 @@ const navSections: {
   {
     label: messages.nav.sections.workspace,
     items: [
+      {
+        label: messages.nav.items.documents,
+        to: ROUTES.studio,
+        icon: "layers",
+      },
       { label: messages.nav.items.dossiers, to: ROUTES.dossiers, icon: "dossiers" },
-      { label: messages.nav.items.templates, to: ROUTES.templates, icon: "templates" },
     ],
   },
 ]

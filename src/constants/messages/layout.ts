@@ -10,7 +10,8 @@ export const nav = {
   },
   items: {
     dashboard: "Dashboard",
-    dossiers: "Resume",
+    documents: "Documents",
+    dossiers: "Resumes",
     templates: "Templates",
     settings: "Settings",
   },

@@ -10,11 +10,19 @@ import { Dossiers } from "@/pages/Dossiers"
 import { Landing } from "@/pages/Landing"
 import { Settings } from "@/pages/Settings"
 import { Templates } from "@/pages/Templates"
+import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
 import { ResumeLibraryProvider } from "@/store/resumes"
+import { DocumentLibraryProvider } from "@/store/documents"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
     default: module.ResumeCreator,
+  }))
+)
+
+const DocumentEditor = lazy(() =>
+  import("@/pages/studio/DocumentEditor").then((module) => ({
+    default: module.DocumentEditor,
   }))
 )
 
@@ -28,30 +36,41 @@ function App() {
       )}
       <BrowserRouter>
         <ResumeLibraryProvider>
-          <Routes>
-            <Route path={ROUTES.landing} element={<Landing />} />
-            <Route path={ROUTES.login} element={<Auth />} />
-            <Route path={ROUTES.register} element={<Auth />} />
-            <Route path={ROUTES.app} element={<AppLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="dossiers" element={<Dossiers />} />
-              <Route path="dossiers/templates" element={<Templates />} />
-              <Route
-                path="dossiers/creator"
-                element={
-                  <Suspense fallback={null}>
-                    <ResumeCreator />
-                  </Suspense>
-                }
-              />
-              <Route path="settings" element={<Settings />} />
-              <Route
-                path="*"
-                element={<Navigate to={ROUTES.dashboard} replace />}
-              />
-            </Route>
-            <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
-          </Routes>
+          <DocumentLibraryProvider>
+            <Routes>
+              <Route path={ROUTES.landing} element={<Landing />} />
+              <Route path={ROUTES.login} element={<Auth />} />
+              <Route path={ROUTES.register} element={<Auth />} />
+              <Route path={ROUTES.app} element={<AppLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="dossiers" element={<Dossiers />} />
+                <Route path="dossiers/templates" element={<Templates />} />
+                <Route
+                  path="dossiers/creator"
+                  element={
+                    <Suspense fallback={null}>
+                      <ResumeCreator />
+                    </Suspense>
+                  }
+                />
+                <Route path="documents" element={<DocumentLibrary />} />
+                <Route
+                  path="documents/editor"
+                  element={
+                    <Suspense fallback={null}>
+                      <DocumentEditor />
+                    </Suspense>
+                  }
+                />
+                <Route path="settings" element={<Settings />} />
+                <Route
+                  path="*"
+                  element={<Navigate to={ROUTES.dashboard} replace />}
+                />
+              </Route>
+              <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
+            </Routes>
+          </DocumentLibraryProvider>
         </ResumeLibraryProvider>
       </BrowserRouter>
     </>

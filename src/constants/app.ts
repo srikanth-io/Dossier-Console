@@ -16,6 +16,8 @@ export const ROUTES = {
   dossiers: "/app/dossiers",
   templates: "/app/dossiers/templates",
   resumeCreator: "/app/dossiers/creator",
+  studio: "/app/documents",
+  studioEditor: "/app/documents/editor",
   settings: "/app/settings",
 } as const
 

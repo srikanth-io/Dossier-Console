@@ -29,6 +29,9 @@ export const commonMessages = {
   role: "Role",
   user: "User",
   actions: "Actions",
+  done: "Done",
+  close: "Close",
+  saveVersion: "Save version",
 } as const
 
 export const statusLabels = {

@@ -7,6 +7,7 @@ import { layout, nav } from "@/constants/messages/layout"
 import { login } from "@/constants/messages/login"
 import { resume } from "@/constants/messages/resume"
 import { settings } from "@/constants/messages/settings"
+import { studio } from "@/constants/messages/studio"
 import { templates } from "@/constants/messages/templates"
 
 export const messages = {
@@ -20,6 +21,7 @@ export const messages = {
   settings,
   resume,
   templates,
+  studio,
   landing,
   login,
 } as const
