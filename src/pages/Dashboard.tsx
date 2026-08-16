@@ -82,7 +82,7 @@ export function Dashboard() {
               </CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm">
-              <Link to={ROUTES.dossiers}>
+              <Link to={ROUTES.documents}>
                 {messages.dashboard.recentDossiers.viewAll}
                 <icons.arrowRight />
               </Link>

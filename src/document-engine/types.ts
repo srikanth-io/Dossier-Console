@@ -111,6 +111,17 @@ export interface RenderContext {
   mode: DocumentMode
   pageIndex: number
   totalPages: number
+  editSession?: EditSession
+}
+
+export type EditTarget =
+  | { kind: "field"; elementId: string; field: string; multiLine: boolean }
+  | { kind: "cell"; elementId: string; row: number; col: number }
+
+export interface EditSession {
+  target: EditTarget
+  commit: (value: string) => void
+  cancel: () => void
 }
 
 export interface MyComponent {

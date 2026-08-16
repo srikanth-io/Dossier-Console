@@ -43,7 +43,8 @@ function App() {
               <Route path={ROUTES.register} element={<Auth />} />
               <Route path={ROUTES.app} element={<AppLayout />}>
                 <Route index element={<Dashboard />} />
-                <Route path="dossiers" element={<Dossiers />} />
+                <Route path="documents" element={<Dossiers />} />
+                <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
                 <Route path="dossiers/templates" element={<Templates />} />
                 <Route
                   path="dossiers/creator"
@@ -53,9 +54,9 @@ function App() {
                     </Suspense>
                   }
                 />
-                <Route path="documents" element={<DocumentLibrary />} />
+                <Route path="templates" element={<DocumentLibrary />} />
                 <Route
-                  path="documents/editor"
+                  path="templates/editor"
                   element={
                     <Suspense fallback={null}>
                       <DocumentEditor />

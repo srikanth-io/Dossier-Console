@@ -13,11 +13,13 @@ export const ROUTES = {
   register: "/signup",
   app: "/app",
   dashboard: "/app",
-  dossiers: "/app/dossiers",
-  templates: "/app/dossiers/templates",
+  documents: "/app/documents",
+  templates: "/app/templates",
+  studio: "/app/templates",
+  studioEditor: "/app/templates/editor",
+  legacyResumeTemplates: "/app/dossiers/templates",
   resumeCreator: "/app/dossiers/creator",
-  studio: "/app/documents",
-  studioEditor: "/app/documents/editor",
+  dossiers: "/app/dossiers",
   settings: "/app/settings",
 } as const
 

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { PointerEvent as ReactPointerEvent } from "react"
+import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react"
 
 import { cn } from "@/lib/utils"
 import { PageContent } from "@/document-engine/PageContent"
-import type { DocDocument, DocElement } from "@/document-engine/types"
+import { definitionFor } from "@/document-engine/registry"
+import type { DocDocument, DocElement, EditTarget } from "@/document-engine/types"
 import { icons, messages } from "@/constants"
 
 type Gesture =
@@ -30,6 +31,75 @@ function snapValue(value: number, grid: number, snap: boolean): number {
 
 function elementPosition(el: DocElement) {
   return { x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation }
+}
+
+function str(props: Record<string, unknown>, key: string, fallback = ""): string {
+  return typeof props[key] === "string" ? (props[key] as string) : fallback
+}
+
+function num(props: Record<string, unknown>, key: string, fallback = 0): number {
+  return typeof props[key] === "number" ? (props[key] as number) : fallback
+}
+
+function inlineTextField(el: DocElement): { field: string; multiLine: boolean } | null {
+  const def = definitionFor(el.type)
+  if (!def) return null
+  for (const group of def.schema) {
+    for (const field of group) {
+      if (field.kind === "text" || field.kind === "textarea") {
+        if (def.textProp && field.key !== def.textProp) continue
+        return { field: field.key, multiLine: field.kind === "textarea" }
+      }
+    }
+  }
+  return null
+}
+
+function fieldLabelFor(el: DocElement, key: string): string {
+  const def = definitionFor(el.type)
+  if (!def) return key
+  for (const group of def.schema) {
+    for (const field of group) {
+      if (field.key === key) return field.label
+    }
+  }
+  return key
+}
+
+function inlineEditTarget(el: DocElement, event: ReactMouseEvent): EditTarget | null {
+  if (el.type === "table" || el.type === "testCaseTable") {
+    const td = (event.target as HTMLElement).closest?.("td") as HTMLElement | null
+    if (!td) return null
+    const row = Number(td.dataset.row)
+    const col = Number(td.dataset.col)
+    if (Number.isNaN(row) || Number.isNaN(col)) return null
+    return { kind: "cell", elementId: el.id, row, col }
+  }
+  if (el.type === "chart") {
+    return { kind: "field", elementId: el.id, field: "data", multiLine: true }
+  }
+  const field = inlineTextField(el)
+  if (!field) return null
+  return { kind: "field", elementId: el.id, field: field.field, multiLine: field.multiLine }
+}
+
+function inlineTextStyle(el: DocElement): CSSProperties {
+  const props = el.props
+  const level = str(props, "level", "h1")
+  const headingSizes: Record<string, number> = { h1: 32, h2: 24, h3: 20 }
+  const heading = el.type === "heading"
+  const fontSize = num(props, "fontSize") || (heading ? headingSizes[level] || 24 : 14)
+  return {
+    fontFamily: str(props, "fontFamily") || undefined,
+    fontSize,
+    fontWeight: str(props, "fontWeight") || (heading ? "700" : "400"),
+    color: str(props, "color") || undefined,
+    textAlign: (str(props, "align", "left") || "left") as CSSProperties["textAlign"],
+    lineHeight: num(props, "lineHeight") || (heading ? 1.2 : 1.6),
+    letterSpacing: num(props, "letterSpacing", 0),
+    padding: num(props, "padding", 0),
+    textTransform: (str(props, "textTransform", "none") || "none") as CSSProperties["textTransform"],
+  }
 }
 
 export interface CanvasViewProps {
@@ -84,10 +154,55 @@ export function CanvasView({
   useEffect(() => {
     if (pageIndex >= doc.pages.length) return
     onSelect([])
+    setEditing(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex])
 
   useEffect(() => () => endGesture(), [endGesture])
+
+  const [editing, setEditing] = useState<EditTarget | null>(null)
+
+  const commitEdit = (value: string) => {
+    if (!editing) return
+    const el = page.elements.find((item) => item.id === editing.elementId)
+    if (!el) return
+    if (editing.kind === "field") {
+      applyElementPatches({
+        [el.id]: { props: { ...el.props, [editing.field]: value } },
+      })
+    } else {
+      const rows = Array.isArray(el.props.rows)
+        ? (el.props.rows as string[][]).map((row) => [...row])
+        : []
+      if (!rows[editing.row]) rows[editing.row] = []
+      rows[editing.row][editing.col] = value
+      applyElementPatches({ [el.id]: { props: { ...el.props, rows } } })
+    }
+  }
+
+  const handleElementDoubleClick = (el: DocElement, event: ReactMouseEvent) => {
+    if (el.locked) return
+    const target = inlineEditTarget(el, event)
+    if (!target) return
+    onSelect([el.id])
+    beginGesture()
+    setEditing(target)
+  }
+
+  const handleElementPointerDown = (el: DocElement, event: ReactPointerEvent) => {
+    if (editing && editing.elementId === el.id) return
+    event.stopPropagation()
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      onSelect(
+        selectedIds.includes(el.id)
+          ? selectedIds.filter((id) => id !== el.id)
+          : [...selectedIds, el.id]
+      )
+      return
+    }
+    if (!selectedIds.includes(el.id)) onSelect([el.id])
+    beginMove(el, event)
+  }
 
   const beginMove = (el: DocElement, event: ReactPointerEvent) => {
     if (el.locked) return
@@ -217,27 +332,52 @@ export function CanvasView({
     endGesture()
   }
 
-  const onElementPointerDown = (el: DocElement, event: ReactPointerEvent) => {
-    event.stopPropagation()
-    if (event.ctrlKey || event.metaKey || event.shiftKey) {
-      onSelect(
-        selectedIds.includes(el.id)
-          ? selectedIds.filter((id) => id !== el.id)
-          : [...selectedIds, el.id]
-      )
-      return
-    }
-    if (!selectedIds.includes(el.id)) onSelect([el.id])
-    beginMove(el, event)
-  }
-
   const overlay = (el: DocElement) => {
+    const editingField =
+      editing && editing.kind === "field" && editing.elementId === el.id && el.type !== "chart"
+        ? editing
+        : null
+    const editBox = editingField ? (
+      <>
+        <textarea
+          value={String(el.props[editingField.field] ?? "")}
+          autoFocus
+          onFocus={(event) => event.target.select()}
+          onChange={(event) => commitEdit(event.target.value)}
+          onBlur={() => setEditing(null)}
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            event.stopPropagation()
+            if (event.key === "Escape") {
+              event.preventDefault()
+              setEditing(null)
+            } else if (event.key === "Enter" && !editingField.multiLine) {
+              event.preventDefault()
+              setEditing(null)
+            }
+          }}
+          className="absolute inset-0 z-30 resize-none overflow-hidden rounded-[inherit] bg-background/95 p-2 pt-6 text-foreground outline-none ring-2 ring-primary"
+          style={inlineTextStyle(el)}
+        />
+        <span className="pointer-events-none absolute top-1 left-1 z-40 max-w-[calc(100%-8px)] truncate rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+          Editing {fieldLabelFor(el, editingField.field)}
+        </span>
+      </>
+    ) : null
     if (doc.mode !== "freeform") {
-      return selectedIds.includes(el.id) ? (
-        <div className="pointer-events-none absolute inset-0 border-2 border-primary/80" />
-      ) : null
+      return (
+        <>
+          {editBox}
+          {selectedIds.includes(el.id) ? (
+            <div className="pointer-events-none absolute inset-0 border-2 border-primary/80" />
+          ) : null}
+        </>
+      )
     }
-    if (!selectedIds.includes(el.id)) return null
+    if (!selectedIds.includes(el.id)) {
+      return editBox
+    }
       const single = selectedIds.length === 1 && selectedIds[0] === el.id
       const handles = [
         { dir: "nw", left: true, top: true, style: { left: 0, top: 0, cursor: "nwse-resize" } },
@@ -275,6 +415,7 @@ export function CanvasView({
       }
       return (
         <>
+          {editBox}
           <div className="pointer-events-none absolute inset-0 border-2 border-primary/80 bg-primary/5" />
           {single && (
             <>
@@ -333,6 +474,14 @@ export function CanvasView({
     onZoom(Math.max(0.2, Math.round(fit * 20) / 20))
   }, [page, onZoom])
 
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const fit = (scroll.clientWidth - 48) / page.width
+    onZoom(Math.min(2, Math.max(0.2, Math.round(fit * 20) / 20)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.width])
+
   const emptyPage = page.elements.length === 0
 
   const selectionBox = useMemo(() => {
@@ -349,14 +498,15 @@ export function CanvasView({
   if (!page) return null
 
   return (
-    <div
-      ref={scrollRef}
-      className="relative h-full overflow-auto bg-muted/50"
-      onPointerDown={() => {
-        if (gestureRef.current.kind === "none") onSelect([])
-      }}
-    >
-      <div className="flex min-h-full w-max items-start justify-center px-10 py-8">
+    <div className="relative h-full">
+      <div
+        ref={scrollRef}
+        className="h-full overflow-auto bg-muted/50"
+        onPointerDown={() => {
+          if (gestureRef.current.kind === "none") onSelect([])
+        }}
+      >
+        <div className="flex min-h-full w-max items-start justify-center px-10 py-8">
         <div
           className="relative shrink-0"
           style={{ width: page.width * zoom, height: page.height * zoom }}
@@ -387,10 +537,16 @@ export function CanvasView({
                 pageIndex={pageIndex}
                 editMode
                 interactive
-                onElementPointerDown={onElementPointerDown}
+                onElementPointerDown={handleElementPointerDown}
+                onElementDoubleClick={handleElementDoubleClick}
                 onPagePointerDown={(e) => {
                   if (e.target === e.currentTarget) onSelect([])
                 }}
+                editSession={
+                  editing
+                    ? { target: editing, commit: commitEdit, cancel: () => setEditing(null) }
+                    : undefined
+                }
                 overlay={overlay}
               />
               {selectionBox && (
@@ -418,8 +574,9 @@ export function CanvasView({
           )}
         </div>
       </div>
+      </div>
 
-      <div className="absolute right-3 bottom-3 flex items-center gap-1 rounded-lg border bg-background p-1 shadow-sm">
+      <div className="absolute right-3 bottom-3 z-40 flex items-center gap-1 rounded-lg border bg-background p-1 shadow-sm">
         <button
           type="button"
           className="flex size-7 items-center justify-center rounded-md hover:bg-muted"

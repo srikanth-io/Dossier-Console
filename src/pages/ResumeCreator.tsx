@@ -166,7 +166,7 @@ export function ResumeCreator() {
           variant="ghost"
           size="icon-sm"
           aria-label={messages.resume.back}
-          onClick={() => navigate(ROUTES.dossiers)}
+          onClick={() => navigate(ROUTES.documents)}
         >
           <icons.chevronLeft />
         </Button>

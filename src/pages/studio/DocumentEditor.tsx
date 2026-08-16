@@ -55,6 +55,67 @@ function relativeSaved(iso: number): string {
 
 type PanelTab = "palette" | "layers"
 
+function DocumentTitle({
+  name,
+  onRename,
+}: {
+  name: string
+  onRename: (next: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(name)
+  const editor = messages.studio.editor
+
+  useEffect(() => {
+    if (editing) setValue(name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, editing])
+
+  const commit = () => {
+    setEditing(false)
+    const next = value.trim()
+    if (!next || next === name) return
+    onRename(next)
+  }
+
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault()
+            commit()
+          } else if (event.key === "Escape") {
+            event.preventDefault()
+            setEditing(false)
+          }
+        }}
+        placeholder={editor.renamePlaceholder}
+        className="h-8 w-56 text-sm font-semibold"
+      />
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(name)
+        setEditing(true)
+      }}
+      className="group flex max-w-56 min-w-0 cursor-text items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left hover:bg-muted"
+      title={editor.renameDocument}
+    >
+      <span className="truncate text-sm font-semibold">{name}</span>
+      <icons.pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+    </button>
+  )
+}
+
 export function DocumentEditor() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -97,6 +158,18 @@ export function DocumentEditor() {
     setSaveState("saved")
     setLastSavedAt(Date.now())
   }, [library])
+
+  const renameDocument = useCallback(
+    (name: string) => {
+      const current = presentRef.current
+      history.replace({ ...current, name })
+      library.updateMeta(current.id, { name })
+      setSaveState("saved")
+      setLastSavedAt(Date.now())
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [library]
+  )
 
   const scheduleSave = useCallback(() => {
     setSaveState("saving")
@@ -528,7 +601,7 @@ export function DocumentEditor() {
               <icons.pencil className="size-4" />
               {editor.edit}
             </Button>
-            <p className="text-sm font-semibold">{doc.name}</p>
+            <DocumentTitle name={doc.name} onRename={renameDocument} />
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.studio)}>
@@ -553,7 +626,7 @@ export function DocumentEditor() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(ROUTES.studio)}>
@@ -561,7 +634,7 @@ export function DocumentEditor() {
             <span className="hidden lg:inline">{editor.backToLibrary}</span>
           </Button>
           <div className="flex min-w-0 items-center gap-2">
-            <p className="max-w-44 truncate text-sm font-semibold">{doc.name}</p>
+            <DocumentTitle name={doc.name} onRename={renameDocument} />
             <span
               className={cn(
                 "flex items-center gap-1 text-[11px]",
@@ -683,7 +756,7 @@ export function DocumentEditor() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-60 shrink-0 border-r md:block">
+        <aside className="hidden min-h-0 w-56 shrink-0 border-r md:block">
           <div className="flex h-full flex-col">
             <div className="grid grid-cols-2 gap-1 border-b p-1.5">
               <button
@@ -732,7 +805,7 @@ export function DocumentEditor() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1">
+        <main className="min-h-0 min-w-0 flex-1">
           <CanvasView
             doc={doc}
             pageIndex={safePageIndex}
@@ -746,7 +819,7 @@ export function DocumentEditor() {
           />
         </main>
 
-        <aside className="hidden w-72 shrink-0 border-l lg:block">
+        <aside className="hidden min-h-0 w-64 shrink-0 border-l lg:block">
           <PropertiesPanel
             doc={doc}
             page={page}

@@ -1,7 +1,7 @@
-import type { CSSProperties, PointerEvent, ReactNode } from "react"
+import type { CSSProperties, MouseEvent, PointerEvent, ReactNode } from "react"
 
 import { renderElement } from "@/document-engine/renderers"
-import type { DocDocument, DocElement, DocPage } from "@/document-engine/types"
+import type { DocDocument, DocElement, DocPage, EditSession } from "@/document-engine/types"
 import { variableMap } from "@/document-engine/variables"
 import { cn } from "@/lib/utils"
 
@@ -12,7 +12,9 @@ export interface PageContentProps {
   editMode?: boolean
   interactive?: boolean
   onElementPointerDown?: (el: DocElement, event: PointerEvent) => void
+  onElementDoubleClick?: (el: DocElement, event: MouseEvent) => void
   onPagePointerDown?: (event: PointerEvent) => void
+  editSession?: EditSession
   overlay?: (el: DocElement) => ReactNode
   className?: string
   style?: CSSProperties
@@ -25,7 +27,9 @@ export function PageContent({
   editMode = false,
   interactive = false,
   onElementPointerDown,
+  onElementDoubleClick,
   onPagePointerDown,
+  editSession,
   overlay,
   className,
   style,
@@ -37,6 +41,7 @@ export function PageContent({
     mode: doc.mode,
     pageIndex,
     totalPages: doc.pages.length,
+    editSession,
   }
 
   const pageStyle: CSSProperties = {
@@ -90,6 +95,11 @@ export function PageContent({
                   ? (event) => onElementPointerDown?.(el, event)
                   : undefined
               }
+              onDoubleClick={
+                editMode && interactive
+                  ? (event) => onElementDoubleClick?.(el, event)
+                  : undefined
+              }
             >
               {renderElementNode(el)}
             </div>
@@ -128,6 +138,11 @@ export function PageContent({
             onPointerDown={
               editMode && interactive
                 ? (event) => onElementPointerDown?.(el, event)
+                : undefined
+            }
+            onDoubleClick={
+              editMode && interactive
+                ? (event) => onElementDoubleClick?.(el, event)
                 : undefined
             }
           >

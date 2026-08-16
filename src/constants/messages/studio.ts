@@ -107,6 +107,8 @@ export const studio = {
   editor: {
     title: "Document Editor",
     edit: "Edit",
+    renameDocument: "Rename document",
+    renamePlaceholder: "Document name",
     preview: "Preview",
     exportPdf: "Export PDF",
     exporting: "Exporting...",
@@ -152,7 +154,7 @@ export const studio = {
     restoreDescription:
       "The current document will be replaced with this version's contents.",
     emptyPage: "Drag components from the left, or select one to begin.",
-    selectHint: "Select an element to edit its properties.",
+    selectHint: "Click to select. Double-click to edit it directly.",
     properties: "Properties",
     transform: "Transform",
     alignDistribute: "Align & distribute",

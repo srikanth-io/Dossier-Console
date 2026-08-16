@@ -26,6 +26,39 @@ const fullBox: CSSProperties = {
 const resolve = (text: string, ctx: RenderContext) =>
   resolveText(text, ctx.variables)
 
+interface TextEditorProps {
+  value: string
+  multiLine?: boolean
+  style?: CSSProperties
+  commit: (value: string) => void
+  cancel: () => void
+}
+
+function TextEditor({ value, multiLine, style, commit, cancel }: TextEditorProps): ReactNode {
+  return (
+    <textarea
+      value={value}
+      autoFocus
+      onFocus={(event) => event.target.select()}
+      onChange={(event) => commit(event.target.value)}
+      onBlur={cancel}
+      onPointerDown={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation()
+        if (event.key === "Escape") {
+          event.preventDefault()
+          cancel()
+        } else if (event.key === "Enter" && !multiLine) {
+          event.preventDefault()
+          cancel()
+        }
+      }}
+      style={{ resize: "none", outline: "none", ...style }}
+    />
+  )
+}
+
 function renderText(props: Props, ctx: RenderContext): ReactNode {
   const variant = S(props, "variant", "paragraph")
   const content = resolve(S(props, "content", ""), ctx)
@@ -326,7 +359,7 @@ function renderPageNumber(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-function renderTable(props: Props, _ctx: RenderContext): ReactNode {
+function renderTable(props: Props, ctx: RenderContext): ReactNode {
   const rows = Array.isArray(props.rows) ? (props.rows as string[][]) : []
   const colWidths = Array.isArray(props.colWidths)
     ? (props.colWidths as number[])
@@ -343,6 +376,8 @@ function renderTable(props: Props, _ctx: RenderContext): ReactNode {
   const cellBg = S(props, "cellBg", "#ffffff")
   const fontSize = N(props, "fontSize", 13)
   const border = `${borderWidth}px solid ${borderColor}`
+  const cellEdit =
+    ctx.editSession?.target.kind === "cell" ? ctx.editSession : undefined
 
   const renderRow = (cells: string[], rowIndex: number, isHeader: boolean) => {
     const cellStyle: CSSProperties = {
@@ -353,6 +388,7 @@ function renderTable(props: Props, _ctx: RenderContext): ReactNode {
       fontFamily: "inherit",
       wordBreak: "break-word",
       verticalAlign: "top",
+      position: "relative",
     }
     if (isHeader) {
       cellStyle.backgroundColor = headerBg
@@ -362,17 +398,47 @@ function renderTable(props: Props, _ctx: RenderContext): ReactNode {
       cellStyle.backgroundColor =
         alternating && rowIndex % 2 === 1 ? "#f9fafb" : cellBg
     }
-    return Array.from({ length: colCount }).map((_, i) => (
-      <td
-        key={i}
-        style={{
-          ...cellStyle,
-          width: colWidths[i] ? `${colWidths[i]}%` : undefined,
-        }}
-      >
-        {cells[i] ?? ""}
-      </td>
-    ))
+    return Array.from({ length: colCount }).map((_, i) => {
+      const editing =
+        cellEdit?.target.kind === "cell" &&
+        cellEdit.target.row === rowIndex &&
+        cellEdit.target.col === i
+      return (
+        <td
+          key={i}
+          data-row={rowIndex}
+          data-col={i}
+          style={{
+            ...cellStyle,
+            width: colWidths[i] ? `${colWidths[i]}%` : undefined,
+          }}
+        >
+          {editing ? (
+            <TextEditor
+              value={cells[i] ?? ""}
+              commit={cellEdit.commit}
+              cancel={cellEdit.cancel}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                padding: cellPadding,
+                backgroundColor: "#ffffff",
+                color: "inherit",
+                fontSize,
+                fontFamily: "inherit",
+                border: "2px solid var(--color-primary, #2563eb)",
+                borderRadius: 2,
+              }}
+            />
+          ) : (
+            (cells[i] ?? "")
+          )}
+        </td>
+      )
+    })
   }
 
   const body = headerRow ? rows.slice(1) : rows
@@ -393,7 +459,7 @@ function renderTable(props: Props, _ctx: RenderContext): ReactNode {
       )}
       <tbody>
         {body.map((row, index) => (
-          <tr key={index}>{renderRow(row, index, false)}</tr>
+          <tr key={index}>{renderRow(row, headerRow ? index + 1 : index, false)}</tr>
         ))}
       </tbody>
     </table>
@@ -935,6 +1001,8 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
   const fontSize = N(props, "fontSize", 12)
   const border = `1px solid ${ctx.theme.border}`
   const body = headerRow ? rows : rows
+  const cellEdit =
+    ctx.editSession?.target.kind === "cell" ? ctx.editSession : undefined
   return (
     <table
       style={{
@@ -976,18 +1044,45 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
               {TEST_CASE_HEADERS.map((_, colIndex) => {
                 const value = row[colIndex] ?? ""
                 const isStatus = colIndex === 4
+                const editing =
+                  cellEdit?.target.kind === "cell" &&
+                  cellEdit.target.row === rowIndex &&
+                  cellEdit.target.col === colIndex
                 return (
                   <td
                     key={colIndex}
+                    data-row={rowIndex}
+                    data-col={colIndex}
                     style={{
                       border,
                       padding: 6,
                       wordBreak: "break-word",
                       verticalAlign: "top",
+                      position: "relative",
                       backgroundColor: isStatus ? statusMeta.bg : rowIndex % 2 === 1 ? "#f9fafb" : "transparent",
                     }}
                   >
-                    {isStatus && value ? (
+                    {editing ? (
+                      <TextEditor
+                        value={value}
+                        commit={cellEdit.commit}
+                        cancel={cellEdit.cancel}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          padding: 6,
+                          backgroundColor: "#ffffff",
+                          color: "inherit",
+                          fontSize,
+                          fontFamily: "inherit",
+                          border: "2px solid var(--color-primary, #2563eb)",
+                          borderRadius: 2,
+                        }}
+                      />
+                    ) : isStatus && value ? (
                       <span style={{ color: statusMeta.color, fontWeight: 600 }}>{value}</span>
                     ) : (
                       <span style={{ color: ctx.theme.text }}>{value}</span>
@@ -1083,6 +1178,11 @@ function renderChart(props: Props, ctx: RenderContext): ReactNode {
   const showValues = B(props, "showValues", true)
   const max = Math.max(1, ...data.map((d) => d.value))
   const chartHeight = 100
+  const editingData =
+    ctx.editSession?.target.kind === "field" &&
+    ctx.editSession.target.field === "data"
+      ? ctx.editSession
+      : undefined
   return (
     <div
       style={{
@@ -1092,70 +1192,97 @@ function renderChart(props: Props, ctx: RenderContext): ReactNode {
         fontFamily: ctx.theme.bodyFont,
       }}
     >
-      {title && (
-        <div
+      {editingData ? (
+        <TextEditor
+          value={S(props, "data", "")}
+          multiLine
+          commit={editingData.commit}
+          cancel={editingData.cancel}
           style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: ctx.theme.text,
-            marginBottom: 10,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            padding: 8,
+            backgroundColor: "#ffffff",
+            color: "#111827",
+            fontFamily: ctx.theme.codeFont,
+            fontSize: 12,
+            lineHeight: 1.5,
+            border: "2px solid var(--color-primary, #2563eb)",
+            borderRadius: 4,
+            zIndex: 30,
           }}
-        >
-          {title}
-        </div>
-      )}
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 12, paddingBottom: 2 }}>
-        {data.map((item, index) => {
-          const height = Math.max(2, (item.value / max) * chartHeight)
-          return (
+        />
+      ) : (
+        <>
+          {title && (
             <div
-              key={index}
               style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 4,
-                minWidth: 0,
+                fontSize: 14,
+                fontWeight: 700,
+                color: ctx.theme.text,
+                marginBottom: 10,
               }}
             >
-              {showValues && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: ctx.theme.text }}>
-                  {item.value}
-                </span>
-              )}
-              <div
-                style={{
-                  width: "100%",
-                  maxWidth: 56,
-                  height: `${height}%`,
-                  backgroundColor: color,
-                  borderRadius: "4px 4px 0 0",
-                  opacity: 0.85 + (index % 3) * 0.05,
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 10.5,
-                  color: ctx.theme.text,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "100%",
-                }}
-              >
-                {item.label}
-              </span>
+              {title}
             </div>
-          )
-        })}
-        {data.length === 0 && (
-          <div style={{ fontSize: 13, color: ctx.theme.text, opacity: 0.6 }}>
-            Add data as lines: “Label 12”
+          )}
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 12, paddingBottom: 2 }}>
+            {data.map((item, index) => {
+              const height = Math.max(2, (item.value / max) * chartHeight)
+              return (
+                <div
+                  key={index}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 4,
+                    minWidth: 0,
+                  }}
+                >
+                  {showValues && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: ctx.theme.text }}>
+                      {item.value}
+                    </span>
+                  )}
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: 56,
+                      height: `${height}%`,
+                      backgroundColor: color,
+                      borderRadius: "4px 4px 0 0",
+                      opacity: 0.85 + (index % 3) * 0.05,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      color: ctx.theme.text,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "100%",
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              )
+            })}
+            {data.length === 0 && (
+              <div style={{ fontSize: 13, color: ctx.theme.text, opacity: 0.6 }}>
+                Add data as lines: “Label 12”
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1332,5 +1459,12 @@ export function renderElement(el: DocElement, ctx: RenderContext): ReactNode {
       </div>
     )
   }
-  return render(el.props, ctx)
+  const activeEdit =
+    ctx.editSession && ctx.editSession.target.elementId === el.id
+      ? ctx.editSession
+      : undefined
+  return render(
+    el.props,
+    activeEdit ? { ...ctx, editSession: activeEdit } : ctx
+  )
 }
