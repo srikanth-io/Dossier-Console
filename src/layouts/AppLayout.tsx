@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { NavLink, Outlet, useNavigate } from "react-router-dom"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 
 import { ROUTES, commonMessages, icons, messages } from "@/constants"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -33,7 +33,11 @@ import {
 
 export function AppLayout() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [signOutOpen, setSignOutOpen] = useState(false)
+
+  const isFullscreen =
+    pathname === ROUTES.resumeCreator || pathname === ROUTES.studioEditor
 
   return (
     <div className="flex min-h-svh">
@@ -123,9 +127,13 @@ export function AppLayout() {
         </header>
 
         <main className="flex-1">
-          <div className="mx-auto w-full max-w-7xl px-6 py-6">
+          {isFullscreen ? (
             <Outlet />
-          </div>
+          ) : (
+            <div className="mx-auto w-full max-w-7xl px-6 py-6">
+              <Outlet />
+            </div>
+          )}
         </main>
       </div>
 

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { APP, ROUTES, icons, messages } from "@/constants"
 import { errorMessages } from "@/constants/messages/errors"
@@ -68,60 +67,6 @@ function BrandPanel() {
         </p>
       </div>
     </aside>
-  )
-}
-
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M12 5.2c1.9 0 3.6.7 4.9 1.8l3.7-3.7C18.5 1.2 15.5 0 12 0 7.3 0 3.2 2.7 1.3 6.6l4.3 3.3C6.5 7.3 9 5.2 12 5.2z" />
-      <path d="M23.5 12.3c0-1-.1-1.9-.3-2.8H12v5.3h6.5c-.3 1.5-1.2 2.7-2.5 3.6v3h4c2.4-2.2 3.5-5.5 3.5-9.1z" />
-      <path d="M5.6 14.1c-.3-.8-.4-1.7-.4-2.6s.2-1.8.5-2.6l-4.3-3.3C.4 7.4 0 9.6 0 12s.4 4.6 1.3 6.6l4.3-3.3z" />
-      <path d="M12 24c3.5 0 6.5-1.2 8.5-3.2l-4-3.1c-1.1.8-2.6 1.2-4.5 1.2-3 0-5.5-2-6.4-4.9l-4.3 3.3C3.2 21.3 7.3 24 12 24z" />
-    </svg>
-  )
-}
-
-function SocialButtons({ onSocialLogin }: { onSocialLogin: (provider: string) => void }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="w-full"
-        onClick={() => onSocialLogin("google")}
-      >
-        <GoogleIcon className="size-4" />
-        {messages.login.continueWithGoogle}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="w-full"
-        onClick={() => onSocialLogin("apple")}
-      >
-        <icons.apple className="size-4" />
-        {messages.login.continueWithApple}
-      </Button>
-    </div>
-  )
-}
-
-function Divider() {
-  return (
-    <div className="relative">
-      <Separator />
-      <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-sm text-muted-foreground">
-        {messages.login.continueWith}
-      </span>
-    </div>
   )
 }
 
@@ -245,22 +190,6 @@ export function Auth() {
   }
 
   const isSignIn = activeTab === "signin"
-
-  async function handleSocialLogin(provider: string) {
-    setSignInError(null)
-    setIsSigningIn(true)
-
-    const user = await safeAsync(() => signIn(`${provider}_user`, "social_login"), {
-      context: "AuthPage.social",
-      onError: (e) => setSignInError(getErrorMessage(e)),
-    })
-
-    setIsSigningIn(false)
-
-    if (user) {
-      navigate(ROUTES.app)
-    }
-  }
 
   return (
     <div className="flex min-h-svh bg-background">
@@ -525,8 +454,6 @@ export function Auth() {
                 </form>
               )}
 
-              <Divider />
-              <SocialButtons onSocialLogin={handleSocialLogin} />
             </div>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">

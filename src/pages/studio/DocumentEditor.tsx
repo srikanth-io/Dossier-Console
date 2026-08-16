@@ -672,7 +672,7 @@ export function DocumentEditor() {
 
   if (previewMode) {
     return (
-      <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden">
+      <div className="flex h-[calc(100svh-3.5rem)] flex-col overflow-hidden">
         <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b bg-card/60 px-4 backdrop-blur">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPreviewMode(false)}>
@@ -704,7 +704,7 @@ export function DocumentEditor() {
   }
 
   return (
-    <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden">
+    <div className="flex h-[calc(100svh-3.5rem)] flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex h-12 shrink-0 items-center gap-0.5 border-b bg-card/60 px-2.5 backdrop-blur">
         <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(ROUTES.studio)}>

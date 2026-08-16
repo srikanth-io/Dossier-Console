@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
 import { SplashScreen } from "@/components/splash-screen"
 import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { ROUTES } from "@/constants"
 import { AppLayout } from "@/layouts/AppLayout"
 import { Auth } from "@/pages/Auth"
@@ -37,44 +38,46 @@ function App() {
       )}
       <Toaster />
       <BrowserRouter>
-        <ResumeLibraryProvider>
-          <DocumentLibraryProvider>
-            <Routes>
-              <Route path={ROUTES.landing} element={<Landing />} />
-              <Route path={ROUTES.login} element={<Auth />} />
-              <Route path={ROUTES.register} element={<Auth />} />
-              <Route path={ROUTES.app} element={<AppLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="documents" element={<Dossiers />} />
-                <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
-                <Route path="dossiers/templates" element={<Templates />} />
-                <Route
-                  path="dossiers/creator"
-                  element={
-                    <Suspense fallback={null}>
-                      <ResumeCreator />
-                    </Suspense>
-                  }
-                />
-                <Route path="templates" element={<DocumentLibrary />} />
-                <Route
-                  path="templates/editor"
-                  element={
-                    <Suspense fallback={null}>
-                      <DocumentEditor />
-                    </Suspense>
-                  }
-                />
-                <Route path="settings" element={<Settings />} />
-                <Route
-                  path="*"
-                  element={<Navigate to={ROUTES.dashboard} replace />}
-                />
-              </Route>
-              <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
-            </Routes>
-          </DocumentLibraryProvider>
-        </ResumeLibraryProvider>
+        <TooltipProvider>
+          <ResumeLibraryProvider>
+            <DocumentLibraryProvider>
+              <Routes>
+                <Route path={ROUTES.landing} element={<Landing />} />
+                <Route path={ROUTES.login} element={<Auth />} />
+                <Route path={ROUTES.register} element={<Auth />} />
+                <Route path={ROUTES.app} element={<AppLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="documents" element={<Dossiers />} />
+                  <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
+                  <Route path="dossiers/templates" element={<Templates />} />
+                  <Route
+                    path="dossiers/creator"
+                    element={
+                      <Suspense fallback={null}>
+                        <ResumeCreator />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="templates" element={<DocumentLibrary />} />
+                  <Route
+                    path="templates/editor"
+                    element={
+                      <Suspense fallback={null}>
+                        <DocumentEditor />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="settings" element={<Settings />} />
+                  <Route
+                    path="*"
+                    element={<Navigate to={ROUTES.dashboard} replace />}
+                  />
+                </Route>
+                <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
+              </Routes>
+            </DocumentLibraryProvider>
+          </ResumeLibraryProvider>
+        </TooltipProvider>
       </BrowserRouter>
     </>
   )
