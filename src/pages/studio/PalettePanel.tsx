@@ -30,15 +30,15 @@ export function PalettePanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="grid grid-cols-2 gap-1 border-b p-2">
+      <div className="grid grid-cols-2 gap-1 border-b bg-muted/30 p-1.5">
         <button
           type="button"
           onClick={() => setTab("elements")}
           className={cn(
             "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
             tab === "elements"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           <icons.layers className="size-3.5" />
@@ -50,8 +50,8 @@ export function PalettePanel({
           className={cn(
             "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
             tab === "saved"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           <icons.sparkles className="size-3.5" />
@@ -69,7 +69,7 @@ export function PalettePanel({
               )
               return (
                 <div key={category}>
-                  <p className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {meta.label}
                   </p>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -89,7 +89,7 @@ export function PalettePanel({
                             )
                             event.dataTransfer.effectAllowed = "copy"
                           }}
-                          className="group flex flex-col items-center gap-1 rounded-lg border bg-background px-1 py-2 text-center hover:border-primary/50 hover:bg-accent"
+                          className="group flex min-h-12 cursor-grab flex-col items-center justify-center gap-1 rounded-lg border border-border/60 bg-card px-1 py-2 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:cursor-grabbing"
                         >
                           <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
                           <span className="text-[10px] leading-tight text-foreground">
@@ -122,9 +122,11 @@ export function PalettePanel({
                   )
                   event.dataTransfer.effectAllowed = "copy"
                 }}
-                className="flex w-full items-center gap-2 rounded-lg border bg-background px-2 py-2 text-left hover:border-primary/50 hover:bg-accent"
+                className="flex w-full cursor-grab items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-2 text-left shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:cursor-grabbing"
               >
-                <icons.text className="size-4 text-muted-foreground" />
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <icons.text className="size-3.5" />
+                </span>
                 <span className="truncate text-xs font-medium">{component.name}</span>
               </button>
             ))}

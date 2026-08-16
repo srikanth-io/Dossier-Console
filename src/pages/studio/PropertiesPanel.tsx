@@ -42,25 +42,102 @@ function ColorField({
   onChange: (value: string) => void
   placeholder?: string
 }) {
+  const swatches = messages.studio.colorSwatches
   return (
-    <div className="flex items-center gap-1.5">
-      <label
-        className="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md border"
-        style={{ backgroundColor: value || "#ffffff" }}
-      >
-        <input
-          type="color"
-          value={value || "#000000"}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <label
+          className="relative size-6 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-border"
+          style={{ backgroundColor: value || "#ffffff" }}
+        >
+          <input
+            type="color"
+            value={value || "#000000"}
+            onChange={(event) => onChange(event.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+        <Input
+          value={value}
+          placeholder={placeholder ?? ""}
           onChange={(event) => onChange(event.target.value)}
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className="h-7 font-mono text-xs"
         />
-      </label>
-      <Input
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {swatches.map((swatch) => {
+          const selected = value?.toLowerCase() === swatch
+          return (
+            <button
+              key={swatch}
+              type="button"
+              aria-label={swatch}
+              onClick={() => onChange(swatch)}
+              className={cn(
+                "relative flex size-5 items-center justify-center rounded-full ring-1 ring-inset ring-border transition-transform hover:scale-110",
+                selected && "ring-2 ring-primary"
+              )}
+              style={{ backgroundColor: swatch }}
+            >
+              {selected && (
+                <icons.check className="size-3 text-white drop-shadow-sm" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function NumberStepper({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  value: number
+  onChange: (value: number) => void
+  min?: number
+  max?: number
+  step?: number
+}) {
+  const editor = messages.studio.editor
+  const clamp = (next: number) =>
+    Math.min(max ?? next, Math.max(min ?? next, next))
+  const stepTo = (delta: number) => onChange(clamp(Number(value) + delta))
+  return (
+    <div className="flex h-8 items-center overflow-hidden rounded-lg border border-input bg-card shadow-xs">
+      <button
+        type="button"
+        aria-label={editor.decrease}
+        onClick={() => stepTo(-step)}
+        className="flex size-8 shrink-0 items-center justify-center border-r border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <span aria-hidden className="text-base leading-none">
+          −
+        </span>
+      </button>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
         value={value}
-        placeholder={placeholder ?? ""}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-7 font-mono text-xs"
+        onChange={(event) =>
+          onChange(event.target.value === "" ? 0 : Number(event.target.value))
+        }
+        className="w-full min-w-0 bg-transparent px-1 text-center font-mono text-xs text-foreground outline-none"
       />
+      <button
+        type="button"
+        aria-label={editor.increase}
+        onClick={() => stepTo(step)}
+        className="flex size-8 shrink-0 items-center justify-center border-l border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <icons.plus className="size-3.5" />
+      </button>
     </div>
   )
 }
@@ -108,7 +185,7 @@ function ImageField({
     <div className="flex items-center gap-1.5">
       <Input
         value={value}
-        placeholder="https://… or upload"
+        placeholder={messages.studio.editor.imageUrlPlaceholder}
         onChange={(event) => onChange(event.target.value)}
         className="h-7 text-xs"
       />
@@ -353,12 +430,12 @@ export function PropertiesPanel({
       onUpdateElementProps(single.id, { [key]: next })
 
     const alignActions: { id: string; title: string; icon: "alignLeft" | "alignCenter" | "alignRight" | "alignTop" | "alignMiddle" | "alignBottom" }[] = [
-      { id: "left", title: "Align left", icon: "alignLeft" },
-      { id: "center", title: "Align center", icon: "alignCenter" },
-      { id: "right", title: "Align right", icon: "alignRight" },
-      { id: "top", title: "Align top", icon: "alignTop" },
-      { id: "middle", title: "Align middle", icon: "alignMiddle" },
-      { id: "bottom", title: "Align bottom", icon: "alignBottom" },
+      { id: "left", title: editor.alignLeft, icon: "alignLeft" },
+      { id: "center", title: editor.alignCenter, icon: "alignCenter" },
+      { id: "right", title: editor.alignRight, icon: "alignRight" },
+      { id: "top", title: editor.alignTop, icon: "alignTop" },
+      { id: "middle", title: editor.alignMiddle, icon: "alignMiddle" },
+      { id: "bottom", title: editor.alignBottom, icon: "alignBottom" },
     ]
 
     return (
@@ -379,15 +456,27 @@ export function PropertiesPanel({
             title={groupIndex === 0 ? definition.name : c.categories.content}
           >
             <div className="space-y-2">
-              {group.map((field) => (
-                <FieldRow key={field.key} label={field.label}>
-                  <FieldControl
-                    field={field}
-                    value={value(field.key)}
-                    onChange={(next) => update(field.key, next)}
-                  />
-                </FieldRow>
-              ))}
+              {group.map((field) =>
+                field.kind === "color" ? (
+                  <div key={field.key} className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      {field.label}
+                    </Label>
+                    <ColorField
+                      value={str(value(field.key))}
+                      onChange={(next) => update(field.key, next)}
+                    />
+                  </div>
+                ) : (
+                  <FieldRow key={field.key} label={field.label}>
+                    <FieldControl
+                      field={field}
+                      value={value(field.key)}
+                      onChange={(next) => update(field.key, next)}
+                    />
+                  </FieldRow>
+                )
+              )}
             </div>
           </Section>
         ))}
@@ -399,27 +488,28 @@ export function PropertiesPanel({
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { key: "x", label: c.fields.x },
-                    { key: "y", label: c.fields.y },
-                    { key: "width", label: c.fields.width },
-                    { key: "height", label: c.fields.height },
-                    { key: "rotation", label: c.fields.rotate },
-                    { key: "opacity", label: c.fields.opacity },
-                  ] as const
+                    { key: "x" as const, label: c.fields.x, step: 1 },
+                    { key: "y" as const, label: c.fields.y, step: 1 },
+                    { key: "width" as const, label: c.fields.width, step: 1, min: 8 },
+                    { key: "height" as const, label: c.fields.height, step: 1, min: 8 },
+                    { key: "rotation" as const, label: c.fields.rotate, step: 1 },
+                    { key: "opacity" as const, label: c.fields.opacity, step: 0.05, min: 0, max: 1 },
+                  ] as Array<{ key: "x" | "y" | "width" | "height" | "rotation" | "opacity"; label: string; step: number; min?: number; max?: number }>
                 ).map((field) => (
                   <div key={field.key}>
                     <Label className="text-[10px] text-muted-foreground">
                       {field.label}
                     </Label>
-                    <Input
-                      type="number"
+                    <NumberStepper
                       value={num(single[field.key])}
-                      onChange={(event) =>
+                      step={field.step}
+                      min={field.min}
+                      max={field.max}
+                      onChange={(next) =>
                         onUpdateTransform(single.id, {
-                          [field.key]: Number(event.target.value),
+                          [field.key]: next,
                         })
                       }
-                      className="mt-0.5 h-7 text-xs"
                     />
                   </div>
                 ))}
@@ -430,7 +520,7 @@ export function PropertiesPanel({
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs"
-                  title="Bring to front"
+                  title={editor.bringToFront}
                   onClick={() => onReorder(single.id, "front")}
                 >
                   <icons.bringToFront className="size-3.5" />
@@ -440,7 +530,7 @@ export function PropertiesPanel({
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs"
-                  title="Send to back"
+                  title={editor.sendToBack}
                   onClick={() => onReorder(single.id, "back")}
                 >
                   <icons.sendToBack className="size-3.5" />
@@ -450,7 +540,7 @@ export function PropertiesPanel({
                   variant="outline"
                   size="sm"
                   className={cn("h-7 px-2 text-xs", single.locked && "text-primary")}
-                  title={single.locked ? "Unlock" : "Lock"}
+                  title={single.locked ? editor.unlock : editor.lock}
                   onClick={() => onToggleLocked(single.id)}
                 >
                   <icons.lock className="size-3.5" />
@@ -460,7 +550,7 @@ export function PropertiesPanel({
                   variant="outline"
                   size="sm"
                   className={cn("h-7 px-2 text-xs", single.hidden && "text-muted-foreground")}
-                  title={single.hidden ? "Show" : "Hide"}
+                  title={single.hidden ? editor.show : editor.hide}
                   onClick={() => onToggleHidden(single.id)}
                 >
                   <icons.eyeOff className="size-3.5" />
@@ -473,7 +563,7 @@ export function PropertiesPanel({
                   title={editor.duplicate}
                   onClick={() => onDuplicateElement(single.id)}
                 >
-                  <icons.copy className="size-3.5" />
+                  <icons.duplicate className="size-3.5" />
                 </Button>
                 <Button
                   type="button"
@@ -710,9 +800,10 @@ export function PropertiesPanel({
               options={orientationOptions}
             />
           </FieldRow>
-          <FieldRow label={editor.background}>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{editor.background}</Label>
             <ColorField value={page.background} onChange={(value) => onUpdatePage({ background: value })} />
-          </FieldRow>
+          </div>
         </div>
       </Section>
 
@@ -759,14 +850,15 @@ export function PropertiesPanel({
               { key: "border", label: editor.colorBorder },
             ] as const
           ).map((color) => (
-            <FieldRow key={color.key} label={color.label}>
+            <div key={color.key} className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{color.label}</Label>
               <ColorField
                 value={doc.theme[color.key]}
                 onChange={(value) =>
                   onUpdateDoc({ theme: { ...doc.theme, [color.key]: value } })
                 }
               />
-            </FieldRow>
+            </div>
           ))}
         </div>
       </Section>

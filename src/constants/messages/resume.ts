@@ -37,4 +37,5 @@ export const resume = {
   delete: "Delete",
   downloadFile: "Download",
   noSource: "This resume has no editable LaTeX source.",
+  resizePanes: "Resize editor and preview panes",
 } as const

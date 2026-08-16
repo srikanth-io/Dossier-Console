@@ -2,6 +2,7 @@ import { Suspense, lazy, useState } from "react"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
 import { SplashScreen } from "@/components/splash-screen"
+import { Toaster } from "@/components/ui/sonner"
 import { ROUTES } from "@/constants"
 import { AppLayout } from "@/layouts/AppLayout"
 import { Auth } from "@/pages/Auth"
@@ -34,6 +35,7 @@ function App() {
       {showSplash && (
         <SplashScreen onFinished={() => setShowSplash(false)} />
       )}
+      <Toaster />
       <BrowserRouter>
         <ResumeLibraryProvider>
           <DocumentLibraryProvider>

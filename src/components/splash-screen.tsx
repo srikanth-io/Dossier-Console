@@ -25,17 +25,17 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background transition-opacity duration-500",
+        "fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-background transition-opacity duration-500",
         leaving && "pointer-events-none opacity-0"
       )}
       aria-hidden={leaving}
     >
-      <div className="animate-splash-scale-in flex size-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
+      <div className="animate-splash-scale-in flex size-16 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-glow">
         <icons.brand className="size-8" />
       </div>
 
       <div className="animate-splash-fade-in text-center">
-        <p className="text-2xl font-semibold tracking-tight">
+        <p className="font-heading text-2xl font-bold tracking-tight text-foreground">
           {messages.nav.brand}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -43,8 +43,8 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
         </p>
       </div>
 
-      <div className="h-1 w-40 overflow-hidden rounded-full bg-muted">
-        <div className="animate-splash-bar h-full rounded-full bg-primary" />
+      <div className="animate-splash-fade-in h-1 w-44 overflow-hidden rounded-full bg-muted">
+        <div className="animate-splash-bar h-full rounded-full bg-gradient-brand" />
       </div>
     </div>
   )

@@ -56,13 +56,13 @@ export function TemplateManagerDialog({
                   onOpenChange(false)
                 }}
                 className={cn(
-                  "group rounded-xl border p-2 text-left transition-colors",
+                  "group rounded-2xl border p-2 text-left transition-all",
                   active
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-foreground/20 hover:bg-muted/40"
+                    ? "border-primary/70 bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border/60 bg-card shadow-xs hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
                 )}
               >
-                <div className="pointer-events-none max-h-40 overflow-hidden rounded-lg bg-white [color-scheme:light]">
+                <div className="pointer-events-none max-h-40 overflow-hidden rounded-xl bg-white [color-scheme:light] ring-1 ring-border/40">
                   <div
                     className={cn(RESUME_PREVIEW_CLASSES, "p-3 [&_a]:!text-primary")}
                     dangerouslySetInnerHTML={{ __html: previews.get(template.id) ?? "" }}

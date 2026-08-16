@@ -8,17 +8,19 @@ export const spacing = {
 } as const
 
 export const componentHeights = {
-  xs: "1.5rem",
-  sm: "1.75rem",
-  md: "2rem",
-  lg: "2.25rem",
-  xl: "2.5rem",
+  xs: "2rem",
+  sm: "2rem",
+  md: "2.25rem",
+  lg: "2.5rem",
+  xl: "2.75rem",
 } as const
 
 export const layoutSizes = {
   sidebarWidth: "16rem",
+  sidebarCollapsedWidth: "4.5rem",
   headerHeight: "3.5rem",
   contentPadding: "1.5rem",
+  contentMaxWidth: "87.5rem",
 } as const
 
 export const iconSizes = {
@@ -28,12 +30,34 @@ export const iconSizes = {
 } as const
 
 export const radii = {
-  base: "0.625rem",
-  sm: "calc(var(--radius) * 0.6)",
-  md: "calc(var(--radius) * 0.8)",
+  base: "0.75rem",
+  sm: "calc(var(--radius) * 0.667)",
+  md: "calc(var(--radius) * 0.833)",
   lg: "var(--radius)",
-  xl: "calc(var(--radius) * 1.4)",
-  "2xl": "calc(var(--radius) * 1.8)",
-  "3xl": "calc(var(--radius) * 2.2)",
-  "4xl": "calc(var(--radius) * 2.6)",
+  xl: "calc(var(--radius) * 1.333)",
+  "2xl": "calc(var(--radius) * 1.667)",
+  "3xl": "calc(var(--radius) * 2)",
+  "4xl": "calc(var(--radius) * 2.667)",
+} as const
+
+export const shadows = {
+  xs: "var(--shadow-xs)",
+  sm: "var(--shadow-sm)",
+  md: "var(--shadow-md)",
+  lg: "var(--shadow-lg)",
+  xl: "var(--shadow-xl)",
+  glow: "var(--shadow-glow)",
+} as const
+
+export const motion = {
+  duration: {
+    micro: "150ms",
+    standard: "200ms",
+    dialog: "250ms",
+    complex: "400ms",
+  },
+  easing: {
+    enter: "cubic-bezier(0.22, 1, 0.36, 1)",
+    exit: "cubic-bezier(0.4, 0, 1, 1)",
+  },
 } as const

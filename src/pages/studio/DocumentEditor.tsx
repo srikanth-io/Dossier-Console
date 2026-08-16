@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -14,17 +14,29 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { icons, messages, ROUTES } from "@/constants"
-import { useDocumentHistory } from "@/document-engine/history"
+import { useDocumentHistory, uid } from "@/document-engine/history"
 import { createPage } from "@/document-engine/defaults"
-import { cloneElement, createElement } from "@/document-engine/registry"
+import {
+  CATEGORY_META,
+  cloneElement,
+  createElement,
+  elementCatalog,
+} from "@/document-engine/registry"
 import { exportDocumentToPdf } from "@/document-engine/export"
 import { PageContent } from "@/document-engine/PageContent"
 import { themePresetById } from "@/document-engine/themes"
-import { uid } from "@/document-engine/history"
 import type { DocDocument, DocElement, DocPage, MyComponent } from "@/document-engine/types"
 import { useDocumentLibrary } from "@/store/documents"
 import { CanvasView } from "@/pages/studio/CanvasView"
@@ -34,6 +46,7 @@ import { PropertiesPanel } from "@/pages/studio/PropertiesPanel"
 import { VariablesDialog } from "@/pages/studio/VariablesDialog"
 import { VersionHistoryDialog } from "@/pages/studio/VersionHistoryDialog"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 function bumpVersion(version: string): string {
   const parts = version.split(".")
@@ -54,6 +67,8 @@ function relativeSaved(iso: number): string {
 }
 
 type PanelTab = "palette" | "layers"
+
+const INSERT_CATEGORIES = ["basic", "layout", "data"] as const
 
 function DocumentTitle({
   name,
@@ -116,6 +131,33 @@ function DocumentTitle({
   )
 }
 
+function PanelTabs({
+  panel,
+  onChange,
+}: {
+  panel: PanelTab
+  onChange: (panel: PanelTab) => void
+}) {
+  const editor = messages.studio.editor
+  const tabClass = (active: boolean) =>
+    cn(
+      "flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+      active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+    )
+  return (
+    <div className="grid grid-cols-2 gap-1 border-b bg-muted/30 p-1.5">
+      <button type="button" onClick={() => onChange("palette")} className={tabClass(panel === "palette")}>
+        <icons.layers className="size-3.5" />
+        {editor.elements}
+      </button>
+      <button type="button" onClick={() => onChange("layers")} className={tabClass(panel === "layers")}>
+        <icons.pendingReviews className="size-3.5" />
+        {editor.layers}
+      </button>
+    </div>
+  )
+}
+
 export function DocumentEditor() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -128,6 +170,8 @@ export function DocumentEditor() {
   const [zoom, setZoom] = useState(0.7)
   const [previewMode, setPreviewMode] = useState(false)
   const [panel, setPanel] = useState<PanelTab>("palette")
+  const [mobileLeftOpen, setMobileLeftOpen] = useState(false)
+  const [mobileRightOpen, setMobileRightOpen] = useState(false)
   const [variablesOpen, setVariablesOpen] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [componentOpen, setComponentOpen] = useState(false)
@@ -496,7 +540,7 @@ export function DocumentEditor() {
     const copy: DocPage = {
       ...source,
       id: uid(),
-      name: `${source.name} (copy)`,
+      name: `${source.name} ${messages.studio.editor.pageCopySuffix}`,
       elements: source.elements.map((el) => cloneElement(el, 0)),
     }
     mutateDoc((draft) => ({
@@ -529,6 +573,7 @@ export function DocumentEditor() {
     library.saveComponent(name, selectedElements.map((el) => structuredClone(el)))
     setComponentOpen(false)
     setComponentName("")
+    toast(messages.studio.toasts.componentSaved)
   }
 
   const saveVersion = (note: string) => {
@@ -547,6 +592,8 @@ export function DocumentEditor() {
     setExporting(true)
     try {
       await exportDocumentToPdf(doc, doc.name)
+    } catch {
+      toast(messages.studio.toasts.exportFailed)
     } finally {
       setExporting(false)
     }
@@ -592,10 +639,41 @@ export function DocumentEditor() {
   const canUndo = history.canUndo
   const canRedo = history.canRedo
 
+  const insertGroups = INSERT_CATEGORIES.map((category) => ({
+    category,
+    label: CATEGORY_META[category].label,
+    icon: CATEGORY_META[category].icon,
+    items: Object.values(elementCatalog).filter(
+      (definition) => definition.category === category
+    ),
+  })).filter((group) => group.items.length > 0)
+
+  const panelContent = (
+    panel === "palette" ? (
+      <PalettePanel
+        onAddType={(type) => addElement(type, Math.round(page.width / 2), Math.round(page.height / 2))}
+        components={library.components}
+        onAddComponent={addComponent}
+      />
+    ) : (
+      <LayersPanel
+        elements={currentElements}
+        selectedIds={selectedIds}
+        onSelect={setSelectedIds}
+        onToggleHidden={toggleHidden}
+        onToggleLocked={toggleLocked}
+        onReorder={reorderElement}
+        onDuplicate={duplicateElement}
+        onDelete={deleteElements}
+        onRename={renameElement}
+      />
+    )
+  )
+
   if (previewMode) {
     return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-2">
+      <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden">
+        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b bg-card/60 px-4 backdrop-blur">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPreviewMode(false)}>
               <icons.pencil className="size-4" />
@@ -604,9 +682,9 @@ export function DocumentEditor() {
             <DocumentTitle name={doc.name} onRename={renameDocument} />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.studio)}>
+            <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.studio)}>
               <icons.arrowLeft className="size-4" />
-              {editor.backToLibrary}
+              <span className="hidden md:inline">{editor.backToLibrary}</span>
             </Button>
             <Button size="sm" disabled={exporting} onClick={exportPdf}>
               <icons.export className="size-4" />
@@ -614,9 +692,9 @@ export function DocumentEditor() {
             </Button>
           </div>
         </div>
-        <div className="flex-1 space-y-6 overflow-y-auto bg-muted/50 p-8">
+        <div className="flex-1 space-y-8 overflow-y-auto bg-muted/50 p-8">
           {doc.pages.map((p, index) => (
-            <div key={p.id} className="mx-auto w-fit shadow-lg">
+            <div key={p.id} className="mx-auto w-fit bg-card shadow-xl ring-1 ring-border/60">
               <PageContent doc={doc} page={p} pageIndex={index} />
             </div>
           ))}
@@ -627,36 +705,35 @@ export function DocumentEditor() {
 
   return (
     <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(ROUTES.studio)}>
-            <icons.arrowLeft className="size-4" />
-            <span className="hidden lg:inline">{editor.backToLibrary}</span>
-          </Button>
-          <div className="flex min-w-0 items-center gap-2">
-            <DocumentTitle name={doc.name} onRename={renameDocument} />
-            <span
-              className={cn(
-                "flex items-center gap-1 text-[11px]",
-                saveState === "saving" ? "text-muted-foreground" : "text-emerald-600"
-              )}
-            >
-              {saveState === "saving" ? (
-                <>
-                  <icons.spinner className="size-3 animate-spin" />
-                  {editor.saveStatusSaving}
-                </>
-              ) : (
-                <>
-                  <icons.check className="size-3" />
-                  {relativeSaved(lastSavedAt)}
-                </>
-              )}
-            </span>
-          </div>
+      {/* Toolbar */}
+      <div className="flex h-12 shrink-0 items-center gap-0.5 border-b bg-card/60 px-2.5 backdrop-blur">
+        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(ROUTES.studio)}>
+          <icons.arrowLeft className="size-4" />
+          <span className="hidden lg:inline">{editor.backToLibrary}</span>
+        </Button>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <DocumentTitle name={doc.name} onRename={renameDocument} />
+          <span
+            className={cn(
+              "flex items-center gap-1 text-[11px]",
+              saveState === "saving" ? "text-muted-foreground" : "text-success"
+            )}
+          >
+            {saveState === "saving" ? (
+              <>
+                <icons.spinner className="size-3 animate-spin" />
+                {editor.saveStatusSaving}
+              </>
+            ) : (
+              <>
+                <icons.check className="size-3" />
+                {relativeSaved(lastSavedAt)}
+              </>
+            )}
+          </span>
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="ml-auto flex min-w-0 items-center gap-0.5 overflow-x-auto">
           <Button
             variant="ghost"
             size="sm"
@@ -664,6 +741,7 @@ export function DocumentEditor() {
             disabled={!canUndo}
             onClick={() => history.undo()}
             title={editor.undo}
+            aria-label={editor.undo}
           >
             <icons.undo className="size-4" />
           </Button>
@@ -674,28 +752,97 @@ export function DocumentEditor() {
             disabled={!canRedo}
             onClick={() => history.redo()}
             title={editor.redo}
+            aria-label={editor.redo}
           >
             <icons.redo className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={copySelection} title={editor.copy}>
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={copySelection} title={editor.copy} aria-label={editor.copy}>
             <icons.copy className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={pasteClipboard} title={editor.paste}>
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={pasteClipboard} title={editor.paste} aria-label={editor.paste}>
             <icons.paste className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setVariablesOpen(true)} title={editor.variables}>
+
+          <div className="mx-1 h-5 w-px shrink-0 bg-border" />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 px-2" title={editor.insert}>
+                <icons.plus className="size-4" />
+                <span className="hidden xl:inline">{editor.insert}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-[28rem] w-56 overflow-y-auto">
+              {insertGroups.map((group) => {
+                const GroupIcon = icons[group.icon]
+                return (
+                  <Fragment key={group.category}>
+                    <DropdownMenuLabel className="flex items-center gap-1.5">
+                      <GroupIcon className="size-3.5" />
+                      {group.label}
+                    </DropdownMenuLabel>
+                    {group.items.map((definition) => {
+                      const Icon = icons[definition.icon]
+                      return (
+                        <DropdownMenuItem
+                          key={definition.type}
+                          onClick={() =>
+                            addElement(
+                              definition.type,
+                              Math.round(page.width / 2),
+                              Math.round(page.height / 2)
+                            )
+                          }
+                        >
+                          <Icon className="size-4" />
+                          {definition.name}
+                        </DropdownMenuItem>
+                      )
+                    })}
+                    <DropdownMenuSeparator />
+                  </Fragment>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setVariablesOpen(true)} title={editor.variables} aria-label={editor.variables}>
             <icons.variables className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setVersionsOpen(true)} title={editor.versionHistory}>
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setVersionsOpen(true)} title={editor.versionHistory} aria-label={editor.versionHistory}>
             <icons.pendingReviews className="size-4" />
           </Button>
-          <div className="mx-1 h-5 w-px bg-border" />
+
+          <div className="mx-1 h-5 w-px shrink-0 bg-border" />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:hidden"
+            onClick={() => setMobileLeftOpen(true)}
+            title={editor.openPalette}
+            aria-label={editor.openPalette}
+          >
+            <icons.layers className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:hidden"
+            onClick={() => setMobileRightOpen(true)}
+            title={editor.openProperties}
+            aria-label={editor.openProperties}
+          >
+            <icons.settings className="size-4" />
+          </Button>
+
           <Button
             variant={previewMode ? "secondary" : "ghost"}
             size="sm"
             className="h-8 px-2"
             onClick={() => setPreviewMode(true)}
             title={editor.preview}
+            aria-label={editor.preview}
           >
             <icons.eye className="size-4" />
           </Button>
@@ -703,10 +850,42 @@ export function DocumentEditor() {
             <icons.export className="size-4" />
             <span className="hidden md:inline">{exporting ? editor.exporting : editor.exportPdf}</span>
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 px-2" title={editor.more} aria-label={editor.more}>
+                <icons.moreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={addPage}>
+                <icons.plus className="size-4" />
+                {editor.addPage}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={duplicatePage}>
+                <icons.duplicate className="size-4" />
+                {editor.duplicatePage}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={doc.pages.length <= 1}
+                onClick={() => setDeletePageOpen(true)}
+                className="text-destructive"
+              >
+                <icons.trash className="size-4" />
+                {editor.deletePage}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={selectedElements.length === 0} onClick={saveAsComponent}>
+                <icons.sparkles className="size-4" />
+                {editor.saveComponent}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 overflow-x-auto border-b px-3 py-1.5">
+      {/* Page tabs */}
+      <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto border-b bg-muted/20 px-3">
         {doc.pages.map((p, index) => (
           <div key={p.id} className="flex shrink-0 items-center gap-0.5">
             <button
@@ -716,8 +895,10 @@ export function DocumentEditor() {
                 setSelectedIds([])
               }}
               className={cn(
-                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                index === pageIndex ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                index === pageIndex
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {p.name}
@@ -726,7 +907,7 @@ export function DocumentEditor() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex size-5 items-center justify-center rounded hover:bg-muted"
+                  className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted"
                   title={editor.pages}
                 >
                   <icons.chevronDown className="size-3" />
@@ -750,58 +931,18 @@ export function DocumentEditor() {
           onClick={addPage}
           className="ml-1 flex size-7 shrink-0 items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary"
           title={editor.addPage}
+          aria-label={editor.addPage}
         >
           <icons.plus className="size-3.5" />
         </button>
       </div>
 
+      {/* Body */}
       <div className="flex min-h-0 flex-1">
-        <aside className="hidden min-h-0 w-56 shrink-0 border-r md:block">
+        <aside className="hidden min-h-0 w-[220px] shrink-0 border-r bg-card/50 lg:flex">
           <div className="flex h-full flex-col">
-            <div className="grid grid-cols-2 gap-1 border-b p-1.5">
-              <button
-                type="button"
-                onClick={() => setPanel("palette")}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium",
-                  panel === "palette" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <icons.layers className="size-3.5" />
-                {editor.elements}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPanel("layers")}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium",
-                  panel === "layers" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <icons.pendingReviews className="size-3.5" />
-                {editor.layers}
-              </button>
-            </div>
-            <div className="min-h-0 flex-1">
-              {panel === "palette" ? (
-                <PalettePanel
-                  onAddType={(type) => addElement(type, Math.round(page.width / 2), Math.round(page.height / 2))}
-                  components={library.components}
-                  onAddComponent={addComponent}
-                />
-              ) : (
-                <LayersPanel
-                  elements={currentElements}
-                  selectedIds={selectedIds}
-                  onSelect={setSelectedIds}
-                  onToggleHidden={toggleHidden}
-                  onToggleLocked={toggleLocked}
-                  onReorder={reorderElement}
-                  onDuplicate={duplicateElement}
-                  onDelete={deleteElements}
-                />
-              )}
-            </div>
+            <PanelTabs panel={panel} onChange={setPanel} />
+            <div className="min-h-0 flex-1">{panelContent}</div>
           </div>
         </aside>
 
@@ -819,7 +960,7 @@ export function DocumentEditor() {
           />
         </main>
 
-        <aside className="hidden min-h-0 w-64 shrink-0 border-l lg:block">
+        <aside className="hidden min-h-0 w-[280px] shrink-0 border-l bg-card/50 lg:flex">
           <PropertiesPanel
             doc={doc}
             page={page}
@@ -842,6 +983,50 @@ export function DocumentEditor() {
           />
         </aside>
       </div>
+
+      {/* Mobile palette/layers sheet */}
+      <Sheet open={mobileLeftOpen} onOpenChange={setMobileLeftOpen}>
+        <SheetContent side="left" className="w-full gap-0 sm:max-w-[20rem]">
+          <SheetHeader>
+            <SheetTitle>{editor.elements}</SheetTitle>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <PanelTabs panel={panel} onChange={setPanel} />
+            <div className="min-h-0 flex-1">{panelContent}</div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile properties sheet */}
+      <Sheet open={mobileRightOpen} onOpenChange={setMobileRightOpen}>
+        <SheetContent side="right" className="w-full gap-0 sm:max-w-[22rem]">
+          <SheetHeader>
+            <SheetTitle>{editor.properties}</SheetTitle>
+          </SheetHeader>
+          <div className="min-h-0 flex-1">
+          <PropertiesPanel
+            doc={doc}
+            page={page}
+            selectedElements={selectedElements}
+            onUpdateElementProps={updateElementProps}
+            onRenameElement={renameElement}
+            onUpdateTransform={updateTransform}
+            onUpdateMultiTransform={updateMultiTransform}
+            onToggleLocked={toggleLocked}
+            onToggleHidden={toggleHidden}
+            onReorder={reorderElement}
+            onDuplicateElement={duplicateElement}
+            onDeleteElements={deleteElements}
+            onAlign={alignSelection}
+            onDistribute={distributeSelection}
+            onUpdateDoc={updateDoc}
+            onUpdatePage={updatePage}
+            onApplyThemePreset={applyThemePreset}
+            onSaveAsComponent={saveAsComponent}
+          />
+        </div>
+        </SheetContent>
+      </Sheet>
 
       <VariablesDialog
         open={variablesOpen}

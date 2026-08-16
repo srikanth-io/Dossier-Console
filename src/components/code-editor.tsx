@@ -1,4 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react"
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
+import { tags } from "@lezer/highlight"
 import type { Extension } from "@codemirror/state"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
@@ -18,13 +20,40 @@ interface CodeEditorProps {
   apiRef?: RefObject<CodeEditorApi | null>
 }
 
+const studioHighlight = syntaxHighlighting(
+  HighlightStyle.define([
+    { tag: tags.comment, color: "var(--muted-foreground)", fontStyle: "italic" },
+    { tag: [tags.string, tags.special(tags.string)], color: "var(--success)" },
+    { tag: [tags.number, tags.bool], color: "var(--warning)" },
+    { tag: [tags.keyword, tags.operatorKeyword], color: "var(--primary)", fontWeight: "600" },
+    { tag: [tags.typeName, tags.className, tags.namespace], color: "var(--info)" },
+    { tag: tags.function(tags.variableName), color: "var(--primary)" },
+    { tag: [tags.propertyName, tags.attributeName], color: "var(--primary)" },
+    { tag: tags.variableName, color: "var(--foreground)" },
+    { tag: tags.tagName, color: "var(--primary)" },
+    { tag: [tags.operator, tags.punctuation, tags.bracket], color: "var(--muted-foreground)" },
+  ])
+)
+
 const codeEditorTheme = EditorView.theme({
-  "&": { height: "100%", fontSize: "13px" },
+  "&": { height: "100%", fontSize: "13px", backgroundColor: "transparent", color: "var(--foreground)" },
   ".cm-scroller": {
     fontFamily: "Geist Mono, ui-monospace, monospace",
     lineHeight: "1.6",
   },
+  ".cm-content": { padding: "8px 0" },
   "&.cm-focused": { outline: "none" },
+  ".cm-cursor": { borderLeftColor: "var(--primary)" },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "color-mix(in srgb, var(--primary) 18%, transparent)",
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    color: "var(--muted-foreground)",
+    borderRight: "1px solid var(--border)",
+  },
+  ".cm-activeLine": { backgroundColor: "color-mix(in srgb, var(--primary) 5%, transparent)" },
+  ".cm-activeLineGutter": { backgroundColor: "transparent" },
 })
 
 export function CodeEditor({
@@ -49,6 +78,7 @@ export function CodeEditor({
         extensions: [
           basicSetup,
           codeEditorTheme,
+          studioHighlight,
           EditorState.tabSize.of(2),
           EditorView.lineWrapping,
           EditorView.updateListener.of((update) => {

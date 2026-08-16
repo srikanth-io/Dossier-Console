@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -26,12 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { commonMessages, icons, messages, ROUTES } from "@/constants"
 import { createBlankDocument } from "@/document-engine/defaults"
 import { exportDocumentToPdf } from "@/document-engine/export"
 import type { DocDocument, TemplateCategory } from "@/document-engine/types"
 import { useDocumentLibrary } from "@/store/documents"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { PageHeader } from "@/components/page-header"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import { CreateDocumentDialog } from "@/pages/studio/CreateDocumentDialog"
 import { DocumentThumbnail } from "@/pages/studio/DocumentThumbnail"
 
@@ -58,12 +60,12 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const minutes = Math.round(diff / 60000)
-  if (minutes < 1) return "now"
-  if (minutes < 60) return `${minutes}m`
+  if (minutes < 1) return messages.studio.library.timeNow
+  if (minutes < 60) return messages.studio.library.timeMinutes(minutes)
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h`
+  if (hours < 24) return messages.studio.library.timeHours(hours)
   const days = Math.round(hours / 24)
-  if (days < 30) return `${days}d`
+  if (days < 30) return messages.studio.library.timeDays(days)
   return new Date(iso).toLocaleDateString()
 }
 
@@ -133,6 +135,8 @@ export function DocumentLibrary() {
     setExporting(doc.id)
     try {
       await exportDocumentToPdf(doc, doc.name)
+    } catch {
+      toast(messages.studio.toasts.exportFailed)
     } finally {
       setExporting(null)
     }
@@ -140,23 +144,24 @@ export function DocumentLibrary() {
 
   const handleDuplicate = (id: string) => {
     const copy = duplicateDocument(id)
-    if (copy) openEditor(copy.id)
+    if (copy) {
+      toast(messages.studio.toasts.templateDuplicated)
+      openEditor(copy.id)
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{messages.studio.library.title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{messages.studio.library.subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setWizardOpen(true)}>
+      <PageHeader
+        title={messages.studio.library.title}
+        description={messages.studio.library.subtitle}
+        actions={
+          <Button size="sm" variant="gradient" className="h-9 px-4" onClick={() => setWizardOpen(true)}>
             <icons.plus className="size-4" />
             {messages.studio.library.createTemplate}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-56">
@@ -167,23 +172,6 @@ export function DocumentLibrary() {
             placeholder={messages.studio.library.searchPlaceholder}
             className="h-9 pl-8"
           />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {categoryOptions.slice(0, 7).map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setCategory(option.value)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                category === option.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
         </div>
         <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
           <SelectTrigger className="h-9 w-44 text-xs">
@@ -198,6 +186,16 @@ export function DocumentLibrary() {
           </SelectContent>
         </Select>
       </div>
+
+      <Tabs value={category} onValueChange={(value) => setCategory(value as TemplateCategory)} className="w-full">
+        <TabsList variant="line" className="h-9 w-full justify-start gap-1 overflow-x-auto">
+          {categoryOptions.map((option) => (
+            <TabsTrigger key={option.value} value={option.value}>
+              {option.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">
@@ -216,25 +214,57 @@ export function DocumentLibrary() {
           {filtered.map((doc) => (
             <div
               key={doc.id}
-              className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <button
-                type="button"
-                className="relative bg-muted/40 p-4"
-                onClick={() => setPreviewId(doc.id)}
-              >
-                <DocumentThumbnail doc={doc} width={240} className="mx-auto max-w-full" />
+              <div className="group/image relative bg-muted/40 p-4">
+                <button
+                  type="button"
+                  className="block w-full cursor-pointer"
+                  onClick={() => setPreviewId(doc.id)}
+                >
+                  <DocumentThumbnail doc={doc} width={240} className="mx-auto max-w-full" />
+                </button>
                 <Badge
                   variant="secondary"
-                  className="absolute right-2 top-2 bg-background/90 backdrop-blur"
+                  className="absolute left-3 top-3 bg-background/90 backdrop-blur"
                 >
-                  {doc.category !== "all" ? messages.studio.categories[doc.category] : ""}
+                  {messages.studio.categories[doc.category]}
                 </Badge>
-              </button>
+                <div className="absolute inset-0 hidden items-center justify-center gap-1.5 bg-background/70 opacity-0 backdrop-blur-[2px] transition-opacity group-hover/image:flex group-hover/image:opacity-100">
+                  <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    onClick={() => setPreviewId(doc.id)}
+                    title={messages.studio.library.preview}
+                    aria-label={messages.studio.library.preview}
+                  >
+                    <icons.eye className="size-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    onClick={() => handleDuplicate(doc.id)}
+                    title={messages.studio.library.duplicate}
+                    aria-label={messages.studio.library.duplicate}
+                  >
+                    <icons.duplicate className="size-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    disabled={Boolean(exporting)}
+                    onClick={() => handleExport(doc)}
+                    title={messages.studio.library.exportPdf}
+                    aria-label={messages.studio.library.exportPdf}
+                  >
+                    <icons.export className="size-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <button
                   type="button"
-                  className="text-left text-sm font-semibold hover:underline"
+                  className="cursor-pointer truncate text-left text-sm font-semibold hover:underline"
                   onClick={() => openEditor(doc.id)}
                 >
                   {doc.name}
@@ -313,13 +343,8 @@ export function DocumentLibrary() {
             placeholder={messages.studio.library.renamePlaceholder}
             className="h-9"
           />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setRename(null)}
-            >
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setRename(null)}>
               {commonMessages.cancel}
             </Button>
             <Button
@@ -327,45 +352,33 @@ export function DocumentLibrary() {
               size="sm"
               disabled={!rename?.name.trim()}
               onClick={() => {
-                if (rename) updateMeta(rename.id, { name: rename.name.trim() })
+                if (rename) {
+                  updateMeta(rename.id, { name: rename.name.trim() })
+                  toast(messages.studio.toasts.templateRenamed)
+                }
                 setRename(null)
               }}
             >
               {commonMessages.save}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{messages.studio.library.deleteTitle}</DialogTitle>
-            <DialogDescription>{messages.studio.library.deleteDescription}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleting(null)}
-            >
-              {commonMessages.cancel}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (deleting) removeDocument(deleting.id)
-                setDeleting(null)
-              }}
-            >
-              {messages.studio.library.confirmDelete}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={messages.studio.library.deleteTitle}
+        description={messages.studio.library.deleteDescription}
+        confirmLabel={messages.studio.library.confirmDelete}
+        onConfirm={() => {
+          if (deleting) {
+            removeDocument(deleting.id)
+            toast(messages.studio.toasts.templateDeleted)
+          }
+          setDeleting(null)
+        }}
+      />
 
       <Dialog open={Boolean(previewing)} onOpenChange={(open) => !open && setPreviewId(null)}>
         <DialogContent className="max-w-xl">
@@ -387,7 +400,7 @@ export function DocumentLibrary() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <div className={cn("flex justify-end")}>
             <Button
               type="button"
               size="sm"
@@ -400,7 +413,7 @@ export function DocumentLibrary() {
             >
               {messages.studio.library.open}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

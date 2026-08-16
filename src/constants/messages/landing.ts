@@ -2,6 +2,9 @@ export const landing = {
   header: {
     nav: {
       features: "Features",
+      templates: "Templates",
+      pricing: "Pricing",
+      docs: "Docs",
       howItWorks: "How it works",
       signIn: "Sign in",
       getStarted: "Get started",
@@ -16,6 +19,14 @@ export const landing = {
     primaryCta: "Get started free",
     secondaryCta: "See how it works",
   },
+  logos: [
+    "Northwind",
+    "Vertex",
+    "Aperture",
+    "Pulse",
+    "Quanta",
+    "Meridian",
+  ],
   download: {
     getItOn: "GET IT ON",
     googlePlay: "Google Play",

@@ -27,4 +27,8 @@ export const layout = {
   userName: "Admin",
   userInitials: "SA",
   userEmail: "admin@swiftant.com",
+  themeToggleLight: "Switch to light mode",
+  themeToggleDark: "Switch to dark mode",
+  themeLight: "Light mode",
+  themeDark: "Dark mode",
 } as const

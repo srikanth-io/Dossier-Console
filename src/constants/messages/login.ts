@@ -4,8 +4,19 @@ export const login = {
     signUp: "Sign up",
   },
   title: "Welcome back",
+  registerTitle: "Create your account",
   subtitle: "Enter your details to access your account.",
   registerSubtitle: "Create your account to get started.",
+  brand: {
+    subtitle:
+      "One secure home for every dossier, review, and report.",
+  },
+  testimonial: {
+    quote:
+      "Dossier replaced three spreadsheets and a folder of loose files. Reviews that took days now take minutes.",
+    author: "Priya Nair",
+    role: "Operations Lead, Swiftant",
+  },
   nameLabel: "Full name",
   namePlaceholder: "Jane Smith",
   usernameLabel: "Username or email",

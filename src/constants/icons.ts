@@ -97,6 +97,8 @@ import { UserIcon } from "@/components/icons/user"
 import { UserPlusIcon } from "@/components/icons/user-plus"
 import { UsersIcon } from "@/components/icons/users"
 import { XIcon } from "@/components/icons/x"
+import { MoonIcon } from "@/components/icons/moon"
+import { SunIcon } from "@/components/icons/sun"
 
 export const icons = {
   brand: DatabaseBackupIcon,
@@ -133,6 +135,8 @@ export const icons = {
   chevronLeft: ChevronLeftIcon,
   user: UserIcon,
   mail: AtSignIcon,
+  moon: MoonIcon,
+  sun: SunIcon,
   upload: UploadIcon,
   file: FileTextIcon,
   fileCode: FolderCodeIcon,

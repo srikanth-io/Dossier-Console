@@ -7,6 +7,7 @@ export const colors = {
   popoverForeground: "var(--popover-foreground)",
   primary: "var(--primary)",
   primaryForeground: "var(--primary-foreground)",
+  primarySoft: "var(--primary-soft)",
   secondary: "var(--secondary)",
   secondaryForeground: "var(--secondary-foreground)",
   muted: "var(--muted)",
@@ -14,9 +15,14 @@ export const colors = {
   accent: "var(--accent)",
   accentForeground: "var(--accent-foreground)",
   destructive: "var(--destructive)",
+  destructiveForeground: "var(--destructive-foreground)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  info: "var(--info)",
   border: "var(--border)",
   input: "var(--input)",
   ring: "var(--ring)",
+  scrim: "var(--scrim)",
   sidebar: "var(--sidebar)",
   sidebarForeground: "var(--sidebar-foreground)",
   sidebarPrimary: "var(--sidebar-primary)",
@@ -35,4 +41,16 @@ export const chartColors = [
   "var(--chart-3)",
   "var(--chart-4)",
   "var(--chart-5)",
+  "var(--chart-6)",
 ] as const
+
+export const gradientBrand = "linear-gradient(135deg, #27272a, #3f3f46)"
+
+export const shadows = {
+  xs: "var(--shadow-xs)",
+  sm: "var(--shadow-sm)",
+  md: "var(--shadow-md)",
+  lg: "var(--shadow-lg)",
+  xl: "var(--shadow-xl)",
+  glow: "var(--shadow-glow)",
+} as const

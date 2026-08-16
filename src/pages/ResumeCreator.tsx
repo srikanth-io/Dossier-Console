@@ -5,7 +5,6 @@ import { stex } from "@codemirror/legacy-modes/mode/stex"
 
 import { CodeEditor, type CodeEditorApi } from "@/components/code-editor"
 import { TemplateManagerDialog } from "@/components/template-manager-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,6 +24,7 @@ import {
   renderLatex,
 } from "@/lib/latexPreview"
 import { exportPreviewToPdf } from "@/lib/pdfExport"
+import { cn } from "@/lib/utils"
 import { useResumeLibrary } from "@/store/resumes"
 
 export function ResumeCreator() {
@@ -54,6 +54,10 @@ export function ResumeCreator() {
   const [exportFailed, setExportFailed] = useState(false)
   const editorApiRef = useRef<CodeEditorApi | null>(null)
   const previewRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [editorPct, setEditorPct] = useState(50)
+
+  const activeTemplate = resumeTemplates.find((t) => t.id === templateId)
 
   const loadTemplate = useCallback((id: string) => {
     const template = resumeTemplates.find((t) => t.id === id)
@@ -158,32 +162,78 @@ export function ResumeCreator() {
 
   const editableResumes = resumes.filter((r) => r.source)
 
+  const startResize = (event: React.PointerEvent) => {
+    event.preventDefault()
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const move = (e: PointerEvent) => {
+      const pct = ((e.clientX - rect.left) / rect.width) * 100
+      setEditorPct(Math.min(75, Math.max(25, pct)))
+    }
+    const stop = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", stop)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", stop)
+  }
+
+  const onDividerKeyDown = (event: React.KeyboardEvent) => {
+    const step = event.shiftKey ? 10 : 2
+    if (event.key === "ArrowLeft") {
+      event.preventDefault()
+      setEditorPct((p) => Math.max(25, p - step))
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault()
+      setEditorPct((p) => Math.min(75, p + step))
+    }
+  }
+
   return (
     <div className="flex h-[calc(100svh-6.5rem)] flex-col overflow-hidden rounded-xl bg-card shadow-sm">
-      {/* Toolbar */}
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-foreground/5 bg-brand-accent-soft px-3">
+      {/* 48px Toolbar */}
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b bg-card/60 px-2.5 backdrop-blur">
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="sm"
+          className="h-8 px-2"
           aria-label={messages.resume.back}
           onClick={() => navigate(ROUTES.documents)}
         >
-          <icons.chevronLeft />
+          <icons.arrowLeft className="size-4" />
+          <span className="hidden md:inline">{messages.resume.back}</span>
         </Button>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1.5">
           <icons.brand className="size-4 text-primary" />
           <span className="text-sm font-semibold">{messages.resume.title}</span>
         </div>
 
-        <div className="mx-2 h-5 w-px bg-foreground/10" />
+        <div className="mx-1 h-5 w-px bg-border" />
 
-        <span className="truncate font-mono text-xs text-muted-foreground">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 max-w-44"
+          onClick={() => setTemplatesOpen(true)}
+        >
+          <icons.templates className="size-3.5 shrink-0" />
+          <span className="truncate">{activeTemplate?.name ?? messages.resume.template}</span>
+          <icons.chevronDown className="size-3.5 shrink-0" />
+        </Button>
+
+        <span className="min-w-0 max-w-48 truncate font-mono text-xs text-muted-foreground">
           {fileName || messages.resume.fileNamePlaceholder}
         </span>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex min-w-0 items-center gap-1">
           {exportFailed && (
-            <span className="mr-1 text-xs text-destructive">
+            <span className="mr-1 hidden text-xs text-destructive sm:inline">
               {messages.resume.exportPdfFailed}
             </span>
           )}
@@ -192,9 +242,10 @@ export function ResumeCreator() {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="h-8"
                 aria-label={messages.resume.openFromLibrary}
               >
-                <icons.openFile />
+                <icons.openFile className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
@@ -215,45 +266,49 @@ export function ResumeCreator() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={messages.templates.managerTitle}
-            onClick={() => setTemplatesOpen(true)}
-          >
-            <icons.templates />
-          </Button>
-          <Button
             variant="outline"
             size="sm"
+            className="h-8 gap-1.5 px-3"
             disabled={exporting || !source.trim()}
             onClick={handleExportPdf}
           >
             {exporting ? (
-              <icons.spinner className="animate-spin" />
+              <icons.spinner className="size-4 animate-spin" />
             ) : (
-              <icons.download />
+              <icons.download className="size-4" />
             )}
-            {exporting ? messages.resume.exportingPdf : messages.resume.exportPdf}
+            <span className="hidden sm:inline">{exporting ? messages.resume.exportingPdf : messages.resume.exportPdf}</span>
           </Button>
-          <div className="mx-1 h-5 w-px bg-foreground/10" />
+          <div className="h-5 w-px bg-border" />
           <Button
             variant="ghost"
             size="icon-sm"
+            className="h-8"
             aria-label={messages.resume.download}
             onClick={handleDownload}
           >
-            <icons.download />
+            <icons.download className="size-4" />
           </Button>
-          <Button onClick={handleSave} size="sm">
-            {saved ? <icons.check /> : <icons.save />}
+          <Button
+            variant={saved ? "outline" : "default"}
+            size="sm"
+            className="h-8 gap-1.5 px-3"
+            onClick={handleSave}
+          >
+            {saved ? (
+              <icons.check className="size-4 text-success" />
+            ) : (
+              <icons.save className="size-4" />
+            )}
             {saved ? messages.resume.saved : messages.resume.save}
           </Button>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1">
+      {/* Body: outline + editor / divider / preview */}
+      <div ref={containerRef} className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Section outline */}
-        <div className="flex w-52 shrink-0 flex-col overflow-y-auto border-r border-foreground/5 bg-muted/20">
+        <aside className="hidden min-h-0 w-52 shrink-0 flex-col overflow-y-auto border-r bg-muted/20 lg:flex">
           <div className="px-3 py-2.5">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               {messages.resume.sections}
@@ -282,21 +337,18 @@ export function ResumeCreator() {
               ))}
             </nav>
           )}
-        </div>
+        </aside>
 
-        {/* Editor */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-foreground/5 bg-muted/20 px-3">
+        {/* Editor pane */}
+        <div
+          className="flex min-h-0 min-w-0 flex-col"
+          style={{ flexBasis: `${editorPct}%` }}
+        >
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
             <icons.fileCode className="size-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
               {messages.resume.editor}
             </span>
-            <Badge
-              variant="secondary"
-              className="ml-auto font-mono text-[10px]"
-            >
-              .tex
-            </Badge>
           </div>
           <div className="min-h-0 flex-1">
             <CodeEditor
@@ -308,22 +360,35 @@ export function ResumeCreator() {
           </div>
         </div>
 
-        {/* Preview */}
-        <div className="flex min-w-0 flex-1 flex-col border-l border-foreground/5">
-          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-foreground/5 bg-muted/20 px-3">
+        {/* Drag divider */}
+        <div
+          className={cn(
+            "hidden w-1.5 shrink-0 cursor-col-resize items-center justify-center transition-colors hover:bg-primary/10 lg:flex",
+            "focus-visible:bg-primary/20 focus-visible:outline-none"
+          )}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={messages.resume.resizePanes}
+          tabIndex={0}
+          onPointerDown={startResize}
+          onKeyDown={onDividerKeyDown}
+        >
+          <span className="h-8 w-0.5 rounded-full bg-border" />
+        </div>
+
+        {/* Preview pane */}
+        <div
+          className="flex min-h-0 min-w-0 flex-col"
+          style={{ flexBasis: `${100 - editorPct}%` }}
+        >
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
             <icons.split className="size-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
               {messages.resume.preview}
             </span>
-            <Badge
-              variant="secondary"
-              className="ml-auto font-mono text-[10px]"
-            >
-              A4
-            </Badge>
           </div>
-          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto bg-muted/30 p-4">
-            <div className="h-fit w-full max-w-[595px] bg-popover p-8 shadow-sm">
+          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto bg-muted/40 p-4">
+            <div className="h-fit w-full max-w-[595px] bg-popover p-8 shadow-xl ring-1 ring-border/60">
               {source.trim() ? (
                 <div
                   ref={previewRef}

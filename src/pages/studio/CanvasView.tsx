@@ -23,7 +23,7 @@ type Gesture =
   | { kind: "rotate"; id: string; cx: number; cy: number; startRotation: number; startPoint: { x: number; y: number } }
 
 const MIN_SIZE = 8
-const HANDLE = 9
+const HANDLE = 8
 
 function snapValue(value: number, grid: number, snap: boolean): number {
   return snap ? Math.round(value / grid) * grid : value
@@ -130,6 +130,7 @@ export function CanvasView({
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const gestureRef = useRef<Gesture>({ kind: "none" })
   const [draggingOver, setDraggingOver] = useState(false)
+  const [gridDots, setGridDots] = useState(false)
   const [, force] = useState(0)
 
   const rerender = useCallback(() => force((n) => n + 1), [])
@@ -360,8 +361,8 @@ export function CanvasView({
           className="absolute inset-0 z-30 resize-none overflow-hidden rounded-[inherit] bg-background/95 p-2 pt-6 text-foreground outline-none ring-2 ring-primary"
           style={inlineTextStyle(el)}
         />
-        <span className="pointer-events-none absolute top-1 left-1 z-40 max-w-[calc(100%-8px)] truncate rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-          Editing {fieldLabelFor(el, editingField.field)}
+        <span className="pointer-events-none absolute top-1 left-1 z-40 max-w-[calc(100%-8px)] truncate rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
+          {messages.studio.editor.editing} {fieldLabelFor(el, editingField.field)}
         </span>
       </>
     ) : null
@@ -370,7 +371,7 @@ export function CanvasView({
         <>
           {editBox}
           {selectedIds.includes(el.id) ? (
-            <div className="pointer-events-none absolute inset-0 border-2 border-primary/80" />
+            <div className="pointer-events-none absolute inset-0 border-2 border-primary/60" />
           ) : null}
         </>
       )
@@ -416,7 +417,7 @@ export function CanvasView({
       return (
         <>
           {editBox}
-          <div className="pointer-events-none absolute inset-0 border-2 border-primary/80 bg-primary/5" />
+          <div className="pointer-events-none absolute inset-0 border-2 border-dashed border-primary/70 bg-primary/5" />
           {single && (
             <>
               <div
@@ -425,7 +426,7 @@ export function CanvasView({
               >
                 <div
                   onPointerDown={(e) => beginRotate(el, e)}
-                  className="flex size-6 -rotate-45 items-center justify-center rounded-full bg-primary text-primary-foreground shadow"
+                  className="flex size-6 -rotate-45 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md"
                 >
                   <icons.rotate className="size-3.5" />
                 </div>
@@ -433,7 +434,7 @@ export function CanvasView({
               {handles.map((handle) => (
                 <div
                   key={handle.dir}
-                  className="absolute z-20 border border-primary bg-white shadow-sm"
+                  className="absolute z-20 rounded-[2px] border border-primary/70 bg-card shadow-md"
                   style={{
                     width: HANDLE,
                     height: HANDLE,
@@ -502,6 +503,15 @@ export function CanvasView({
       <div
         ref={scrollRef}
         className="h-full overflow-auto bg-muted/50"
+        style={
+          gridDots
+            ? {
+                backgroundImage:
+                  "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+                backgroundSize: `${doc.grid}px ${doc.grid}px`,
+              }
+            : undefined
+        }
         onPointerDown={() => {
           if (gestureRef.current.kind === "none") onSelect([])
         }}
@@ -523,7 +533,7 @@ export function CanvasView({
             <div
               ref={pageRef}
               className={cn(
-                "relative",
+                "relative shadow-xl ring-1 ring-border/60",
                 draggingOver && "ring-2 ring-primary ring-offset-4"
               )}
               style={{ width: page.width, height: page.height, touchAction: "none" }}
@@ -576,18 +586,19 @@ export function CanvasView({
       </div>
       </div>
 
-      <div className="absolute right-3 bottom-3 z-40 flex items-center gap-1 rounded-lg border bg-background p-1 shadow-sm">
+      <div className="absolute right-3 bottom-3 z-40 flex items-center gap-0.5 rounded-full border border-border/60 bg-card p-1 shadow-lg">
         <button
           type="button"
-          className="flex size-7 items-center justify-center rounded-md hover:bg-muted"
+          className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={() => onZoom(Math.max(0.2, Math.round((zoom - 0.1) * 10) / 10))}
           title={messages.studio.editor.zoomOut}
+          aria-label={messages.studio.editor.zoomOut}
         >
           <icons.zoomOut className="size-4" />
         </button>
         <button
           type="button"
-          className="min-w-14 rounded-md px-2 py-0.5 text-xs font-medium hover:bg-muted"
+          className="min-w-14 rounded-full px-2 py-1 text-xs font-medium hover:bg-muted"
           onClick={zoomFit}
           title={messages.studio.editor.zoomFit}
         >
@@ -595,11 +606,35 @@ export function CanvasView({
         </button>
         <button
           type="button"
-          className="flex size-7 items-center justify-center rounded-md hover:bg-muted"
+          className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={() => onZoom(Math.min(2, Math.round((zoom + 0.1) * 10) / 10))}
           title={messages.studio.editor.zoomIn}
+          aria-label={messages.studio.editor.zoomIn}
         >
           <icons.zoomIn className="size-4" />
+        </button>
+        <div className="mx-0.5 h-4 w-px bg-border" />
+        <button
+          type="button"
+          className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={zoomFit}
+          title={messages.studio.editor.zoomFit}
+          aria-label={messages.studio.editor.zoomFit}
+        >
+          <icons.fit className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-pressed={gridDots}
+          className={cn(
+            "flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground",
+            gridDots && "bg-primary-soft text-primary"
+          )}
+          onClick={() => setGridDots((value) => !value)}
+          title={messages.studio.editor.gridDots}
+          aria-label={messages.studio.editor.gridDots}
+        >
+          <icons.grid className="size-4" />
         </button>
       </div>
 

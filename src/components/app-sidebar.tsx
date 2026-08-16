@@ -1,26 +1,7 @@
-import { useState } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 
 import { ROUTES, icons, messages } from "@/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 const navSections: {
@@ -56,29 +37,36 @@ const navSections: {
         to: ROUTES.documents,
         icon: "file",
       },
+      {
+        label: messages.nav.items.dossiers,
+        to: ROUTES.resumeCreator,
+        icon: "dossiers",
+      },
     ],
   },
 ]
 
 export function AppSidebar() {
-  const navigate = useNavigate()
-  const [signOutOpen, setSignOutOpen] = useState(false)
   return (
-    <aside className="sticky top-0 flex h-svh w-64 shrink-0 flex-col bg-brand-accent-soft text-sidebar-foreground">
-      <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <icons.brand className="size-4" />
+    <aside className="sticky top-0 flex h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="flex h-16 shrink-0 items-center gap-2.5 px-4">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-brand text-white shadow-glow">
+          <icons.brand className="size-4.5" />
         </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold">{messages.nav.brand}</p>
-          <p className="text-xs text-muted-foreground">{messages.nav.console}</p>
+        <div className="min-w-0 leading-tight">
+          <p className="font-heading text-sm font-bold tracking-tight">
+            {messages.nav.brand}
+          </p>
+          <p className="truncate text-xs text-sidebar-foreground/60">
+            {messages.nav.console}
+          </p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
         {navSections.map((section) => (
           <div key={section.label}>
-            <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
+            <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-[0.12em] text-sidebar-foreground/50 uppercase">
               {section.label}
             </p>
             <ul className="space-y-0.5">
@@ -91,14 +79,33 @@ export function AppSidebar() {
                       end={item.end}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                          isActive &&
-                            "bg-primary font-medium text-primary-foreground shadow-sm"
+                          "relative flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                          isActive
+                            ? "bg-primary-soft/70 font-semibold text-primary dark:bg-primary/15 dark:text-zinc-300"
+                            : "text-sidebar-foreground/75"
                         )
                       }
                     >
-                      <Icon className="size-4" />
-                      {item.label}
+                      {({ isActive }) => (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-foreground to-muted-foreground transition-opacity duration-150",
+                              isActive ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <Icon
+                            className={cn(
+                              "size-4 transition-colors",
+                              isActive
+                                ? "text-primary dark:text-zinc-300"
+                                : "text-sidebar-foreground/60"
+                            )}
+                          />
+                          {item.label}
+                        </>
+                      )}
                     </NavLink>
                   </li>
                 )
@@ -108,69 +115,21 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto p-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex w-full items-center gap-2 px-2 py-2">
-              <Avatar className="size-8">
-                <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
-              </Avatar>
-              <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                <span className="text-sm font-medium">{messages.layout.userName}</span>
-                <span className="text-xs text-muted-foreground">
-                  {messages.layout.userEmail}
-                </span>
-              </span>
-              <icons.chevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" side="top" className="w-56">
-            <DropdownMenuLabel>{messages.layout.signedInAs}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <NavLink to={ROUTES.settings}>
-                <icons.settings /> {messages.nav.items.settings}
-              </NavLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setSignOutOpen(true)}
-            >
-              <icons.signOut /> {messages.layout.signOut}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="p-3">
+        <div className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-2.5 py-2.5">
+          <Avatar className="size-8">
+            <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
+          </Avatar>
+          <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+            <span className="text-sm font-semibold">
+              {messages.layout.userName}
+            </span>
+            <span className="truncate text-xs text-sidebar-foreground/60">
+              {messages.layout.userEmail}
+            </span>
+          </span>
+        </div>
       </div>
-
-      <Dialog
-        open={signOutOpen}
-        onOpenChange={(open) => {
-          if (!open) setSignOutOpen(false)
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{messages.layout.signOutTitle}</DialogTitle>
-            <DialogDescription>
-              {messages.layout.signOutDescription}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{messages.common.cancel}</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setSignOutOpen(false)
-                navigate(ROUTES.login)
-              }}
-            >
-              <icons.signOut /> {messages.layout.signOut}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </aside>
   )
 }
