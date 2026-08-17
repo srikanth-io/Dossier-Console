@@ -12,6 +12,8 @@ import { Dossiers } from "@/pages/Dossiers"
 import { ForgotPassword } from "@/pages/ForgotPassword"
 import { Landing } from "@/pages/Landing"
 import { MfaVerify } from "@/pages/MfaVerify"
+import { Notepad } from "@/pages/Notepad"
+import { NotepadEditor } from "@/pages/NotepadEditor"
 import { PageDetail } from "@/pages/PageDetail"
 import { Pages } from "@/pages/Pages"
 import { ProjectDetail } from "@/pages/ProjectDetail"
@@ -85,6 +87,8 @@ function App() {
                         }
                       />
                       <Route path="settings" element={<Settings />} />
+                      <Route path="notepad" element={<Notepad />} />
+                      <Route path="notepad/:id" element={<NotepadEditor />} />
                       <Route
                         path="*"
                         element={<Navigate to={ROUTES.dashboard} replace />}

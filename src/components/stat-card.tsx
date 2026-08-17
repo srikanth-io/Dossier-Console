@@ -34,7 +34,7 @@ function StatCard({
     <div
       data-slot="stat-card"
       className={cn(
-        "group/card flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md",
+        "group/card flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md glass",
         className
       )}
       {...props}

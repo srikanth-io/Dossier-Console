@@ -16,61 +16,24 @@ import {
 import { usePages } from "@/store/pages"
 import { cn } from "@/lib/utils"
 
-const navSections: {
+const navItems: {
   label: string
-  items: {
-    label: string
-    to: string
-    icon: keyof typeof icons
-    end?: boolean
-  }[]
+  to: string
+  icon: keyof typeof icons
+  end?: boolean
 }[] = [
-  {
-    label: messages.nav.sections.overview,
-    items: [
-      { label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true },
-    ],
-  },
-  {
-    label: messages.nav.sections.content,
-    items: [
-      { label: messages.nav.items.pages, to: ROUTES.pages, icon: "file" },
-      { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
-      { label: messages.nav.items.databases, to: ROUTES.dashboard, icon: "database" },
-      { label: messages.nav.items.dataSources, to: ROUTES.dashboard, icon: "source" },
-      { label: messages.nav.items.views, to: ROUTES.dashboard, icon: "layoutList" },
-    ],
-  },
-  {
-    label: messages.nav.sections.organize,
-    items: [
-      { label: messages.nav.items.favorites, to: ROUTES.pages, icon: "star" },
-      { label: messages.nav.items.recent, to: ROUTES.pages, icon: "pendingReviews" },
-      { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
-    ],
-  },
-  {
-    label: messages.nav.sections.resources,
-    items: [
-      { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
-      { label: messages.nav.items.comments, to: ROUTES.dashboard, icon: "messageCircle" },
-      { label: messages.nav.items.people, to: ROUTES.dashboard, icon: "users" },
-    ],
-  },
-  {
-    label: messages.nav.sections.system,
-    items: [
-      { label: messages.nav.items.connections, to: ROUTES.dashboard, icon: "plug" },
-      { label: messages.nav.items.settings, to: ROUTES.settings, icon: "settings" },
-    ],
-  },
+  { label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true },
+  { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
+  { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
+  { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
+  { label: messages.nav.items.notepad, to: ROUTES.notepad, icon: "file" },
 ]
 
 function NavItem({
   item,
   collapsed,
 }: {
-  item: (typeof navSections)[number]["items"][number]
+  item: (typeof navItems)[number]
   collapsed: boolean
 }) {
   const link = (
@@ -195,7 +158,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
               onClick={() => {
                 setCurrentWorkspace(ws.id)
                 setOpen(false)
-                navigate(ROUTES.pages)
+                navigate(ROUTES.notepad)
               }}
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
@@ -247,7 +210,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+        "sticky top-0 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 glass",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -272,21 +235,12 @@ export function AppSidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {navSections.map((section) => (
-          <div key={section.label}>
-            {!collapsed && (
-              <p className="mb-1 px-3 text-[10px] font-semibold tracking-[0.12em] text-sidebar-foreground/40 uppercase">
-                {section.label}
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavItem key={item.to + item.label} item={item} collapsed={collapsed} />
-              ))}
-            </ul>
-          </div>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 py-2">
+        <ul className="space-y-0.5">
+          {navItems.map((item) => (
+            <NavItem key={item.to + item.label} item={item} collapsed={collapsed} />
+          ))}
+        </ul>
       </nav>
 
       <div className="p-3">

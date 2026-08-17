@@ -110,7 +110,7 @@ export function AppLayout() {
                 <DropdownMenuLabel>{messages.layout.signedInAs}</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
                   <NavLink to={ROUTES.settings}>
-                    <icons.settings /> {messages.nav.items.settings}
+                    <icons.settings /> Settings
                   </NavLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem

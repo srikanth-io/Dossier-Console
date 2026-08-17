@@ -89,27 +89,27 @@
 }
 
 /* ============================================================
-   LIGHT THEME  — Monochrome (grayscale only)
+   LIGHT THEME  — Warm monochrome with transparency
    ============================================================ */
 :root {
   --radius: 0.75rem;
 
-  --background: #FAFAFA;
-  --foreground: #18181B;
-  --card: #FFFFFF;
-  --card-foreground: #18181B;
-  --popover: #FFFFFF;
-  --popover-foreground: #18181B;
+  --background: hsl(40 20% 98%);
+  --foreground: hsl(240 5% 12%);
+  --card: rgb(255 255 255 / 0.88);
+  --card-foreground: hsl(240 5% 12%);
+  --popover: rgb(255 255 255 / 0.92);
+  --popover-foreground: hsl(240 5% 12%);
 
   --primary: #18181B;
   --primary-foreground: #FAFAFA;
-  --primary-soft: #F4F4F5;
-  --secondary: #F4F4F5;
-  --secondary-foreground: #27272A;
-  --muted: #F4F4F5;
-  --muted-foreground: #71717A;
-  --accent: #F4F4F5;
-  --accent-foreground: #18181B;
+  --primary-soft: hsl(40 15% 94%);
+  --secondary: hsl(40 12% 95%);
+  --secondary-foreground: hsl(240 5% 18%);
+  --muted: hsl(40 12% 95%);
+  --muted-foreground: hsl(240 4% 46%);
+  --accent: hsl(40 12% 95%);
+  --accent-foreground: hsl(240 5% 12%);
 
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
@@ -117,10 +117,10 @@
   --warning: #D97706;
   --info: #2563EB;
 
-  --border: #E4E4E7;
-  --input: #D4D4D8;
+  --border: hsl(0 0% 90%);
+  --input: hsl(0 0% 85%);
   --ring: #18181B;
-  --scrim: rgb(9 9 11 / 0.50);
+  --scrim: hsl(240 5% 10% / 0.5);
 
   --chart-1: #18181B;
   --chart-2: #52525B;
@@ -129,13 +129,13 @@
   --chart-5: #D4D4D8;
   --chart-6: #F4F4F5;
 
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #3F3F46;
+  --sidebar: hsl(40 20% 98.5%);
+  --sidebar-foreground: hsl(240 5% 25%);
   --sidebar-primary: #18181B;
   --sidebar-primary-foreground: #FAFAFA;
-  --sidebar-accent: #F4F4F5;
-  --sidebar-accent-foreground: #18181B;
-  --sidebar-border: #E4E4E7;
+  --sidebar-accent: hsl(40 12% 95%);
+  --sidebar-accent-foreground: hsl(240 5% 12%);
+  --sidebar-border: hsl(0 0% 90%);
   --sidebar-ring: #18181B;
 
   --brand-accent: #52525B;
@@ -150,25 +150,25 @@
 }
 
 /* ============================================================
-   DARK THEME  — Monochrome (grayscale only)
+   DARK THEME  — Blue-tinted monochrome with transparency
    ============================================================ */
 .dark {
-  --background: #09090B;
-  --foreground: #FAFAFA;
-  --card: #18181B;
-  --card-foreground: #FAFAFA;
-  --popover: #1C1C1F;
-  --popover-foreground: #FAFAFA;
+  --background: hsl(230 15% 12%);
+  --foreground: hsl(220 10% 92%);
+  --card: hsl(230 12% 18% / 0.82);
+  --card-foreground: hsl(220 10% 92%);
+  --popover: hsl(230 12% 15% / 0.88);
+  --popover-foreground: hsl(220 10% 92%);
 
   --primary: #FAFAFA;
   --primary-foreground: #09090B;
-  --primary-soft: rgba(250, 250, 250, 0.10);
-  --secondary: #27272A;
-  --secondary-foreground: #FAFAFA;
-  --muted: #27272A;
-  --muted-foreground: #A1A1AA;
-  --accent: #27272A;
-  --accent-foreground: #FAFAFA;
+  --primary-soft: hsl(220 10% 92% / 0.10);
+  --secondary: hsl(230 10% 18%);
+  --secondary-foreground: hsl(220 10% 92%);
+  --muted: hsl(230 10% 18%);
+  --muted-foreground: hsl(220 8% 63%);
+  --accent: hsl(230 10% 18%);
+  --accent-foreground: hsl(220 10% 92%);
 
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
@@ -176,10 +176,10 @@
   --warning: #FBBF24;
   --info: #60A5FA;
 
-  --border: #27272A;
-  --input: #3F3F46;
-  --ring: #A1A1AA;
-  --scrim: rgb(0 0 0 / 0.65);
+  --border: hsl(230 10% 20%);
+  --input: hsl(230 8% 25%);
+  --ring: hsl(220 8% 63%);
+  --scrim: hsl(230 20% 4% / 0.7);
 
   --chart-1: #FAFAFA;
   --chart-2: #A1A1AA;
@@ -188,24 +188,24 @@
   --chart-5: #3F3F46;
   --chart-6: #27272A;
 
-  --sidebar: #09090B;
-  --sidebar-foreground: #D4D4D8;
+  --sidebar: hsl(230 15% 10%);
+  --sidebar-foreground: hsl(220 8% 76%);
   --sidebar-primary: #FAFAFA;
   --sidebar-primary-foreground: #09090B;
-  --sidebar-accent: #27272A;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: #27272A;
-  --sidebar-ring: #A1A1AA;
+  --sidebar-accent: hsl(230 10% 18%);
+  --sidebar-accent-foreground: hsl(220 10% 92%);
+  --sidebar-border: hsl(230 10% 18%);
+  --sidebar-ring: hsl(220 8% 63%);
 
-  --brand-accent: #A1A1AA;
-  --brand-accent-soft: rgba(161, 161, 170, 0.10);
+  --brand-accent: hsl(220 8% 63%);
+  --brand-accent-soft: hsl(220 8% 63% / 0.10);
 
-  --shadow-elev-xs: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-elev-sm: 0 1px 3px rgb(0 0 0 / 0.42), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-elev-md: 0 4px 12px rgb(0 0 0 / 0.45);
-  --shadow-elev-lg: 0 12px 28px rgb(0 0 0 / 0.55);
-  --shadow-elev-xl: 0 24px 60px rgb(0 0 0 / 0.65);
-  --shadow-elev-glow: 0 8px 24px rgb(250 250 250 / 0.06);
+  --shadow-elev-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-elev-sm: 0 1px 3px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-elev-md: 0 4px 12px rgb(0 0 0 / 0.4);
+  --shadow-elev-lg: 0 12px 28px rgb(0 0 0 / 0.5);
+  --shadow-elev-xl: 0 24px 60px rgb(0 0 0 / 0.6);
+  --shadow-elev-glow: 0 8px 24px hsl(230 30% 60% / 0.06);
 }
 
 @layer base {
@@ -255,6 +255,28 @@
   *::-webkit-scrollbar-thumb:hover {
     background-color: var(--brand-accent);
     background-clip: padding-box;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color;
+    transition-timing-function: ease;
+    transition-duration: 0.2s;
+  }
+
+  /* Exclude elements that manage their own transitions */
+  [data-slot],
+  [data-state],
+  [role="dialog"],
+  [role="menu"],
+  [role="listbox"],
+  [data-radix-popper-content-wrapper] *,
+  .animate-spin,
+  .animate-pulse,
+  [style*="transform"],
+  svg {
+    transition-duration: 0s !important;
   }
 }
 
@@ -387,10 +409,25 @@
   }
 }
 
+/* ============================================================
+   GLASS-MORPHISM
+   ============================================================ */
+.glass {
+  background: rgb(255 255 255 / 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+.dark .glass {
+  background: rgb(26 29 35 / 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
 /* Block editor placeholder */
 [contenteditable][data-placeholder]:empty::before {
   content: attr(data-placeholder);
-  color: hsl(var(--muted-foreground) / 0.4);
+  color: hsl(240 4% 46% / 0.4);
   pointer-events: none;
 }
 

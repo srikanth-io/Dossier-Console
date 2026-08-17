@@ -9,19 +9,41 @@ type SlashCommandMenuProps = {
   onClose: () => void
 }
 
+function fuzzyScore(text: string, query: string): number {
+  if (!query) return 0
+  const t = text.toLowerCase()
+  const q = query.toLowerCase()
+  if (t === q) return 100
+  if (t.startsWith(q)) return 80
+  if (t.includes(q)) return 60
+  let qi = 0
+  let score = 0
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) {
+      score += 10
+      qi++
+    }
+  }
+  return qi === q.length ? score : 0
+}
+
 export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuProps) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase()
+    const q = query.toLowerCase().trim()
     if (!q) return BLOCK_TYPES
-    return BLOCK_TYPES.filter(
-      (b) =>
-        b.label.toLowerCase().includes(q) ||
-        b.category.toLowerCase().includes(q) ||
-        b.type.toLowerCase().includes(q)
-    )
+    return BLOCK_TYPES.filter((b) => {
+      const labelScore = fuzzyScore(b.label, q)
+      const categoryScore = fuzzyScore(b.category, q)
+      const descScore = fuzzyScore(b.description, q)
+      return labelScore > 0 || categoryScore > 0 || descScore > 0
+    }).sort((a, b) => {
+      const aScore = Math.max(fuzzyScore(a.label, q), fuzzyScore(a.category, q), fuzzyScore(a.description, q))
+      const bScore = Math.max(fuzzyScore(b.label, q), fuzzyScore(b.category, q), fuzzyScore(b.description, q))
+      return bScore - aScore
+    })
   }, [query])
 
   useEffect(() => {
@@ -75,7 +97,7 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
 
   return (
     <div
-      className="fixed z-50 w-72 overflow-hidden rounded-xl border border-border/60 bg-popover shadow-xl animate-in fade-in slide-in-from-top-2"
+      className="fixed z-50 w-80 overflow-hidden rounded-xl border border-border/60 bg-popover shadow-xl animate-in fade-in slide-in-from-top-2"
       style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
     >
       <div className="border-b border-border/50 px-3 py-2">
@@ -108,12 +130,15 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{item.label}</p>
-                    {item.shortcut && (
-                      <p className="text-[11px] text-muted-foreground/60">
-                        {item.shortcut}
-                      </p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground/60 truncate">
+                      {item.description}
+                    </p>
                   </div>
+                  {item.shortcut && (
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/70">
+                      {item.shortcut.trim()}
+                    </span>
+                  )}
                 </button>
               )
             })}

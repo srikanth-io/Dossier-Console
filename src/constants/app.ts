@@ -28,6 +28,8 @@ export const ROUTES = {
   projectDetail: "/app/projects/:id",
   pages: "/app/pages",
   pageDetail: "/app/pages/:id",
+  notepad: "/app/notepad",
+  notepadDetail: "/app/notepad/:id",
 } as const
 
 export type RouteName = keyof typeof ROUTES

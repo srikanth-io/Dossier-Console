@@ -51,7 +51,7 @@ function ThemeToggle({ className }: { className?: string }) {
       display:flex;align-items:center;justify-content:center;
     `
     const circle = document.createElement("div")
-    const targetBg = theme === "dark" ? "#fafafa" : "#18181b"
+    const targetBg = theme === "dark" ? "hsl(40 20% 98%)" : "hsl(230 15% 12%)"
     circle.style.cssText = `
       width:0;height:0;border-radius:50%;
       background:${targetBg};
