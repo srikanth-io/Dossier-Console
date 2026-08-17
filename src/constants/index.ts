@@ -1,5 +1,5 @@
 import { APP, API, ROUTES, SPLASH } from "@/constants/app"
-import { icons, resolveIcon } from "@/constants/icons"
+import { icons, resolveIcon, type IconName } from "@/constants/icons"
 import { messages } from "@/constants/messages"
 import {
   commonMessages,
@@ -16,6 +16,7 @@ export {
   SPLASH,
   icons,
   resolveIcon,
+  type IconName,
   messages,
   theme,
   commonMessages,

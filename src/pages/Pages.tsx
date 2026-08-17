@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { ROUTES, icons, messages } from "@/constants"
+import { ROUTES, icons, messages, type IconName } from "@/constants"
 import { usePages } from "@/store/pages"
 import { cn } from "@/lib/utils"
 
@@ -113,7 +113,10 @@ export function Pages() {
               >
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{page.icon}</span>
+                    {(() => {
+                      const PageIcon = icons[page.icon as IconName] ?? icons.file
+                      return <PageIcon className="size-5 shrink-0 text-muted-foreground" />
+                    })()}
                     <div>
                       <CardTitle className="text-base">{page.title}</CardTitle>
                       <CardDescription className="mt-0.5">
@@ -135,9 +138,9 @@ export function Pages() {
                       onClick={() => handleToggleFavorite(page.id, page.favorite)}
                     >
                       {page.favorite ? (
-                        <icons.sparkles className="size-4 fill-current" />
+                        <icons.star className="size-4 fill-current" />
                       ) : (
-                        <icons.sparkles className="size-4" />
+                        <icons.star className="size-4" />
                       )}
                     </Button>
                     <DropdownMenu>
@@ -151,7 +154,7 @@ export function Pages() {
                           <icons.eye /> View
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleFavorite(page.id, page.favorite)}>
-                          <icons.sparkles /> {page.favorite ? messages.pages.actions.unfavorite : messages.pages.actions.favorite}
+                          <icons.star /> {page.favorite ? messages.pages.actions.unfavorite : messages.pages.actions.favorite}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -167,11 +170,14 @@ export function Pages() {
                 {children.length > 0 && (
                   <CardContent className="pt-0">
                     <div className="flex flex-wrap gap-1.5">
-                      {children.slice(0, 4).map((child) => (
-                        <Badge key={child.id} variant="secondary" className="text-xs">
-                          {child.icon} {child.title}
-                        </Badge>
-                      ))}
+                      {children.slice(0, 4).map((child) => {
+                        const ChildIcon = icons[child.icon as IconName] ?? icons.file
+                        return (
+                          <Badge key={child.id} variant="secondary" className="text-xs gap-1">
+                            <ChildIcon className="size-3" /> {child.title}
+                          </Badge>
+                        )
+                      })}
                       {children.length > 4 && (
                         <Badge variant="outline" className="text-xs">
                           +{children.length - 4} more

@@ -27,7 +27,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-1",
     title: "Engineering",
-    icon: "⚙️",
+    icon: "settings",
     content: "# Engineering\n\nThe engineering hub for all technical documentation, architecture decisions, and project tracking.",
     parentId: null,
     children: ["p-2", "p-3"],
@@ -39,7 +39,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-2",
     title: "Architecture",
-    icon: "🏗️",
+    icon: "layers",
     content: "# Architecture\n\nSystem architecture and design decisions.\n\n## Tech Stack\n\n- React 19 + TypeScript\n- Vite 8\n- Tailwind CSS v4\n- shadcn/ui\n\n## Principles\n\n- Database is source of truth\n- Excel is working document\n- Clean separation of concerns",
     parentId: "p-1",
     children: ["p-4", "p-5"],
@@ -51,7 +51,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-3",
     title: "Projects",
-    icon: "📋",
+    icon: "checklist",
     content: "# Projects\n\nActive project tracking and management.\n\n## Active Projects\n\n- Timesheet Management System\n- Document Editor\n- Resume Builder",
     parentId: "p-1",
     children: ["p-6"],
@@ -63,7 +63,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-4",
     title: "Backend",
-    icon: "🖥️",
+    icon: "code",
     content: "# Backend\n\nBackend architecture and API design.\n\n## Services\n\n- API Gateway\n- Auth Service\n- Database\n- Email Service",
     parentId: "p-2",
     children: [],
@@ -75,7 +75,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-5",
     title: "Frontend",
-    icon: "🎨",
+    icon: "text",
     content: "# Frontend\n\nFrontend architecture and component design.\n\n## Stack\n\n- React 19\n- shadcn/ui\n- Tailwind CSS v4\n- React Router 7",
     parentId: "p-2",
     children: [],
@@ -87,7 +87,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-6",
     title: "Timesheet System",
-    icon: "⏰",
+    icon: "pendingReviews",
     content: "# Timesheet Management System\n\nComplete timesheet management with project-centric workflow.\n\n## Features\n\n- Project cards with progress\n- Daily time entries\n- Calendar view\n- Excel integration\n- Monthly tracking\n\n## Status\n\nIn Progress",
     parentId: "p-3",
     children: [],
@@ -99,7 +99,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-7",
     title: "Quick Notes",
-    icon: "📝",
+    icon: "pencil",
     content: "# Quick Notes\n\nRandom thoughts and ideas.\n\n- Look into command palette\n- Add keyboard shortcuts\n- Consider Notion API integration",
     parentId: null,
     children: [],
@@ -111,7 +111,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-8",
     title: "Reading List",
-    icon: "📚",
+    icon: "file",
     content: "# Reading List\n\n## Books\n\n- Designing Data-Intensive Applications\n- The Pragmatic Programmer\n\n## Articles\n\n- React Server Components\n- Tailwind CSS v4 Migration Guide",
     parentId: null,
     children: [],
@@ -123,7 +123,7 @@ export const pages: PageEntry[] = [
   {
     id: "p-9",
     title: "Goals 2026",
-    icon: "🎯",
+    icon: "chart",
     content: "# Goals 2026\n\n## Q3\n\n- [ ] Ship timesheet v1\n- [ ] Launch document editor\n- [ ] Integrate Excel service\n\n## Q4\n\n- [ ] Add team management\n- [ ] Build reporting dashboard\n- [ ] Mobile app prototype",
     parentId: null,
     children: [],

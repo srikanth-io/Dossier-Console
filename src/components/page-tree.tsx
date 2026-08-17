@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { ROUTES, icons } from "@/constants"
+import { ROUTES, icons, type IconName } from "@/constants"
 import { usePages } from "@/store/pages"
 import type { PageEntry } from "@/data/pages"
 import { cn } from "@/lib/utils"
@@ -13,6 +13,7 @@ function TreeNode({ page, depth = 0 }: { page: PageEntry; depth?: number }) {
   const [expanded, setExpanded] = useState(depth < 1)
 
   const hasChildren = children.length > 0
+  const PageIcon = icons[page.icon as IconName] ?? icons.file
 
   const handleClick = useCallback(() => {
     navigate(`${ROUTES.pages}/${page.id}`)
@@ -27,7 +28,7 @@ function TreeNode({ page, depth = 0 }: { page: PageEntry; depth?: number }) {
     <div>
       <div
         className={cn(
-          "group flex items-center gap-1 rounded-md px-2 py-1 text-sm transition-colors hover:bg-sidebar-accent cursor-pointer",
+          "group flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-sidebar-accent cursor-pointer",
           "text-sidebar-foreground/75"
         )}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
@@ -45,10 +46,10 @@ function TreeNode({ page, depth = 0 }: { page: PageEntry; depth?: number }) {
         >
           <icons.chevronRight className="size-3" />
         </button>
-        <span className="text-sm leading-none">{page.icon}</span>
+        <PageIcon className="size-4 shrink-0 text-sidebar-foreground/50" />
         <span className="min-w-0 flex-1 truncate">{page.title}</span>
         {page.favorite && (
-          <icons.sparkles className="size-3 shrink-0 text-amber-500 opacity-0 group-hover:opacity-100" />
+          <icons.star className="size-3 shrink-0 fill-amber-500 text-amber-500 opacity-0 group-hover:opacity-100" />
         )}
       </div>
       {expanded && hasChildren && (

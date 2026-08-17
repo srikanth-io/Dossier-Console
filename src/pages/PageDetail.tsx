@@ -12,12 +12,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ROUTES, icons, messages } from "@/constants"
+import { ROUTES, icons, messages, type IconName } from "@/constants"
 import { usePages } from "@/store/pages"
 import { createBlock, type Block } from "@/lib/blocks"
 import { cn } from "@/lib/utils"
 
-const pageIcons = ["📄", "📋", "📝", "🗂️", "📊", "📈", "🎯", "💡", "🔧", "⚙️", "🗑️", "📁", "🗓️", "⏰", "🎨", "🖥️", "📦", "🚀"]
+const pageIcons: IconName[] = [
+  "file", "checklist", "pencil", "database", "chart", "activity",
+  "sparkles", "star", "settings", "code", "text", "image",
+  "table", "layers", "container", "plug", "users", "messageCircle",
+]
 
 const DEMO_PROPERTIES: PropertyDef[] = [
   { id: "name", name: "Name", type: "title" },
@@ -158,7 +162,11 @@ export function PageDetail() {
               className="h-7 gap-1.5 px-2"
               onClick={() => navigate(`${ROUTES.pages}/${parentPage.id}`)}
             >
-              {parentPage.icon} {parentPage.title}
+              {(() => {
+                const ParentIcon = icons[parentPage.icon as IconName] ?? icons.file
+                return <ParentIcon className="size-3.5" />
+              })()}
+              {parentPage.title}
             </Button>
           </>
         )}
@@ -182,8 +190,11 @@ export function PageDetail() {
                 <option key={i} value={i}>{i}</option>
               ))}
             </select>
-            <span className="text-3xl cursor-pointer group-hover:opacity-70 transition-opacity">
-              {icon}
+            <span className="cursor-pointer group-hover:opacity-70 transition-opacity">
+              {(() => {
+                const CurrentIcon = icons[icon as IconName] ?? icons.file
+                return <CurrentIcon className="size-7 text-muted-foreground" />
+              })()}
             </span>
           </div>
           <Input
@@ -221,9 +232,9 @@ export function PageDetail() {
                 onClick={() => updatePage(id!, { favorite: !page.favorite })}
               >
                 {page.favorite ? (
-                  <icons.sparkles className="size-4 fill-current" />
+                  <icons.star className="size-4 fill-current" />
                 ) : (
-                  <icons.sparkles className="size-4" />
+                  <icons.star className="size-4" />
                 )}
               </Button>
             </TooltipTrigger>
@@ -267,18 +278,21 @@ export function PageDetail() {
               Sub-pages
             </p>
             <div className="space-y-1">
-              {childPages.map((child) => (
-                <button
-                  key={child.id}
-                  type="button"
-                  onClick={() => navigate(`${ROUTES.pages}/${child.id}`)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
-                >
-                  <span>{child.icon}</span>
-                  <span className="font-medium">{child.title}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{child.updatedAt}</span>
-                </button>
-              ))}
+              {childPages.map((child) => {
+                const ChildIcon = icons[child.icon as IconName] ?? icons.file
+                return (
+                  <button
+                    key={child.id}
+                    type="button"
+                    onClick={() => navigate(`${ROUTES.pages}/${child.id}`)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+                  >
+                    <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="font-medium">{child.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{child.updatedAt}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </>

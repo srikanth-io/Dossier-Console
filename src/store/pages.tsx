@@ -80,7 +80,7 @@ export function PagesProvider({ children }: { children: ReactNode }) {
       const newPage: PageEntry = {
         id,
         title,
-        icon: "📄",
+        icon: "file",
         content: `# ${title}\n\nStart writing here...`,
         parentId,
         children: [],

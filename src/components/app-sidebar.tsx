@@ -36,15 +36,15 @@ const navSections: {
     items: [
       { label: messages.nav.items.pages, to: ROUTES.pages, icon: "file" },
       { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
-      { label: messages.nav.items.databases, to: ROUTES.dashboard, icon: "grid" },
-      { label: messages.nav.items.dataSources, to: ROUTES.dashboard, icon: "container" },
-      { label: messages.nav.items.views, to: ROUTES.dashboard, icon: "grid" },
+      { label: messages.nav.items.databases, to: ROUTES.dashboard, icon: "database" },
+      { label: messages.nav.items.dataSources, to: ROUTES.dashboard, icon: "source" },
+      { label: messages.nav.items.views, to: ROUTES.dashboard, icon: "layoutList" },
     ],
   },
   {
     label: messages.nav.sections.organize,
     items: [
-      { label: messages.nav.items.favorites, to: ROUTES.pages, icon: "sparkles" },
+      { label: messages.nav.items.favorites, to: ROUTES.pages, icon: "star" },
       { label: messages.nav.items.recent, to: ROUTES.pages, icon: "pendingReviews" },
       { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
     ],
@@ -52,15 +52,15 @@ const navSections: {
   {
     label: messages.nav.sections.resources,
     items: [
-      { label: messages.nav.items.files, to: ROUTES.documents, icon: "file" },
-      { label: messages.nav.items.comments, to: ROUTES.dashboard, icon: "mail" },
+      { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
+      { label: messages.nav.items.comments, to: ROUTES.dashboard, icon: "messageCircle" },
       { label: messages.nav.items.people, to: ROUTES.dashboard, icon: "users" },
     ],
   },
   {
     label: messages.nav.sections.system,
     items: [
-      { label: messages.nav.items.connections, to: ROUTES.dashboard, icon: "link" },
+      { label: messages.nav.items.connections, to: ROUTES.dashboard, icon: "plug" },
       { label: messages.nav.items.settings, to: ROUTES.settings, icon: "settings" },
     ],
   },
@@ -128,7 +128,7 @@ function NavItem({
   return <li>{link}</li>
 }
 
-function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
+function UserCard({ collapsed }: { collapsed: boolean }) {
   const { workspaces, currentWorkspace, setCurrentWorkspace } = usePages()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -157,70 +157,84 @@ function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
           type="button"
           className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-2.5 py-2.5 transition-colors hover:bg-sidebar-accent"
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand text-xs font-bold text-white">
-            {currentWorkspace.icon}
-          </span>
+          <Avatar className="size-8 shrink-0">
+            <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
+          </Avatar>
           <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-            <span className="text-sm font-semibold truncate w-full text-left">
-              {currentWorkspace.name}
+            <span className="text-sm font-semibold">
+              {messages.layout.userName}
             </span>
-            <span className="text-[11px] text-sidebar-foreground/50">
-              {currentWorkspace.pageCount} pages
+            <span className="truncate text-xs text-sidebar-foreground/60">
+              {currentWorkspace.name}
             </span>
           </span>
           <icons.chevronDown className="size-3.5 shrink-0 text-sidebar-foreground/40" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" sideOffset={4} className="w-64 p-1.5">
+      <PopoverContent align="start" side="top" sideOffset={4} className="w-64 p-1.5">
         <p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          Workspaces
+          Account
         </p>
-        {workspaces.map((ws) => (
-          <button
-            key={ws.id}
-            type="button"
-            onClick={() => {
-              setCurrentWorkspace(ws.id)
-              setOpen(false)
-              navigate(ROUTES.pages)
-            }}
-            className={cn(
-              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
-              ws.id === currentWorkspace.id && "bg-primary/5"
-            )}
-          >
-            <span className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
-              ws.id === currentWorkspace.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            )}>
-              {ws.icon}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className={cn(
-                "text-sm font-medium truncate",
-                ws.id === currentWorkspace.id && "text-primary"
-              )}>
-                {ws.name}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {ws.pageCount} pages
-              </span>
-            </span>
-            {ws.id === currentWorkspace.id && (
-              <icons.check className="size-3.5 shrink-0 text-primary" />
-            )}
-          </button>
-        ))}
+        <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
+          <Avatar className="size-7">
+            <AvatarFallback className="text-xs">{messages.layout.userInitials}</AvatarFallback>
+          </Avatar>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium truncate">{messages.layout.userName}</span>
+            <span className="text-[11px] text-muted-foreground truncate">{messages.layout.userEmail}</span>
+          </div>
+        </div>
         <div className="mt-1 border-t border-border/50 pt-1">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <icons.plus className="size-3.5" />
-            Connect workspace
-          </button>
+          <p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+            Workspace
+          </p>
+          {workspaces.map((ws) => (
+            <button
+              key={ws.id}
+              type="button"
+              onClick={() => {
+                setCurrentWorkspace(ws.id)
+                setOpen(false)
+                navigate(ROUTES.pages)
+              }}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
+                ws.id === currentWorkspace.id && "bg-primary/5"
+              )}
+            >
+              <span className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
+                ws.id === currentWorkspace.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {ws.icon}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className={cn(
+                  "text-sm font-medium truncate",
+                  ws.id === currentWorkspace.id && "text-primary"
+                )}>
+                  {ws.name}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {ws.pageCount} pages
+                </span>
+              </span>
+              {ws.id === currentWorkspace.id && (
+                <icons.check className="size-3.5 shrink-0 text-primary" />
+              )}
+            </button>
+          ))}
+          <div className="mt-1 border-t border-border/50 pt-1">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <icons.plus className="size-3.5" />
+              Connect workspace
+            </button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
@@ -237,9 +251,7 @@ export function AppSidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div
-        className="group/logo flex h-14 shrink-0 items-center gap-2.5 px-4"
-      >
+      <div className="group/logo flex h-14 shrink-0 items-center gap-2.5 px-4">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow">
           <icons.brand className="size-4" />
         </div>
@@ -260,10 +272,6 @@ export function AppSidebar() {
         </button>
       </div>
 
-      <div className={cn("px-3 pb-2", collapsed && "px-2")}>
-        <WorkspaceSwitcher collapsed={collapsed} />
-      </div>
-
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
         {navSections.map((section) => (
           <div key={section.label}>
@@ -282,26 +290,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="p-3">
-        <div
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-2.5 py-2.5",
-            collapsed && "justify-center px-0"
-          )}
-        >
-          <Avatar className="size-8 shrink-0">
-            <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-              <span className="text-sm font-semibold">
-                {messages.layout.userName}
-              </span>
-              <span className="truncate text-xs text-sidebar-foreground/60">
-                {messages.layout.userEmail}
-              </span>
-            </span>
-          )}
-        </div>
+        <UserCard collapsed={collapsed} />
       </div>
     </aside>
   )

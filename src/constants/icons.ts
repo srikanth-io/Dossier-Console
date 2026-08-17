@@ -14,6 +14,7 @@ import { ChevronUpIcon } from "@/components/icons/chevron-up"
 import { CircleCheckIcon } from "@/components/icons/circle-check"
 import { ClockIcon } from "@/components/icons/clock"
 import { CopyIcon } from "@/components/icons/copy"
+import { DatabaseIcon } from "@/components/icons/database"
 import { DatabaseBackupIcon } from "@/components/icons/database-backup"
 import { DeleteIcon } from "@/components/icons/delete"
 import { DownloadIcon } from "@/components/icons/download"
@@ -27,10 +28,14 @@ import { FolderPlusIcon } from "@/components/icons/folder-plus"
 import { GripHorizontalIcon } from "@/components/icons/grip-horizontal"
 import { HardDriveDownloadIcon } from "@/components/icons/hard-drive-download"
 import { LayoutGridIcon } from "@/components/icons/layout-grid"
+import { LayoutListIcon } from "@/components/icons/layout-list"
 import { LoaderCircleIcon } from "@/components/icons/loader-circle"
 import { LockKeyholeIcon } from "@/components/icons/lock-keyhole"
 import { LogoutIcon } from "@/components/icons/logout"
 import { MenuIcon } from "@/components/icons/menu"
+import { MessageCircleIcon } from "@/components/icons/message-circle"
+import { MoonIcon } from "@/components/icons/moon"
+import { PlugIcon } from "@/components/icons/plug"
 import { PlayIcon } from "@/components/icons/play"
 import { PlusIcon } from "@/components/icons/plus"
 import { RedoIcon } from "@/components/icons/redo"
@@ -39,8 +44,10 @@ import { SearchIcon } from "@/components/icons/search"
 import { SettingsIcon } from "@/components/icons/settings"
 import { ShieldCheckIcon } from "@/components/icons/shield-check"
 import { SmartphoneNfcIcon } from "@/components/icons/smartphone-nfc"
+import { SourceIcon } from "@/components/icons/source"
 import { SparklesIcon } from "@/components/icons/sparkles"
 import { SquarePenIcon } from "@/components/icons/square-pen"
+import { StarIcon } from "@/components/icons/star"
 import {
   AddPageIcon,
   AlignBottomIcon,
@@ -97,7 +104,6 @@ import { UserIcon } from "@/components/icons/user"
 import { UserPlusIcon } from "@/components/icons/user-plus"
 import { UsersIcon } from "@/components/icons/users"
 import { XIcon } from "@/components/icons/x"
-import { MoonIcon } from "@/components/icons/moon"
 import { SunIcon } from "@/components/icons/sun"
 
 export const icons = {
@@ -125,6 +131,7 @@ export const icons = {
   shield: ShieldCheckIcon,
   lock: LockKeyholeIcon,
   sparkles: SparklesIcon,
+  star: StarIcon,
   menu: MenuIcon,
   close: XIcon,
   apple: SmartphoneNfcIcon,
@@ -202,6 +209,11 @@ export const icons = {
   sendToBack: SendToBackIcon,
   paste: PasteIcon,
   page: PageIcon,
+  database: DatabaseIcon,
+  source: SourceIcon,
+  layoutList: LayoutListIcon,
+  messageCircle: MessageCircleIcon,
+  plug: PlugIcon,
 } as const
 
 export type IconName = keyof typeof icons
