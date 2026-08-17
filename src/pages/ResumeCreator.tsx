@@ -132,30 +132,35 @@ export function ResumeCreator() {
 
     const pageContainer = containerRef.current?.querySelector("[data-preview-page]")
     const availableWidth = (pageContainer?.parentElement?.clientWidth ?? 595) - 32
-    const pageWidth = Math.min(availableWidth, 794)
+    const pageWidth = Math.min(availableWidth, 595)
     const pageHeight = Math.round(pageWidth / A4_ASPECT)
     const contentHeight = pageHeight - A4_PADDING * 2
     setScaledDims({ width: pageWidth, height: pageHeight })
 
-    const lines = previewHtml.split("\n")
-    const pages: string[] = []
-    let current = ""
+    const contentWidth = pageWidth - A4_PADDING * 2
+    el.style.width = `${contentWidth}px`
+    el.style.position = "absolute"
+    el.style.visibility = "hidden"
 
-    el.style.width = `${pageWidth - A4_PADDING * 2}px`
-    for (let i = 0; i < lines.length; i += 1) {
-      const next = current ? current + "\n" + lines[i] : lines[i]
-      el.innerHTML = `<div class="${RESUME_PREVIEW_CLASSES}">${next}</div>`
-      if (el.scrollHeight > contentHeight && current) {
-        pages.push(current)
-        current = lines[i]
+    const blocks = previewHtml.split("\n")
+    const pages: string[] = []
+    let currentPage = ""
+
+    for (let i = 0; i < blocks.length; i += 1) {
+      const candidate = currentPage ? currentPage + "\n" + blocks[i] : blocks[i]
+      el.innerHTML = `<div class="${RESUME_PREVIEW_CLASSES}">${candidate}</div>`
+
+      if (el.scrollHeight > contentHeight && currentPage) {
+        pages.push(currentPage)
+        currentPage = blocks[i]
       } else {
-        current = next
+        currentPage = candidate
       }
     }
-    if (current) pages.push(current)
-    setPreviewPages(pages.length ? pages : [""])
+    if (currentPage) pages.push(currentPage)
 
-    el.innerHTML = `<div class="${RESUME_PREVIEW_CLASSES}">${previewHtml}</div>`
+    setPreviewPages(pages.length ? pages : [""])
+    el.innerHTML = ""
   }, [previewHtml, source])
 
   const focusSection = useCallback((index: number, line: number) => {
@@ -447,14 +452,15 @@ export function ResumeCreator() {
               {messages.resume.preview}
             </span>
           </div>
-          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto p-8" style={{ background: "linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.3))" }}>
+          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto px-8 pt-8 pb-12" style={{ background: "linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.3))" }}>
             <div className="flex flex-col items-center gap-10">
               {source.trim() ? (
                 <>
                   <div
                     ref={previewRef}
-                    className={`${RESUME_PREVIEW_CLASSES} sr-only`}
+                    className={RESUME_PREVIEW_CLASSES}
                     aria-hidden
+                    style={{ position: "absolute", visibility: "hidden", pointerEvents: "none" }}
                   />
                   {previewPages.map((pageHtml, i) => (
                     <div key={i} className="flex flex-col items-center gap-2">
@@ -463,7 +469,7 @@ export function ResumeCreator() {
                       </span>
                       <div
                         data-preview-page
-                        className="shrink-0 rounded-sm"
+                        className="shrink-0 rounded-xl"
                         style={{
                           width: `${scaledDims.width}px`,
                           height: `${scaledDims.height}px`,
@@ -482,7 +488,7 @@ export function ResumeCreator() {
                   ))}
                 </>
               ) : (
-                <div className="shrink-0 rounded-sm" style={{ width: `${scaledDims.width}px`, height: `${scaledDims.height}px`, padding: `${A4_PADDING}px`, background: "#fefefe", boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
+                <div className="shrink-0 rounded-xl" style={{ width: `${scaledDims.width}px`, height: `${scaledDims.height}px`, padding: `${A4_PADDING}px`, overflow: "hidden", background: "#fefefe", boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
                   <p className="text-sm text-muted-foreground">
                     {messages.resume.previewEmpty}
                   </p>

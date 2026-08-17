@@ -1,5 +1,5 @@
 export const RESUME_PREVIEW_CLASSES =
-  "resume-preview text-sm text-foreground [&_hr]:my-3 [&_hr]:border-t [&_hr]:border-foreground/15 [&_.hfill]:inline-block [&_.hfill]:w-16 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
+  "resume-preview text-xs leading-tight text-zinc-900 [&_hr]:my-2 [&_hr]:border-t [&_hr]:border-zinc-200 [&_.hfill]:inline-block [&_.hfill]:w-16 [&_a]:text-zinc-900 [&_a]:underline [&_a]:underline-offset-2"
 
 function escapeHtml(value: string): string {
   return value
@@ -218,7 +218,7 @@ export function renderInline(text: string): string {
       const close = text.indexOf("$", i + 1)
       if (close !== -1) {
         flush()
-        html += `<code class="rounded bg-muted px-1 py-0.5 text-xs">${escapeHtml(text.slice(i + 1, close))}</code>`
+        html += `<code class="rounded bg-transparent px-1 py-0.5 text-xs text-zinc-400">${escapeHtml(text.slice(i + 1, close))}</code>`
         i = close + 1
         continue
       }
@@ -250,8 +250,8 @@ function renderBlock(block: Block): string {
   switch (block.kind) {
     case "section":
       return block.starred
-        ? `<h2 class="mt-4 font-semibold text-xs tracking-wide text-muted-foreground uppercase">${renderInline(block.title)}</h2>`
-        : `<h2 class="mt-4 border-b pb-0.5 text-sm font-bold tracking-wide uppercase">${renderInline(block.title)}</h2>`
+        ? `<h2 class="mt-3 font-semibold text-xs tracking-wide text-muted-foreground uppercase">${renderInline(block.title)}</h2>`
+        : `<h2 class="mt-3 border-b pb-0.5 text-sm font-bold tracking-wide uppercase">${renderInline(block.title)}</h2>`
     case "itemize":
     case "enumerate": {
       const tag = block.kind === "itemize" ? "ul" : "ol"
@@ -261,7 +261,7 @@ function renderBlock(block: Block): string {
           return `<li class="${block.kind === "itemize" ? "list-disc" : "list-decimal"} ml-4">${line}</li>`
         })
         .join("")
-      return `<${tag} class="space-y-1 py-1">${items}</${tag}>`
+      return `<${tag} class="space-y-0.5 py-0.5">${items}</${tag}>`
     }
     case "center":
       return `<div class="text-center">${renderInline(block.content)}</div>`
@@ -279,7 +279,7 @@ function renderBlock(block: Block): string {
     case "title":
       return renderInline(block.content)
     case "paragraph":
-      return `<p class="leading-relaxed">${renderInline(block.content)}</p>`
+      return `<p class="leading-snug">${renderInline(block.content)}</p>`
   }
 }
 
