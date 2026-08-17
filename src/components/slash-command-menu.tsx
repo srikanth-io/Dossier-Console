@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 
 type SlashCommandMenuProps = {
   query: string
+  position?: { x: number; y: number } | null
   onSelect: (type: BlockType) => void
   onClose: () => void
 }
@@ -27,7 +28,12 @@ function fuzzyScore(text: string, query: string): number {
   return qi === q.length ? score : 0
 }
 
-export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuProps) {
+export function SlashCommandMenu({
+  query,
+  position,
+  onSelect,
+  onClose,
+}: SlashCommandMenuProps) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -40,8 +46,16 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
       const descScore = fuzzyScore(b.description, q)
       return labelScore > 0 || categoryScore > 0 || descScore > 0
     }).sort((a, b) => {
-      const aScore = Math.max(fuzzyScore(a.label, q), fuzzyScore(a.category, q), fuzzyScore(a.description, q))
-      const bScore = Math.max(fuzzyScore(b.label, q), fuzzyScore(b.category, q), fuzzyScore(b.description, q))
+      const aScore = Math.max(
+        fuzzyScore(a.label, q),
+        fuzzyScore(a.category, q),
+        fuzzyScore(a.description, q)
+      )
+      const bScore = Math.max(
+        fuzzyScore(b.label, q),
+        fuzzyScore(b.category, q),
+        fuzzyScore(b.description, q)
+      )
       return bScore - aScore
     })
   }, [query])
@@ -95,13 +109,28 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
 
   let globalIdx = -1
 
+  const posStyle: React.CSSProperties = position
+    ? {
+        position: "fixed",
+        left: `${Math.min(position.x, window.innerWidth - 320)}px`,
+        top: `${Math.min(position.y, window.innerHeight - 340)}px`,
+      }
+    : {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+      }
+
   return (
     <div
       className="fixed z-50 w-80 overflow-hidden rounded-xl border border-border/60 bg-popover shadow-xl animate-in fade-in slide-in-from-top-2"
-      style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+      style={posStyle}
     >
       <div className="border-b border-border/50 px-3 py-2">
-        <p className="text-xs font-medium text-muted-foreground">Block types</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          Block types
+        </p>
       </div>
       <div ref={listRef} className="max-h-80 overflow-y-auto p-1">
         {categories.map((cat) => (
@@ -128,14 +157,14 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted/50 text-xs font-medium">
                     {item.icon}
                   </span>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">{item.label}</p>
-                    <p className="text-[11px] text-muted-foreground/60 truncate">
+                    <p className="truncate text-[11px] text-muted-foreground/60">
                       {item.description}
                     </p>
                   </div>
                   {item.shortcut && (
-                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/70">
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70">
                       {item.shortcut.trim()}
                     </span>
                   )}

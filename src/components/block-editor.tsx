@@ -9,13 +9,15 @@ import {
 
 import {
   createBlock,
+  detectMarkdownShortcut,
+  getBlockPlaceholder,
   type Block,
   type BlockType,
-  type TextSegment,
 } from "@/lib/blocks"
 import { cn } from "@/lib/utils"
 import { SlashCommandMenu } from "@/components/slash-command-menu"
 import { RichTextToolbar } from "@/components/rich-text-toolbar"
+import { icons } from "@/constants"
 
 type BlockEditorProps = {
   blocks: Block[]
@@ -23,262 +25,383 @@ type BlockEditorProps = {
   className?: string
 }
 
-function segmentsToHtml(segments: TextSegment[]): string {
-  return segments
-    .map((seg) => {
-      let html = escapeHtml(seg.text)
-      for (const s of seg.styles) {
-        if (s.type === "bold") html = `<strong>${html}</strong>`
-        else if (s.type === "italic") html = `<em>${html}</em>`
-        else if (s.type === "underline") html = `<u>${html}</u>`
-        else if (s.type === "strikethrough") html = `<s>${html}</s>`
-        else if (s.type === "code") html = `<code>${html}</code>`
-        else if (s.type === "link") html = `<a href="${escapeHtml(s.value ?? "#")}" class="text-primary underline">${html}</a>`
-      }
-      return html
-    })
-    .join("")
+function caretIsAtStart(el: HTMLElement): boolean {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return false
+  const range = sel.getRangeAt(0)
+  if (!range.collapsed) return false
+
+  const preRange = document.createRange()
+  preRange.selectNodeContents(el)
+  preRange.setEnd(range.startContainer, range.startOffset)
+  return preRange.toString().length === 0
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+function caretIsAtEnd(el: HTMLElement): boolean {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return false
+  const range = sel.getRangeAt(0)
+  if (!range.collapsed) return false
+
+  const postRange = document.createRange()
+  postRange.selectNodeContents(el)
+  postRange.setStart(range.endContainer, range.endOffset)
+  return postRange.toString().length === 0
 }
 
-function htmlToSegments(html: string): TextSegment[] {
-  const tmp = document.createElement("div")
-  tmp.innerHTML = html
-  const segments: TextSegment[] = []
-  function walk(node: Node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent ?? ""
-      if (text) segments.push({ text, styles: [] })
-      return
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return
-    const el = node as HTMLElement
-    const tag = el.tagName.toLowerCase()
-    const childSegments: TextSegment[] = []
-    el.childNodes.forEach(walk)
-    if (childSegments.length === 0 && el.textContent) {
-      childSegments.push({ text: el.textContent, styles: [] })
-    }
-    let styleType: TextSegment["styles"][number]["type"] | null = null
-    if (tag === "strong" || tag === "b") styleType = "bold"
-    else if (tag === "em" || tag === "i") styleType = "italic"
-    else if (tag === "u") styleType = "underline"
-    else if (tag === "s" || tag === "del") styleType = "strikethrough"
-    else if (tag === "code") styleType = "code"
-    else if (tag === "a") {
-      const href = el.getAttribute("href") ?? "#"
-      for (const cs of childSegments) {
-        segments.push({ text: cs.text, styles: [...cs.styles, { type: "link", value: href }] })
-      }
-      return
-    }
-    if (styleType) {
-      for (const cs of childSegments) {
-        segments.push({ text: cs.text, styles: [...cs.styles, { type: styleType }] })
-      }
-    } else {
-      segments.push(...childSegments)
-    }
-  }
-  walk(tmp)
-  if (segments.length === 0) segments.push({ text: "", styles: [] })
-  return segments
+function moveCaretToEnd(el: HTMLElement) {
+  el.focus()
+  const sel = window.getSelection()
+  if (!sel) return
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  range.collapse(false)
+  sel.removeAllRanges()
+  sel.addRange(range)
 }
 
-function getBlockPlaceholder(type: BlockType): string {
-  switch (type) {
-    case "paragraph": return "Type '/' for commands…"
-    case "heading1": return "Heading 1"
-    case "heading2": return "Heading 2"
-    case "heading3": return "Heading 3"
-    case "bulletedList": return "List item"
-    case "numberedList": return "List item"
-    case "todo": return "To-do"
-    case "toggle": return "Toggle"
-    case "quote": return "Quote"
-    case "callout": return "Callout"
-    case "code": return "Code"
-    default: return ""
-  }
+function moveCaretToStart(el: HTMLElement) {
+  el.focus()
+  const sel = window.getSelection()
+  if (!sel) return
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  range.collapse(true)
+  sel.removeAllRanges()
+  sel.addRange(range)
 }
 
-export function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
+function getTextContent(el: HTMLElement): string {
+  return el.textContent ?? ""
+}
+
+function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [slashOpen, setSlashOpen] = useState(false)
   const [slashBlockId, setSlashBlockId] = useState<string | null>(null)
   const [slashQuery, setSlashQuery] = useState("")
+  const [slashPos, setSlashPos] = useState<{ x: number; y: number } | null>(null)
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null)
   const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set())
-  const editorRef = useRef<HTMLDivElement>(null)
   const blockRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
-  const getBlockRef = useCallback((id: string) => (el: HTMLDivElement | null) => {
-    if (el) blockRefs.current.set(id, el)
-    else blockRefs.current.delete(id)
+  const getBlockRef = useCallback(
+    (id: string) => (el: HTMLDivElement | null) => {
+      if (el) blockRefs.current.set(id, el)
+      else blockRefs.current.delete(id)
+    },
+    []
+  )
+
+  const updateBlock = useCallback(
+    (id: string, updates: Partial<Block>) => {
+      onChange(blocks.map((b) => (b.id === id ? { ...b, ...updates } : b)))
+    },
+    [blocks, onChange]
+  )
+
+  const insertBlockAfter = useCallback(
+    (afterId: string, type: BlockType = "paragraph", text = "") => {
+      const newBlock = createBlock(
+        type,
+        text ? [{ text, styles: [] }] : undefined
+      )
+      const idx = blocks.findIndex((b) => b.id === afterId)
+      const next = [...blocks]
+      next.splice(idx + 1, 0, newBlock)
+      onChange(next)
+      requestAnimationFrame(() => {
+        const el = blockRefs.current.get(newBlock.id)
+        if (el) moveCaretToEnd(el)
+      })
+      return newBlock.id
+    },
+    [blocks, onChange]
+  )
+
+  const focusBlock = useCallback((id: string, atEnd = true) => {
+    requestAnimationFrame(() => {
+      const el = blockRefs.current.get(id)
+      if (!el) return
+      if (atEnd) moveCaretToEnd(el)
+      else moveCaretToStart(el)
+    })
   }, [])
 
-  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
-    onChange(blocks.map((b) => (b.id === id ? { ...b, ...updates } : b)))
-  }, [blocks, onChange])
+  const handleInput = useCallback(
+    (id: string, e: React.FormEvent<HTMLDivElement>) => {
+      const el = e.currentTarget
+      const text = getTextContent(el)
 
-  const insertBlockAfter = useCallback((afterId: string, type: BlockType = "paragraph") => {
-    const newBlock = createBlock(type)
-    const idx = blocks.findIndex((b) => b.id === afterId)
-    const next = [...blocks]
-    next.splice(idx + 1, 0, newBlock)
-    onChange(next)
-    requestAnimationFrame(() => {
-      const el = blockRefs.current.get(newBlock.id)
-      el?.focus()
-    })
-  }, [blocks, onChange])
-
-  const removeBlock = useCallback((id: string) => {
-    if (blocks.length <= 1) return
-    const idx = blocks.findIndex((b) => b.id === id)
-    const prev = blocks[idx - 1]
-    const next = blocks.filter((b) => b.id !== id)
-    onChange(next)
-    if (prev) {
-      requestAnimationFrame(() => {
-        const el = blockRefs.current.get(prev.id)
-        el?.focus()
-        const range = document.createRange()
+      if (text.startsWith("/") && !slashOpen) {
         const sel = window.getSelection()
-        if (el && sel) {
-          range.selectNodeContents(el)
-          range.collapse(false)
-          sel.removeAllRanges()
-          sel.addRange(range)
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0)
+          const rect = range.getBoundingClientRect()
+          setSlashPos({ x: rect.left, y: rect.bottom + 4 })
         }
-      })
-    }
-  }, [blocks, onChange])
-
-  const handleInput = useCallback((id: string, e: React.FormEvent<HTMLDivElement>) => {
-    const el = e.currentTarget
-    const html = el.innerHTML
-    const text = el.textContent ?? ""
-
-    if (text.startsWith("/") && !slashOpen) {
-      setSlashOpen(true)
-      setSlashBlockId(id)
-      setSlashQuery(text.slice(1))
-      return
-    }
-    if (slashOpen && slashBlockId === id) {
-      setSlashQuery(text.startsWith("/") ? text.slice(1) : "")
-      if (!text.startsWith("/")) {
-        setSlashOpen(false)
+        setSlashOpen(true)
+        setSlashBlockId(id)
+        setSlashQuery(text.slice(1))
+        return
       }
-    }
 
-    const segments = htmlToSegments(html)
-    updateBlock(id, { content: segments })
-  }, [updateBlock, slashOpen, slashBlockId])
+      if (slashOpen && slashBlockId === id) {
+        if (text.startsWith("/")) {
+          setSlashQuery(text.slice(1))
+        } else {
+          setSlashOpen(false)
+          setSlashBlockId(null)
+        }
+      }
+    },
+    [slashOpen, slashBlockId]
+  )
 
-  const handleSlashSelect = useCallback((type: BlockType) => {
-    if (!slashBlockId) return
-    updateBlock(slashBlockId, {
-      type,
-      content: [{ text: "", styles: [] }],
-    })
+  const handleSlashSelect = useCallback(
+    (type: BlockType) => {
+      if (!slashBlockId) return
+      const el = blockRefs.current.get(slashBlockId)
+      if (el) el.textContent = ""
+      updateBlock(slashBlockId, {
+        type,
+        content: [{ text: "", styles: [] }],
+      })
+      setSlashOpen(false)
+      setSlashBlockId(null)
+      setSlashPos(null)
+      focusBlock(slashBlockId)
+    },
+    [slashBlockId, updateBlock, focusBlock]
+  )
+
+  const handleSlashClose = useCallback(() => {
     setSlashOpen(false)
     setSlashBlockId(null)
-    requestAnimationFrame(() => {
-      const el = blockRefs.current.get(slashBlockId)
-      if (el) {
-        el.focus()
-        const range = document.createRange()
-        const sel = window.getSelection()
-        range.selectNodeContents(el)
-        range.collapse(false)
-        sel?.removeAllRanges()
-        sel?.addRange(range)
+    setSlashPos(null)
+    if (slashBlockId) focusBlock(slashBlockId)
+  }, [slashBlockId, focusBlock])
+
+  const handleBlockBlur = useCallback(
+    (id: string, e: React.FocusEvent<HTMLDivElement>) => {
+      const el = e.currentTarget
+      const text = getTextContent(el)
+      const block = blocks.find((b) => b.id === id)
+      if (block && text !== (block.content[0]?.text ?? "")) {
+        updateBlock(id, { content: [{ text, styles: [] }] })
       }
-    })
-  }, [slashBlockId, updateBlock])
+    },
+    [blocks, updateBlock]
+  )
 
-  const handleKeyDown = useCallback((id: string, e: KeyboardEvent<HTMLDivElement>) => {
-    const block = blocks.find((b) => b.id === id)
-    if (!block) return
+  const handleKeyDown = useCallback(
+    (id: string, e: KeyboardEvent<HTMLDivElement>) => {
+      const block = blocks.find((b) => b.id === id)
+      if (!block) return
+      const el = blockRefs.current.get(id)
+      if (!el) return
 
-    if (e.key === "Enter" && !e.shiftKey) {
-      if (slashOpen) return
-      e.preventDefault()
-      if (block.type === "bulletedList" || block.type === "numberedList" || block.type === "todo") {
-        const text = block.content.map((s) => s.text).join("")
-        if (!text) {
-          updateBlock(id, { type: "paragraph", content: [{ text: "", styles: [] }] })
+      if (e.key === "Escape" && slashOpen) {
+        e.preventDefault()
+        setSlashOpen(false)
+        setSlashBlockId(null)
+        return
+      }
+
+      if (e.key === "Enter" && !e.shiftKey) {
+        if (slashOpen) return
+        e.preventDefault()
+
+        const text = getTextContent(el)
+
+        if (block.type === "code") {
+          document.execCommand("insertText", false, "\n")
           return
         }
-        insertBlockAfter(id, block.type)
-      } else {
-        insertBlockAfter(id)
-      }
-    }
 
-    if (e.key === "Backspace") {
-      const el = blockRefs.current.get(id)
-      if (el) {
-        const sel = window.getSelection()
-        if (sel && sel.isCollapsed) {
-          const range = sel.getRangeAt(0)
-          if (range.startOffset === 0 && el.textContent === "") {
-            e.preventDefault()
-            if (block.type !== "paragraph") {
-              updateBlock(id, { type: "paragraph" })
-            } else {
-              removeBlock(id)
-            }
-          } else if (range.startOffset === 0 && block.type !== "paragraph") {
-            e.preventDefault()
-            updateBlock(id, { type: "paragraph" })
+        if (
+          block.type === "bulletedList" ||
+          block.type === "numberedList" ||
+          block.type === "todo"
+        ) {
+          if (!text) {
+            updateBlock(id, {
+              type: "paragraph",
+              content: [{ text: "", styles: [] }],
+            })
+            el.textContent = ""
+            return
+          }
+          insertBlockAfter(id, block.type)
+        } else {
+          const sel = window.getSelection()
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0)
+            const postRange = document.createRange()
+            postRange.selectNodeContents(el)
+            postRange.setStart(range.endContainer, range.endOffset)
+            const remaining = postRange.toString()
+
+            const preRange = document.createRange()
+            preRange.selectNodeContents(el)
+            preRange.setEnd(range.startContainer, range.startOffset)
+            const beforeText = preRange.toString()
+
+            postRange.deleteContents()
+            insertBlockAfter(id, "paragraph", remaining)
+            updateBlock(id, { content: [{ text: beforeText, styles: [] }] })
+          } else {
+            insertBlockAfter(id)
           }
         }
       }
-    }
 
-    if (e.key === "ArrowUp") {
-      const idx = blocks.findIndex((b) => b.id === id)
-      if (idx > 0) {
-        const prev = blocks[idx - 1]
-        blockRefs.current.get(prev.id)?.focus()
+      if (e.key === "Backspace" && !e.shiftKey) {
+        const sel = window.getSelection()
+        if (sel && sel.isCollapsed && caretIsAtStart(el)) {
+          e.preventDefault()
+          if (block.type !== "paragraph") {
+            updateBlock(id, {
+              type: "paragraph",
+              content: [{ text: getTextContent(el), styles: [] }],
+            })
+            el.setAttribute("data-just-type-changed", "true")
+          } else {
+            const idx = blocks.findIndex((b) => b.id === id)
+            if (idx > 0) {
+              const prev = blocks[idx - 1]
+              const prevText = prev.content.map((s) => s.text).join("")
+              const curText = getTextContent(el)
+              updateBlock(prev.id, {
+                content: [{ text: prevText + curText, styles: [] }],
+              })
+              const prevEl = blockRefs.current.get(prev.id)
+              if (prevEl) {
+                prevEl.textContent = prevText + curText
+                const next = blocks.filter((b) => b.id !== id)
+                onChange(next)
+                requestAnimationFrame(() => {
+                  if (prevEl) {
+                    prevEl.focus()
+                    const range = document.createRange()
+                    const newSel = window.getSelection()
+                    const textNode = prevEl.firstChild ?? prevEl
+                    range.setStart(textNode, prevText.length)
+                    range.collapse(true)
+                    newSel?.removeAllRanges()
+                    newSel?.addRange(range)
+                  }
+                })
+              }
+            }
+          }
+        }
       }
-    }
 
-    if (e.key === "ArrowDown") {
-      const idx = blocks.findIndex((b) => b.id === id)
-      if (idx < blocks.length - 1) {
-        const next = blocks[idx + 1]
-        blockRefs.current.get(next.id)?.focus()
+      if (e.key === "Delete" && !e.shiftKey) {
+        const sel = window.getSelection()
+        if (sel && sel.isCollapsed && caretIsAtEnd(el)) {
+          e.preventDefault()
+          const idx = blocks.findIndex((b) => b.id === id)
+          if (idx < blocks.length - 1) {
+            const next = blocks[idx + 1]
+            const curText = getTextContent(el)
+            const nextText = next.content.map((s) => s.text).join("")
+            updateBlock(id, {
+              content: [{ text: curText + nextText, styles: [] }],
+            })
+            el.textContent = curText + nextText
+            onChange(blocks.filter((b) => b.id !== next.id))
+            requestAnimationFrame(() => {
+              el.focus()
+              const range = document.createRange()
+              const newSel = window.getSelection()
+              const textNode = el.firstChild ?? el
+              range.setStart(textNode, curText.length)
+              range.collapse(true)
+              newSel?.removeAllRanges()
+              newSel?.addRange(range)
+            })
+          }
+        }
       }
-    }
 
-    if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-      e.preventDefault()
-      document.execCommand("bold")
-    }
-    if ((e.metaKey || e.ctrlKey) && e.key === "i") {
-      e.preventDefault()
-      document.execCommand("italic")
-    }
-    if ((e.metaKey || e.ctrlKey) && e.key === "u") {
-      e.preventDefault()
-      document.execCommand("underline")
-    }
-    if ((e.metaKey || e.ctrlKey) && e.key === "e") {
-      e.preventDefault()
-      document.execCommand("strikeThrough")
-    }
-  }, [blocks, slashOpen, insertBlockAfter, updateBlock, removeBlock])
+      if (e.key === "ArrowUp") {
+        const sel = window.getSelection()
+        if (
+          sel &&
+          sel.isCollapsed &&
+          caretIsAtStart(el)
+        ) {
+          e.preventDefault()
+          const idx = blocks.findIndex((b) => b.id === id)
+          if (idx > 0) {
+            focusBlock(blocks[idx - 1].id, true)
+          }
+        }
+      }
+
+      if (e.key === "ArrowDown") {
+        const sel = window.getSelection()
+        if (
+          sel &&
+          sel.isCollapsed &&
+          caretIsAtEnd(el)
+        ) {
+          e.preventDefault()
+          const idx = blocks.findIndex((b) => b.id === id)
+          if (idx < blocks.length - 1) {
+            focusBlock(blocks[idx + 1].id, false)
+          }
+        }
+      }
+
+      if (e.key === " " && !slashOpen) {
+        const text = getTextContent(el)
+        const match = detectMarkdownShortcut(text)
+        if (match) {
+          e.preventDefault()
+          el.textContent = ""
+          updateBlock(id, {
+            type: match.type,
+            content: [{ text: text.slice(match.prefixLength), styles: [] }],
+          })
+          requestAnimationFrame(() => {
+            if (match.type === "code") {
+              el.textContent = ""
+            }
+            moveCaretToEnd(el)
+          })
+        }
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault()
+        document.execCommand("bold")
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "i") {
+        e.preventDefault()
+        document.execCommand("italic")
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "u") {
+        e.preventDefault()
+        document.execCommand("underline")
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+        e.preventDefault()
+        document.execCommand("strikeThrough")
+      }
+    },
+    [
+      blocks,
+      slashOpen,
+      insertBlockAfter,
+      updateBlock,
+      focusBlock,
+      onChange,
+    ]
+  )
 
   const handlePaste = useCallback((_id: string, e: ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -298,16 +421,28 @@ export function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
       return
     }
     const range = sel.getRangeAt(0)
+    if (!editorRef.current?.contains(range.commonAncestorContainer)) {
+      setToolbarPos(null)
+      setActiveFormats(new Set())
+      return
+    }
     const rect = range.getBoundingClientRect()
+    if (rect.width === 0 && rect.height === 0) {
+      setToolbarPos(null)
+      return
+    }
     setToolbarPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
 
     const formats = new Set<string>()
     if (document.queryCommandState("bold")) formats.add("bold")
     if (document.queryCommandState("italic")) formats.add("italic")
     if (document.queryCommandState("underline")) formats.add("underline")
-    if (document.queryCommandState("strikeThrough")) formats.add("strikethrough")
+    if (document.queryCommandState("strikeThrough"))
+      formats.add("strikethrough")
     setActiveFormats(formats)
   }, [])
+
+  const editorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     document.addEventListener("selectionchange", handleSelectionChange)
@@ -324,6 +459,16 @@ export function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
     }
   }, [])
 
+  const handleTodoToggle = useCallback(
+    (id: string) => {
+      const block = blocks.find((b) => b.id === id)
+      if (block) {
+        updateBlock(id, { checked: !block.checked })
+      }
+    },
+    [blocks, updateBlock]
+  )
+
   return (
     <div className={cn("relative", className)}>
       {toolbarPos && (
@@ -338,32 +483,39 @@ export function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
       {slashOpen && slashBlockId && (
         <SlashCommandMenu
           query={slashQuery}
+          position={slashPos}
           onSelect={handleSlashSelect}
-          onClose={() => {
-            setSlashOpen(false)
-            setSlashBlockId(null)
-          }}
+          onClose={handleSlashClose}
         />
       )}
 
       <div ref={editorRef} className="space-y-0.5">
         {blocks.map((block) => {
           const isFocused = focusedId === block.id
+          const isHovered = hoveredId === block.id
           const placeholder = getBlockPlaceholder(block.type)
 
           if (block.type === "divider") {
             return (
               <div
                 key={block.id}
-                ref={getBlockRef(block.id)}
-                className="py-2"
-                contentEditable
-                suppressContentEditableWarning
-                onFocus={() => handleFocus(block.id)}
-                onKeyDown={(e) => handleKeyDown(block.id, e)}
-                data-block-id={block.id}
+                className="group relative flex items-center py-3"
+                onMouseEnter={() => setHoveredId(block.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
-                <hr className="border-border/60" />
+                <div className="absolute -left-7 top-1/2 flex -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    className="flex size-6 items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground"
+                    onClick={() => {
+                      updateBlock(block.id, { type: "paragraph" })
+                      focusBlock(block.id)
+                    }}
+                  >
+                    <icons.moreVertical className="size-3.5" />
+                  </button>
+                </div>
+                <hr className="flex-1 border-border/60" />
               </div>
             )
           }
@@ -371,37 +523,112 @@ export function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
           return (
             <div
               key={block.id}
-              ref={getBlockRef(block.id)}
-              className={cn(
-                "group relative min-h-[1.5em] rounded px-1 py-0.5 outline-none transition-colors",
-                "focus:bg-muted/30",
-                block.type === "heading1" && "py-2 font-heading text-2xl font-bold",
-                block.type === "heading2" && "py-1.5 font-heading text-xl font-semibold",
-                block.type === "heading3" && "py-1 font-heading text-lg font-medium",
-                block.type === "quote" && "border-l-4 border-primary/40 pl-4 text-muted-foreground italic",
-                block.type === "callout" && "rounded-lg border border-border/50 bg-muted/30 p-3",
-                block.type === "code" && "rounded-lg bg-muted/50 p-3 font-mono text-sm",
-                (block.type === "bulletedList" || block.type === "numberedList") && "pl-6",
-                block.type === "todo" && "flex items-start gap-2",
-                isFocused && "bg-muted/30"
+              className="group relative flex items-start"
+              onMouseEnter={() => setHoveredId(block.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <div
+                className={cn(
+                  "absolute -left-7 top-0.5 flex gap-0.5 transition-opacity",
+                  isHovered || isFocused ? "opacity-100" : "opacity-0"
+                )}
+              >
+                <button
+                  type="button"
+                  className="flex size-6 items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground"
+                  title="Add block below"
+                  onClick={() => {
+                    const newId = insertBlockAfter(block.id)
+                    focusBlock(newId)
+                  }}
+                >
+                  <icons.plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="flex size-6 items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground"
+                  title="Drag to reorder"
+                >
+                  <icons.moreVertical className="size-3.5" />
+                </button>
+              </div>
+
+              {block.type === "bulletedList" && (
+                <span className="mt-[5px] mr-1.5 flex size-5 shrink-0 items-center justify-center text-sm text-muted-foreground select-none">
+                  •
+                </span>
               )}
-              contentEditable
-              suppressContentEditableWarning
-              data-block-id={block.id}
-              onInput={(e) => handleInput(block.id, e)}
-              onKeyDown={(e) => handleKeyDown(block.id, e)}
-              onPaste={(e) => handlePaste(block.id, e)}
-              onFocus={() => handleFocus(block.id)}
-              dangerouslySetInnerHTML={{
-                __html: segmentsToHtml(block.content),
-              }}
-              data-placeholder={placeholder}
-              role="textbox"
-              aria-label={`${block.type} block`}
-            />
+
+              {block.type === "numberedList" && (
+                <span className="mt-[3px] mr-1.5 flex size-5 shrink-0 items-center justify-center text-sm font-medium text-muted-foreground select-none">
+                  {blocks
+                    .filter((b) => b.type === "numberedList")
+                    .indexOf(block) + 1}
+                  .
+                </span>
+              )}
+
+              {block.type === "todo" && (
+                <button
+                  type="button"
+                  className={cn(
+                    "mt-[5px] mr-1.5 flex size-[18px] shrink-0 items-center justify-center rounded border-2 transition-colors",
+                    block.checked
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-muted-foreground/40 hover:border-muted-foreground/60"
+                  )}
+                  onClick={() => handleTodoToggle(block.id)}
+                >
+                  {block.checked && (
+                    <svg className="size-3" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M10 3L4.5 8.5L2 6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              )}
+
+              <div
+                ref={getBlockRef(block.id)}
+                className={cn(
+                  "min-h-[1.5em] flex-1 rounded px-1 py-0.5 outline-none transition-colors empty:before:pointer-events-none empty:before:text-muted-foreground/40 empty:before:content-[attr(data-placeholder)]",
+                  block.type === "heading1" &&
+                    "py-2 font-heading text-2xl font-bold",
+                  block.type === "heading2" &&
+                    "py-1.5 font-heading text-xl font-semibold",
+                  block.type === "heading3" &&
+                    "py-1 font-heading text-lg font-medium",
+                  block.type === "quote" &&
+                    "border-l-4 border-primary/40 pl-4 text-muted-foreground italic",
+                  block.type === "callout" &&
+                    "rounded-lg border border-border/50 bg-muted/30 p-3",
+                  block.type === "code" &&
+                    "rounded-lg bg-muted/50 p-3 font-mono text-sm whitespace-pre",
+                  isFocused && "bg-muted/30"
+                )}
+                contentEditable
+                suppressContentEditableWarning
+                data-block-id={block.id}
+                data-placeholder={placeholder}
+                onInput={(e) => handleInput(block.id, e)}
+                onKeyDown={(e) => handleKeyDown(block.id, e)}
+                onPaste={(e) => handlePaste(block.id, e)}
+                onFocus={() => handleFocus(block.id)}
+                onBlur={(e) => handleBlockBlur(block.id, e)}
+                role="textbox"
+                aria-label={`${block.type} block`}
+              />
+            </div>
           )
         })}
       </div>
     </div>
   )
 }
+
+export { BlockEditor }
