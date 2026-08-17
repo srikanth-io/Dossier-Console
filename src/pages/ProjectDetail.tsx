@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Card,
   CardContent,
@@ -13,6 +14,11 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -31,6 +37,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { TimePicker } from "@/components/time-picker"
 import { icons, messages, ROUTES } from "@/constants"
 import { projects, timeEntries } from "@/data/projects"
 
@@ -68,7 +75,8 @@ export function ProjectDetail() {
     { id: "1", task: "Development", description: "", startTime: "09:30", endTime: "12:00", breakMinutes: 0, hours: 2.5, priority: "high" },
   ])
   const [remarks, setRemarks] = useState("")
-  const [selectedDate, setSelectedDate] = useState("2026-08-17")
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date("2026-08-17"))
+  const [dateOpen, setDateOpen] = useState(false)
 
   if (!project) {
     return (
@@ -269,14 +277,35 @@ export function ProjectDetail() {
             <TabsContent value="timesheet" className="space-y-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="ts-date">{messages.projects.timesheet.date}</Label>
-                  <Input
-                    id="ts-date"
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-40"
-                  />
+                  <Label>{messages.projects.timesheet.date}</Label>
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-[200px] justify-start text-left font-normal"
+                      >
+                        <icons.pendingReviews className="mr-2 size-4" />
+                        {selectedDate.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(day) => {
+                          if (day) {
+                            setSelectedDate(day)
+                            setDateOpen(false)
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -353,18 +382,16 @@ export function ProjectDetail() {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.startTime}</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={task.startTime}
-                          onChange={(e) => updateTask(task.id, "startTime", e.target.value)}
+                          onChange={(v) => updateTask(task.id, "startTime", v)}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.endTime}</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={task.endTime}
-                          onChange={(e) => updateTask(task.id, "endTime", e.target.value)}
+                          onChange={(v) => updateTask(task.id, "endTime", v)}
                         />
                       </div>
                       <div className="space-y-1.5">
