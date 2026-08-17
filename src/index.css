@@ -386,3 +386,29 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Block editor placeholder */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--muted-foreground) / 0.4);
+  pointer-events: none;
+}
+
+[contenteditable][data-placeholder]:empty:focus::before {
+  content: attr(data-placeholder);
+}
+
+/* Block editor focus ring removal */
+[contenteditable]:focus {
+  outline: none;
+}
+
+/* Number inputs in database */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
