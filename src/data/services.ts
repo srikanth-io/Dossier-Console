@@ -1,0 +1,131 @@
+export type ServiceStatus = "operational" | "degraded" | "down" | "stopped"
+
+export type ServiceEntry = {
+  id: string
+  name: string
+  description: string
+  status: ServiceStatus
+  uptime: number
+  port: number
+  version: string
+  responseTime: number
+  lastChecked: string
+  upSince: string
+  lastRestart: string | null
+  category: "core" | "integration" | "storage" | "security"
+}
+
+export const services: ServiceEntry[] = [
+  {
+    id: "api-gateway",
+    name: "API Gateway",
+    description: "Routes and rate-limits all incoming HTTP traffic.",
+    status: "operational",
+    uptime: 99.98,
+    port: 443,
+    version: "3.12.1",
+    responseTime: 42,
+    lastChecked: "2 min ago",
+    upSince: "Aug 01, 2026 — 09:00 AM",
+    lastRestart: "Aug 01, 2026 — 09:00 AM",
+    category: "core",
+  },
+  {
+    id: "database",
+    name: "PostgreSQL Database",
+    description: "Primary relational database for all application data.",
+    status: "operational",
+    uptime: 99.99,
+    port: 5432,
+    version: "16.3",
+    responseTime: 8,
+    lastChecked: "2 min ago",
+    upSince: "Jul 15, 2026 — 06:30 AM",
+    lastRestart: "Jul 15, 2026 — 06:30 AM",
+    category: "core",
+  },
+  {
+    id: "auth-service",
+    name: "Authentication Service",
+    description: "Handles login, MFA, session tokens and OAuth flows.",
+    status: "operational",
+    uptime: 99.97,
+    port: 8443,
+    version: "2.4.0",
+    responseTime: 35,
+    lastChecked: "2 min ago",
+    upSince: "Aug 03, 2026 — 11:00 AM",
+    lastRestart: "Aug 03, 2026 — 11:00 AM",
+    category: "security",
+  },
+  {
+    id: "email-service",
+    name: "Email Service",
+    description: "Sends transactional emails, OTP codes and notification digests.",
+    status: "degraded",
+    uptime: 97.12,
+    port: 587,
+    version: "1.8.2",
+    responseTime: 1240,
+    lastChecked: "2 min ago",
+    upSince: "Aug 14, 2026 — 02:15 PM",
+    lastRestart: "Aug 14, 2026 — 02:15 PM",
+    category: "integration",
+  },
+  {
+    id: "excel-service",
+    name: "Excel Processing",
+    description: "Generates, parses and syncs timesheet Excel workbooks.",
+    status: "operational",
+    uptime: 99.85,
+    port: 9090,
+    version: "1.2.0",
+    responseTime: 120,
+    lastChecked: "2 min ago",
+    upSince: "Aug 10, 2026 — 08:00 AM",
+    lastRestart: "Aug 10, 2026 — 08:00 AM",
+    category: "integration",
+  },
+  {
+    id: "file-storage",
+    name: "File Storage (S3)",
+    description: "Stores uploaded documents, resumes and exported files.",
+    status: "operational",
+    uptime: 100.0,
+    port: 443,
+    version: "—",
+    responseTime: 22,
+    lastChecked: "2 min ago",
+    upSince: "Jun 01, 2026 — 12:00 AM",
+    lastRestart: null,
+    category: "storage",
+  },
+  {
+    id: "search-engine",
+    name: "Search Engine",
+    description: "Full-text search index for documents and dossiers.",
+    status: "down",
+    uptime: 94.5,
+    port: 9200,
+    version: "8.14.0",
+    responseTime: 0,
+    lastChecked: "2 min ago",
+    upSince: "Aug 16, 2026 — 03:45 AM",
+    lastRestart: "Aug 16, 2026 — 03:45 AM",
+    category: "core",
+  },
+  {
+    id: "scheduler",
+    name: "Task Scheduler",
+    description: "Runs cron jobs for daily reminders, archiving and cleanup.",
+    status: "operational",
+    uptime: 99.9,
+    port: 8080,
+    version: "1.0.3",
+    responseTime: 15,
+    lastChecked: "2 min ago",
+    upSince: "Aug 05, 2026 — 10:00 AM",
+    lastRestart: "Aug 05, 2026 — 10:00 AM",
+    category: "core",
+  },
+]

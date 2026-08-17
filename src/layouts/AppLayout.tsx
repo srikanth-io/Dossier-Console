@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 
 import { ROUTES, commonMessages, icons, messages } from "@/constants"
 import { AppSidebar } from "@/components/app-sidebar"
+import { NotificationPanel } from "@/components/notification-panel"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -30,11 +31,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useNotifications } from "@/store/notifications"
 
 export function AppLayout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [signOutOpen, setSignOutOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const { unreadCount } = useNotifications()
 
   const isFullscreen =
     pathname === ROUTES.resumeCreator || pathname === ROUTES.studioEditor
@@ -58,25 +62,31 @@ export function AppLayout() {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={messages.common.notifications}
-                  className="relative"
-                >
-                  <icons.notifications />
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary ring-2 ring-background"
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {messages.common.notifications}
-              </TooltipContent>
-            </Tooltip>
+            <NotificationPanel open={notifOpen} onOpenChange={setNotifOpen}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={messages.notifications.title}
+                    className="relative"
+                  >
+                    <icons.notifications />
+                    {unreadCount > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground ring-2 ring-background"
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {messages.notifications.title}
+                </TooltipContent>
+              </Tooltip>
+            </NotificationPanel>
 
             <ThemeToggle />
 

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table"
 import { APP, departmentLabels, icons, messages } from "@/constants"
 import { devices as deviceList, logs as logList } from "@/data/security"
+import { services as serviceList, type ServiceEntry } from "@/data/services"
 import { cn } from "@/lib/utils"
 
 const THEME_KEY = "dossier-theme"
@@ -45,6 +46,7 @@ type SectionKey =
   | "security"
   | "devices"
   | "logs"
+  | "services"
   | "billing"
   | "dangerZone"
 
@@ -57,6 +59,7 @@ const sections: { key: SectionKey; label: string; icon: (typeof icons)[keyof typ
   { key: "security", label: messages.settings.nav.security, icon: icons.lock },
   { key: "devices", label: messages.settings.nav.devices, icon: icons.apple },
   { key: "logs", label: messages.settings.nav.logs, icon: icons.activity },
+  { key: "services", label: messages.settings.nav.services, icon: icons.activity },
   { key: "billing", label: messages.settings.nav.billing, icon: icons.reports },
   { key: "dangerZone", label: messages.settings.nav.dangerZone, icon: icons.alertCircle },
 ]
@@ -109,6 +112,14 @@ export function Settings() {
   const [mfaPasskey, setMfaPasskey] = useState(false)
   const [mfaEmailOtp, setMfaEmailOtp] = useState(false)
 
+  const [logPage, setLogPage] = useState(1)
+  const [logPageSize, setLogPageSize] = useState(10)
+
+  const [serviceStates, setServiceStates] = useState<Record<string, ServiceEntry>>(
+    () => Object.fromEntries(serviceList.map((s) => [s.id, { ...s }]))
+  )
+  const [restartingService, setRestartingService] = useState<string | null>(null)
+
   const [resetOpen, setResetOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -149,6 +160,45 @@ export function Settings() {
     setNewPassword("")
     setConfirmPassword("")
     toast.success(messages.settings.security.passwordUpdated)
+  }
+
+  const logPageCount = Math.max(1, Math.ceil(logList.length / logPageSize))
+  const safeLogPage = Math.min(logPage, logPageCount)
+  const visibleLogs = logList.slice(
+    (safeLogPage - 1) * logPageSize,
+    safeLogPage * logPageSize
+  )
+
+  useEffect(() => {
+    if (logPage > logPageCount) {
+      setLogPage(logPageCount)
+    }
+  }, [logPage, logPageCount])
+
+  const handleRestartService = (serviceId: string) => {
+    setRestartingService(serviceId)
+    setTimeout(() => {
+      setServiceStates((prev) => ({
+        ...prev,
+        [serviceId]: {
+          ...prev[serviceId],
+          status: "operational",
+          responseTime: Math.floor(Math.random() * 50) + 10,
+          lastChecked: "Just now",
+          lastRestart: new Date().toLocaleString("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          }),
+        },
+      }))
+      const name = serviceList.find((s) => s.id === serviceId)?.name ?? serviceId
+      toast.success(messages.settings.services.restartSuccess(name))
+      setRestartingService(null)
+    }, 2000)
   }
 
   return (
@@ -620,7 +670,7 @@ export function Settings() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {logList.map((log) => (
+                      {visibleLogs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="whitespace-nowrap text-xs tabular-nums">{log.timestamp}</TableCell>
                           <TableCell>
@@ -645,9 +695,176 @@ export function Settings() {
                     </TableBody>
                   </Table>
                 </div>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-foreground/5 pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    {messages.settings.logs.showingRecords(
+                      (safeLogPage - 1) * logPageSize + 1,
+                      Math.min(safeLogPage * logPageSize, logList.length),
+                      logList.length
+                    )}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {messages.settings.logs.pageSize}
+                      </span>
+                      <Select
+                        value={String(logPageSize)}
+                        onValueChange={(value) => {
+                          setLogPageSize(Number(value))
+                          setLogPage(1)
+                        }}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="h-8 w-16"
+                          aria-label={messages.settings.logs.pageSize}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="pr-1 text-xs text-muted-foreground">
+                        {messages.settings.logs.pageOf(safeLogPage, logPageCount)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={safeLogPage <= 1}
+                        aria-label={messages.settings.logs.previousPage}
+                        onClick={() =>
+                          setLogPage((p) => Math.max(1, p - 1))
+                        }
+                      >
+                        <icons.chevronLeft />
+                        {messages.settings.logs.previousPage}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={safeLogPage >= logPageCount}
+                        aria-label={messages.settings.logs.nextPage}
+                        onClick={() =>
+                          setLogPage((p) => Math.min(logPageCount, p + 1))
+                        }
+                      >
+                        {messages.settings.logs.nextPage}
+                        <icons.chevronRight />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
+
+          {active === "services" && (() => {
+            const allServices = Object.values(serviceStates)
+            const degradedCount = allServices.filter((s) => s.status === "degraded").length
+            const downCount = allServices.filter((s) => s.status === "down" || s.status === "stopped").length
+
+            const statusDot = (status: ServiceEntry["status"]) =>
+              status === "operational"
+                ? "bg-emerald-500"
+                : status === "degraded"
+                  ? "bg-amber-500"
+                  : "bg-red-500"
+
+            return (
+              <div className="space-y-6">
+                <Card className="animate-fade-rise">
+                  <CardHeader>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <CardTitle>{messages.settings.services.title}</CardTitle>
+                        <CardDescription>{messages.settings.services.description}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {downCount > 0 && (
+                          <Badge variant="destructive">{messages.settings.services.downServices(downCount)}</Badge>
+                        )}
+                        {degradedCount > 0 && (
+                          <Badge variant="warning">{messages.settings.services.degradedServices(degradedCount)}</Badge>
+                        )}
+                        {downCount === 0 && degradedCount === 0 && (
+                          <Badge variant="success">{messages.settings.services.allOperational}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {allServices.map((service) => (
+                      <div
+                        key={service.id}
+                        className="rounded-xl border border-border/70 p-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${statusDot(service.status)}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">{service.name}</p>
+                                <Badge variant={service.status === "operational" ? "success" : service.status === "degraded" ? "warning" : "destructive"}>
+                                  {service.status === "operational"
+                                    ? messages.settings.services.operational
+                                    : service.status === "degraded"
+                                      ? messages.settings.services.degraded
+                                      : service.status === "down"
+                                        ? messages.settings.services.down
+                                        : messages.settings.services.stopped}
+                                </Badge>
+                              </div>
+                              <p className="mt-0.5 text-xs text-muted-foreground">{service.description}</p>
+                              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+                                <span>{messages.settings.services.uptime}: <span className={`font-semibold ${service.uptime >= 99.9 ? "text-emerald-600 dark:text-emerald-400" : service.uptime >= 97 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>{service.uptime}%</span></span>
+                                <span>{messages.settings.services.responseTime}: <span className="font-medium tabular-nums">{service.responseTime > 0 ? `${service.responseTime} ms` : "—"}</span></span>
+                                <span>{messages.settings.services.version}: <span className="font-medium">{service.version}</span></span>
+                                <span>{messages.settings.services.port}: <span className="font-mono font-medium">{service.port}</span></span>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground/70">
+                                <span>{messages.settings.services.lastChecked}: {service.lastChecked}</span>
+                                <span>{messages.settings.services.upSince}: {service.upSince}</span>
+                                {service.lastRestart && (
+                                  <span>{messages.settings.services.lastRestart}: {service.lastRestart}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={restartingService === service.id || service.status === "stopped"}
+                              onClick={() => handleRestartService(service.id)}
+                            >
+                              {restartingService === service.id ? (
+                                <>
+                                  <icons.spinner className="size-3.5 animate-spin" />
+                                  {messages.settings.services.restarting}
+                                </>
+                              ) : (
+                                <>
+                                  <icons.retry className="size-3.5" />
+                                  {messages.settings.services.restart}
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )
+          })()}
 
           {active === "billing" && (
             <Card className="animate-fade-rise">

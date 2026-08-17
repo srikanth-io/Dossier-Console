@@ -19,6 +19,7 @@ import { Templates } from "@/pages/Templates"
 import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
 import { ResumeLibraryProvider } from "@/store/resumes"
 import { DocumentLibraryProvider } from "@/store/documents"
+import { NotificationsProvider } from "@/store/notifications"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
@@ -44,8 +45,9 @@ function App() {
       <BrowserRouter>
         <TooltipProvider>
           <ResumeLibraryProvider>
-            <DocumentLibraryProvider>
-              <Routes>
+              <DocumentLibraryProvider>
+                <NotificationsProvider>
+                  <Routes>
                 <Route path={ROUTES.landing} element={<Landing />} />
                 <Route path={ROUTES.login} element={<Auth />} />
                 <Route path={ROUTES.register} element={<Auth />} />
@@ -83,8 +85,9 @@ function App() {
                   />
                 </Route>
                 <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
-              </Routes>
-            </DocumentLibraryProvider>
+                  </Routes>
+                </NotificationsProvider>
+              </DocumentLibraryProvider>
           </ResumeLibraryProvider>
         </TooltipProvider>
       </BrowserRouter>
