@@ -43,7 +43,7 @@ export function AppLayout() {
       <AppSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/85 px-6 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 bg-background/60 px-6 backdrop-blur-xl">
           <div className="relative w-full max-w-sm">
             <icons.search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input

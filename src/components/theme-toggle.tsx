@@ -41,45 +41,57 @@ function ThemeToggle({ className }: { className?: string }) {
     }
 
     const rect = btn.getBoundingClientRect()
-    const x = rect.left + rect.width / 2
-    const y = rect.top + rect.height / 2
-    const maxDim = Math.max(window.innerWidth, window.innerHeight) * 2.5
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const maxDim = Math.hypot(window.innerWidth, window.innerHeight) * 2
 
     const overlay = document.createElement("div")
-    overlay.style.cssText = `
-      position:fixed;inset:0;z-index:9999;pointer-events:none;
-      display:flex;align-items:center;justify-content:center;
-    `
+    overlay.style.cssText =
+      "position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden;"
+
     const circle = document.createElement("div")
-    const targetBg = theme === "dark" ? "hsl(40 20% 98%)" : "hsl(230 15% 12%)"
-    circle.style.cssText = `
-      width:0;height:0;border-radius:50%;
-      background:${targetBg};
-      transform:translate(${x - window.innerWidth / 2}px, ${y - window.innerHeight / 2}px);
-      transition:width 0.5s cubic-bezier(0.4,0,0.2,1), height 0.5s cubic-bezier(0.4,0,0.2,1), transform 0.5s cubic-bezier(0.4,0,0.2,1);
-    `
+    const goingDark = theme === "light"
+    const circleColor = goingDark
+      ? "rgba(15, 18, 28, 0.55)"
+      : "rgba(255, 255, 255, 0.55)"
+
+    Object.assign(circle.style, {
+      position: "absolute",
+      left: `${cx}px`,
+      top: `${cy}px`,
+      width: "0px",
+      height: "0px",
+      borderRadius: "50%",
+      background: circleColor,
+      transform: "translate(-50%, -50%)",
+      willChange: "width, height",
+      transition:
+        "width 0.6s cubic-bezier(0.4,0,0.2,1), height 0.6s cubic-bezier(0.4,0,0.2,1)",
+    })
+
     overlay.appendChild(circle)
     document.body.appendChild(overlay)
 
     requestAnimationFrame(() => {
       circle.style.width = `${maxDim}px`
       circle.style.height = `${maxDim}px`
-      circle.style.transform = "translate(0px, 0px)"
     })
 
     setTimeout(() => {
       setTheme((t) => (t === "dark" ? "light" : "dark"))
-    }, 250)
+    }, 180)
 
     setTimeout(() => {
-      circle.style.opacity = "0"
-      circle.style.transition = "opacity 0.3s ease-out"
-    }, 500)
+      Object.assign(circle.style, {
+        opacity: "0",
+        transition: "opacity 0.4s ease-out",
+      })
+    }, 450)
 
     setTimeout(() => {
       overlay.remove()
       setAnimating(false)
-    }, 800)
+    }, 900)
   }
 
   return (
