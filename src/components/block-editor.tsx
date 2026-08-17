@@ -213,47 +213,75 @@ function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
         if (slashOpen) return
         e.preventDefault()
 
-        const text = getTextContent(el)
-
         if (block.type === "code") {
           document.execCommand("insertText", false, "\n")
           return
         }
+
+        const sel = window.getSelection()
+        const hasCaret = sel && sel.rangeCount > 0
+        const range = hasCaret ? sel.getRangeAt(0) : null
 
         if (
           block.type === "bulletedList" ||
           block.type === "numberedList" ||
           block.type === "todo"
         ) {
+          const text = getTextContent(el)
           if (!text) {
-            updateBlock(id, {
-              type: "paragraph",
-              content: [{ text: "", styles: [] }],
-            })
+            onChange(
+              blocks.map((b) =>
+                b.id === id
+                  ? { ...b, type: "paragraph" as BlockType, content: [{ text: "", styles: [] }] }
+                  : b
+              )
+            )
             el.textContent = ""
             return
           }
-          insertBlockAfter(id, block.type)
+          const idx = blocks.findIndex((b) => b.id === id)
+          const newBlock = createBlock(block.type)
+          const next = [...blocks]
+          next.splice(idx + 1, 0, newBlock)
+          onChange(next)
+          requestAnimationFrame(() => {
+            const nel = blockRefs.current.get(newBlock.id)
+            if (nel) moveCaretToEnd(nel)
+          })
+        } else if (range) {
+          const postRange = document.createRange()
+          postRange.selectNodeContents(el)
+          postRange.setStart(range.endContainer, range.endOffset)
+          const remaining = postRange.toString()
+
+          const preRange = document.createRange()
+          preRange.selectNodeContents(el)
+          preRange.setEnd(range.startContainer, range.startOffset)
+          const beforeText = preRange.toString()
+
+          postRange.deleteContents()
+
+          const newBlock = createBlock("paragraph", remaining ? [{ text: remaining, styles: [] }] : undefined)
+          const idx = blocks.findIndex((b) => b.id === id)
+          const next = blocks.map((b) =>
+            b.id === id ? { ...b, content: [{ text: beforeText, styles: [] }] } : b
+          )
+          next.splice(idx + 1, 0, newBlock)
+          onChange(next)
+          requestAnimationFrame(() => {
+            const nel = blockRefs.current.get(newBlock.id)
+            if (nel) moveCaretToEnd(nel)
+          })
         } else {
-          const sel = window.getSelection()
-          if (sel && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0)
-            const postRange = document.createRange()
-            postRange.selectNodeContents(el)
-            postRange.setStart(range.endContainer, range.endOffset)
-            const remaining = postRange.toString()
-
-            const preRange = document.createRange()
-            preRange.selectNodeContents(el)
-            preRange.setEnd(range.startContainer, range.startOffset)
-            const beforeText = preRange.toString()
-
-            postRange.deleteContents()
-            insertBlockAfter(id, "paragraph", remaining)
-            updateBlock(id, { content: [{ text: beforeText, styles: [] }] })
-          } else {
-            insertBlockAfter(id)
-          }
+          const newBlock = createBlock("paragraph")
+          const idx = blocks.findIndex((b) => b.id === id)
+          const next = [...blocks]
+          next.splice(idx + 1, 0, newBlock)
+          onChange(next)
+          requestAnimationFrame(() => {
+            const nel = blockRefs.current.get(newBlock.id)
+            if (nel) moveCaretToEnd(nel)
+          })
         }
       }
 
@@ -262,36 +290,40 @@ function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
         if (sel && sel.isCollapsed && caretIsAtStart(el)) {
           e.preventDefault()
           if (block.type !== "paragraph") {
-            updateBlock(id, {
-              type: "paragraph",
-              content: [{ text: getTextContent(el), styles: [] }],
-            })
-            el.setAttribute("data-just-type-changed", "true")
+            onChange(
+              blocks.map((b) =>
+                b.id === id
+                  ? { ...b, type: "paragraph" as BlockType, content: [{ text: getTextContent(el), styles: [] }] }
+                  : b
+              )
+            )
           } else {
             const idx = blocks.findIndex((b) => b.id === id)
             if (idx > 0) {
               const prev = blocks[idx - 1]
               const prevText = prev.content.map((s) => s.text).join("")
               const curText = getTextContent(el)
-              updateBlock(prev.id, {
-                content: [{ text: prevText + curText, styles: [] }],
-              })
+              const merged = prevText + curText
+              const next = blocks
+                .filter((b) => b.id !== id)
+                .map((b) =>
+                  b.id === prev.id
+                    ? { ...b, content: [{ text: merged, styles: [] }] }
+                    : b
+                )
+              onChange(next)
               const prevEl = blockRefs.current.get(prev.id)
               if (prevEl) {
-                prevEl.textContent = prevText + curText
-                const next = blocks.filter((b) => b.id !== id)
-                onChange(next)
+                prevEl.textContent = merged
                 requestAnimationFrame(() => {
-                  if (prevEl) {
-                    prevEl.focus()
-                    const range = document.createRange()
-                    const newSel = window.getSelection()
-                    const textNode = prevEl.firstChild ?? prevEl
-                    range.setStart(textNode, prevText.length)
-                    range.collapse(true)
-                    newSel?.removeAllRanges()
-                    newSel?.addRange(range)
-                  }
+                  prevEl.focus()
+                  const range = document.createRange()
+                  const newSel = window.getSelection()
+                  const textNode = prevEl.firstChild ?? prevEl
+                  range.setStart(textNode, prevText.length)
+                  range.collapse(true)
+                  newSel?.removeAllRanges()
+                  newSel?.addRange(range)
                 })
               }
             }
@@ -308,11 +340,16 @@ function BlockEditor({ blocks, onChange, className }: BlockEditorProps) {
             const next = blocks[idx + 1]
             const curText = getTextContent(el)
             const nextText = next.content.map((s) => s.text).join("")
-            updateBlock(id, {
-              content: [{ text: curText + nextText, styles: [] }],
-            })
-            el.textContent = curText + nextText
-            onChange(blocks.filter((b) => b.id !== next.id))
+            const merged = curText + nextText
+            const updated = blocks
+              .filter((b) => b.id !== next.id)
+              .map((b) =>
+                b.id === id
+                  ? { ...b, content: [{ text: merged, styles: [] }] }
+                  : b
+              )
+            onChange(updated)
+            el.textContent = merged
             requestAnimationFrame(() => {
               el.focus()
               const range = document.createRange()
