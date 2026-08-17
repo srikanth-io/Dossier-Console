@@ -31,67 +31,81 @@ function ThemeToggle({ className }: { className?: string }) {
 
   const toggle = () => {
     if (animating) return
-    setAnimating(true)
-
     const btn = buttonRef.current
     if (!btn) {
       setTheme((t) => (t === "dark" ? "light" : "dark"))
-      setAnimating(false)
       return
     }
+
+    setAnimating(true)
 
     const rect = btn.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
-    const maxDim = Math.hypot(window.innerWidth, window.innerHeight) * 2
+    const radius = Math.hypot(
+      Math.max(cx, window.innerWidth - cx),
+      Math.max(cy, window.innerHeight - cy)
+    )
+    const svgNS = "http://www.w3.org/2000/svg"
+    const svg = document.createElementNS(svgNS, "svg")
+    svg.setAttribute("width", "100%")
+    svg.setAttribute("height", "100%")
+    svg.style.cssText =
+      "position:fixed;inset:0;z-index:9999;pointer-events:none;"
 
-    const overlay = document.createElement("div")
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden;"
+    const defs = document.createElementNS(svgNS, "defs")
+    const clipPath = document.createElementNS(svgNS, "clipPath")
+    clipPath.id = "theme-clip"
+    const circle = document.createElementNS(svgNS, "circle")
+    circle.setAttribute("cx", String(cx))
+    circle.setAttribute("cy", String(cy))
+    circle.setAttribute("r", "0")
+    clipPath.appendChild(circle)
+    defs.appendChild(clipPath)
+    svg.appendChild(defs)
 
-    const circle = document.createElement("div")
+    const rect2 = document.createElementNS(svgNS, "rect")
+    rect2.setAttribute("x", "0")
+    rect2.setAttribute("y", "0")
+    rect2.setAttribute("width", "100%")
+    rect2.setAttribute("height", "100%")
+    rect2.setAttribute("clip-path", "url(#theme-clip)")
+
     const goingDark = theme === "light"
-    const circleColor = goingDark
-      ? "rgba(15, 18, 28, 0.55)"
-      : "rgba(255, 255, 255, 0.55)"
+    rect2.setAttribute(
+      "fill",
+      goingDark ? "rgb(15,18,28)" : "rgb(255,255,255)"
+    )
 
-    Object.assign(circle.style, {
-      position: "absolute",
-      left: `${cx}px`,
-      top: `${cy}px`,
-      width: "0px",
-      height: "0px",
-      borderRadius: "50%",
-      background: circleColor,
-      transform: "translate(-50%, -50%)",
-      willChange: "width, height",
-      transition:
-        "width 0.6s cubic-bezier(0.4,0,0.2,1), height 0.6s cubic-bezier(0.4,0,0.2,1)",
-    })
+    svg.appendChild(rect2)
+    document.body.appendChild(svg)
 
-    overlay.appendChild(circle)
-    document.body.appendChild(overlay)
+    const duration = 420
+    const startTime = performance.now()
 
-    requestAnimationFrame(() => {
-      circle.style.width = `${maxDim}px`
-      circle.style.height = `${maxDim}px`
-    })
+    const animate = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
 
-    setTimeout(() => {
-      setTheme((t) => (t === "dark" ? "light" : "dark"))
-    }, 180)
+      circle.setAttribute("r", String(eased * radius))
 
-    setTimeout(() => {
-      Object.assign(circle.style, {
-        opacity: "0",
-        transition: "opacity 0.4s ease-out",
-      })
-    }, 450)
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        setTheme((t) => (t === "dark" ? "light" : "dark"))
 
-    setTimeout(() => {
-      overlay.remove()
-      setAnimating(false)
-    }, 900)
+        svg.style.transition = "opacity 0.35s ease-out"
+        svg.style.opacity = "0"
+
+        setTimeout(() => {
+          svg.remove()
+          setAnimating(false)
+        }, 380)
+      }
+    }
+
+    requestAnimationFrame(animate)
   }
 
   return (
