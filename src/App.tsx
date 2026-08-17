@@ -10,6 +10,8 @@ import { Auth } from "@/pages/Auth"
 import { Dashboard } from "@/pages/Dashboard"
 import { Dossiers } from "@/pages/Dossiers"
 import { Landing } from "@/pages/Landing"
+import { ProjectDetail } from "@/pages/ProjectDetail"
+import { Projects } from "@/pages/Projects"
 import { Settings } from "@/pages/Settings"
 import { Templates } from "@/pages/Templates"
 import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
@@ -47,6 +49,8 @@ function App() {
                 <Route path={ROUTES.register} element={<Auth />} />
                 <Route path={ROUTES.app} element={<AppLayout />}>
                   <Route index element={<Dashboard />} />
+                  <Route path="projects" element={<Projects />} />
+                  <Route path="projects/:id" element={<ProjectDetail />} />
                   <Route path="documents" element={<Dossiers />} />
                   <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
                   <Route path="dossiers/templates" element={<Templates />} />

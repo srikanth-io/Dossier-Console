@@ -28,6 +28,11 @@ const navSections: {
     label: messages.nav.sections.workspace,
     items: [
       {
+        label: messages.nav.items.projects,
+        to: ROUTES.projects,
+        icon: "dossiers",
+      },
+      {
         label: messages.nav.items.templates,
         to: ROUTES.templates,
         icon: "templates",
@@ -36,11 +41,6 @@ const navSections: {
         label: messages.nav.items.documents,
         to: ROUTES.documents,
         icon: "file",
-      },
-      {
-        label: messages.nav.items.dossiers,
-        to: ROUTES.resumeCreator,
-        icon: "dossiers",
       },
     ],
   },
@@ -113,6 +113,7 @@ export function AppSidebar() {
             </ul>
           </div>
         ))}
+
       </nav>
 
       <div className="p-3">

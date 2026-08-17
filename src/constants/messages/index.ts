@@ -5,6 +5,7 @@ import { errorCodes, errorMessages } from "@/constants/messages/errors"
 import { landing } from "@/constants/messages/landing"
 import { layout, nav } from "@/constants/messages/layout"
 import { login } from "@/constants/messages/login"
+import { projects } from "@/constants/messages/projects"
 import { resume } from "@/constants/messages/resume"
 import { settings } from "@/constants/messages/settings"
 import { studio } from "@/constants/messages/studio"
@@ -18,6 +19,7 @@ export const messages = {
   nav,
   dashboard,
   dossiers,
+  projects,
   settings,
   resume,
   templates,

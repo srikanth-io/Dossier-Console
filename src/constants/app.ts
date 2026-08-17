@@ -21,6 +21,8 @@ export const ROUTES = {
   resumeCreator: "/app/dossiers/creator",
   dossiers: "/app/dossiers",
   settings: "/app/settings",
+  projects: "/app/projects",
+  projectDetail: "/app/projects/:id",
 } as const
 
 export type RouteName = keyof typeof ROUTES
