@@ -215,6 +215,7 @@
 
   html {
     scroll-behavior: smooth;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   body {
@@ -318,6 +319,17 @@
   }
   to {
     background-position: 200% 0;
+  }
+}
+
+@keyframes theme-icon-spin {
+  from {
+    transform: rotate(-90deg) scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
   }
 }
 
