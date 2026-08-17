@@ -372,9 +372,12 @@ export function ProjectDetail() {
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.totalHours}</Label>
                         <Input
-                          value={`${task.hours}h`}
-                          readOnly
-                          className="font-semibold tabular-nums bg-muted/40"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={task.hours}
+                          onChange={(e) => updateTask(task.id, "hours", Number(e.target.value))}
+                          className="font-semibold tabular-nums"
                         />
                       </div>
                     </div>
