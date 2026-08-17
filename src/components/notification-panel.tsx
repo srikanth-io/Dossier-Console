@@ -52,7 +52,7 @@ export function NotificationPanel({ open, onOpenChange, children }: Notification
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[420px] max-h-[520px] p-0 overflow-hidden glass"
+        className="w-[420px] max-h-[520px] p-0 overflow-hidden"
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
