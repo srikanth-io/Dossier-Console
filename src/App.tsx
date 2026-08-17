@@ -12,6 +12,8 @@ import { Dossiers } from "@/pages/Dossiers"
 import { ForgotPassword } from "@/pages/ForgotPassword"
 import { Landing } from "@/pages/Landing"
 import { MfaVerify } from "@/pages/MfaVerify"
+import { PageDetail } from "@/pages/PageDetail"
+import { Pages } from "@/pages/Pages"
 import { ProjectDetail } from "@/pages/ProjectDetail"
 import { Projects } from "@/pages/Projects"
 import { Settings } from "@/pages/Settings"
@@ -20,6 +22,7 @@ import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
 import { ResumeLibraryProvider } from "@/store/resumes"
 import { DocumentLibraryProvider } from "@/store/documents"
 import { NotificationsProvider } from "@/store/notifications"
+import { PagesProvider } from "@/store/pages"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
@@ -45,49 +48,53 @@ function App() {
       <BrowserRouter>
         <TooltipProvider>
           <ResumeLibraryProvider>
-              <DocumentLibraryProvider>
-                <NotificationsProvider>
+            <DocumentLibraryProvider>
+              <NotificationsProvider>
+                <PagesProvider>
                   <Routes>
-                <Route path={ROUTES.landing} element={<Landing />} />
-                <Route path={ROUTES.login} element={<Auth />} />
-                <Route path={ROUTES.register} element={<Auth />} />
-                <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
-                <Route path={ROUTES.resetPassword} element={<ForgotPassword />} />
-                <Route path={ROUTES.mfaVerify} element={<MfaVerify />} />
-                <Route path={ROUTES.app} element={<AppLayout />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="projects" element={<Projects />} />
-                  <Route path="projects/:id" element={<ProjectDetail />} />
-                  <Route path="documents" element={<Dossiers />} />
-                  <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
-                  <Route path="dossiers/templates" element={<Templates />} />
-                  <Route
-                    path="dossiers/creator"
-                    element={
-                      <Suspense fallback={null}>
-                        <ResumeCreator />
-                      </Suspense>
-                    }
-                  />
-                  <Route path="templates" element={<DocumentLibrary />} />
-                  <Route
-                    path="templates/editor"
-                    element={
-                      <Suspense fallback={null}>
-                        <DocumentEditor />
-                      </Suspense>
-                    }
-                  />
-                  <Route path="settings" element={<Settings />} />
-                  <Route
-                    path="*"
-                    element={<Navigate to={ROUTES.dashboard} replace />}
-                  />
-                </Route>
-                <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
+                    <Route path={ROUTES.landing} element={<Landing />} />
+                    <Route path={ROUTES.login} element={<Auth />} />
+                    <Route path={ROUTES.register} element={<Auth />} />
+                    <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+                    <Route path={ROUTES.resetPassword} element={<ForgotPassword />} />
+                    <Route path={ROUTES.mfaVerify} element={<MfaVerify />} />
+                    <Route path={ROUTES.app} element={<AppLayout />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="pages" element={<Pages />} />
+                      <Route path="pages/:id" element={<PageDetail />} />
+                      <Route path="projects" element={<Projects />} />
+                      <Route path="projects/:id" element={<ProjectDetail />} />
+                      <Route path="documents" element={<Dossiers />} />
+                      <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
+                      <Route path="dossiers/templates" element={<Templates />} />
+                      <Route
+                        path="dossiers/creator"
+                        element={
+                          <Suspense fallback={null}>
+                            <ResumeCreator />
+                          </Suspense>
+                        }
+                      />
+                      <Route path="templates" element={<DocumentLibrary />} />
+                      <Route
+                        path="templates/editor"
+                        element={
+                          <Suspense fallback={null}>
+                            <DocumentEditor />
+                          </Suspense>
+                        }
+                      />
+                      <Route path="settings" element={<Settings />} />
+                      <Route
+                        path="*"
+                        element={<Navigate to={ROUTES.dashboard} replace />}
+                      />
+                    </Route>
+                    <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
                   </Routes>
-                </NotificationsProvider>
-              </DocumentLibraryProvider>
+                </PagesProvider>
+              </NotificationsProvider>
+            </DocumentLibraryProvider>
           </ResumeLibraryProvider>
         </TooltipProvider>
       </BrowserRouter>

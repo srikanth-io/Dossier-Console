@@ -26,11 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useNotifications } from "@/store/notifications"
 
 export function AppLayout() {
@@ -63,29 +58,22 @@ export function AppLayout() {
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <NotificationPanel open={notifOpen} onOpenChange={setNotifOpen}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={messages.notifications.title}
-                    className="relative"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={messages.notifications.title}
+                className="relative"
+              >
+                <icons.notifications />
+                {unreadCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground ring-2 ring-background"
                   >
-                    <icons.notifications />
-                    {unreadCount > 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground ring-2 ring-background"
-                      >
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {messages.notifications.title}
-                </TooltipContent>
-              </Tooltip>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
             </NotificationPanel>
 
             <ThemeToggle />

@@ -1,0 +1,200 @@
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { EmptyState } from "@/components/empty-state"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { ROUTES, icons, messages } from "@/constants"
+import { usePages } from "@/store/pages"
+import { cn } from "@/lib/utils"
+
+export function Pages() {
+  const navigate = useNavigate()
+  const { rootPages, getChildPages, addPage, deletePage, updatePage, currentWorkspace } = usePages()
+  const [query, setQuery] = useState("")
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const allPages = rootPages.filter((p) =>
+    p.title.toLowerCase().includes(query.toLowerCase())
+  )
+
+  const handleCreate = () => {
+    const page = addPage("Untitled")
+    toast.success(messages.pages.actions.created)
+    navigate(`${ROUTES.pages}/${page.id}`)
+  }
+
+  const handleDelete = () => {
+    if (!deleteId) return
+    deletePage(deleteId)
+    toast.success(messages.pages.actions.deleted)
+    setDeleteId(null)
+  }
+
+  const handleToggleFavorite = (id: string, current: boolean) => {
+    updatePage(id, { favorite: !current })
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={currentWorkspace.name}
+        title={messages.pages.title}
+        description={messages.pages.subtitle}
+        actions={
+          <Button variant="gradient" onClick={handleCreate}>
+            <icons.plus /> {messages.pages.newPage}
+          </Button>
+        }
+      />
+
+      <Card className="animate-fade-rise">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative min-w-52 flex-1">
+              <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={messages.pages.searchPlaceholder}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-8"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {allPages.length === 0 ? (
+        <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
+          <CardContent className="py-16">
+            <EmptyState
+              icon={<icons.file />}
+              title={query ? "No pages found" : messages.pages.noPages}
+              description={query ? "Try a different search term." : messages.pages.noPagesHint}
+              action={
+                !query ? (
+                  <Button onClick={handleCreate}>
+                    <icons.plus /> {messages.pages.newPage}
+                  </Button>
+                ) : undefined
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {allPages.map((page, index) => {
+            const children = getChildPages(page.id)
+            return (
+              <Card
+                key={page.id}
+                className="animate-fade-rise group cursor-pointer transition-shadow hover:shadow-md"
+                style={{ animationDelay: `${60 + index * 40}ms` }}
+                onClick={() => navigate(`${ROUTES.pages}/${page.id}`)}
+              >
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{page.icon}</span>
+                    <div>
+                      <CardTitle className="text-base">{page.title}</CardTitle>
+                      <CardDescription className="mt-0.5">
+                        {children.length > 0
+                          ? `${children.length} sub-page${children.length > 1 ? "s" : ""} · `
+                          : ""}
+                        {page.updatedAt}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className={cn(
+                        "size-8",
+                        page.favorite ? "text-amber-500" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                      )}
+                      onClick={() => handleToggleFavorite(page.id, page.favorite)}
+                    >
+                      {page.favorite ? (
+                        <icons.sparkles className="size-4 fill-current" />
+                      ) : (
+                        <icons.sparkles className="size-4" />
+                      )}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" className="size-8 opacity-0 group-hover:opacity-100">
+                          <icons.moreVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`${ROUTES.pages}/${page.id}`)}>
+                          <icons.eye /> View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleFavorite(page.id, page.favorite)}>
+                          <icons.sparkles /> {page.favorite ? messages.pages.actions.unfavorite : messages.pages.actions.favorite}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setDeleteId(page.id)}
+                        >
+                          <icons.trash /> {messages.pages.actions.delete}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                {children.length > 0 && (
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {children.slice(0, 4).map((child) => (
+                        <Badge key={child.id} variant="secondary" className="text-xs">
+                          {child.icon} {child.title}
+                        </Badge>
+                      ))}
+                      {children.length > 4 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{children.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteId(null) }}
+        title={messages.pages.actions.deleteConfirm}
+        description={messages.pages.actions.deleteConfirmDescription}
+        confirmLabel={messages.pages.actions.delete}
+        variant="danger"
+        onConfirm={handleDelete}
+      />
+    </div>
+  )
+}

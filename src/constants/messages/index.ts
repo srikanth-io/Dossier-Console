@@ -6,6 +6,7 @@ import { landing } from "@/constants/messages/landing"
 import { layout, nav } from "@/constants/messages/layout"
 import { login } from "@/constants/messages/login"
 import { notifications } from "@/constants/messages/notifications"
+import { pagesMsg } from "@/constants/messages/pages"
 import { projects } from "@/constants/messages/projects"
 import { resume } from "@/constants/messages/resume"
 import { settings } from "@/constants/messages/settings"
@@ -21,6 +22,7 @@ export const messages = {
   dashboard,
   dossiers,
   projects,
+  pages: pagesMsg,
   settings,
   resume,
   templates,
