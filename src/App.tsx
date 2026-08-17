@@ -9,7 +9,9 @@ import { AppLayout } from "@/layouts/AppLayout"
 import { Auth } from "@/pages/Auth"
 import { Dashboard } from "@/pages/Dashboard"
 import { Dossiers } from "@/pages/Dossiers"
+import { ForgotPassword } from "@/pages/ForgotPassword"
 import { Landing } from "@/pages/Landing"
+import { MfaVerify } from "@/pages/MfaVerify"
 import { ProjectDetail } from "@/pages/ProjectDetail"
 import { Projects } from "@/pages/Projects"
 import { Settings } from "@/pages/Settings"
@@ -47,6 +49,9 @@ function App() {
                 <Route path={ROUTES.landing} element={<Landing />} />
                 <Route path={ROUTES.login} element={<Auth />} />
                 <Route path={ROUTES.register} element={<Auth />} />
+                <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+                <Route path={ROUTES.resetPassword} element={<ForgotPassword />} />
+                <Route path={ROUTES.mfaVerify} element={<MfaVerify />} />
                 <Route path={ROUTES.app} element={<AppLayout />}>
                   <Route index element={<Dashboard />} />
                   <Route path="projects" element={<Projects />} />

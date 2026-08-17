@@ -288,7 +288,11 @@ export function Auth() {
                       </Label>
                     </div>
                     <a
-                      href="#"
+                      href={ROUTES.forgotPassword}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        navigate(ROUTES.forgotPassword)
+                      }}
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
                       {messages.login.forgotPassword}

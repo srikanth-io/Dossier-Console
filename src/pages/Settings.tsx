@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { FormField } from "@/components/form-field"
 import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -22,7 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { APP, departmentLabels, icons, messages } from "@/constants"
+import { devices as deviceList, logs as logList } from "@/data/security"
 import { cn } from "@/lib/utils"
 
 const THEME_KEY = "dossier-theme"
@@ -33,6 +43,8 @@ type SectionKey =
   | "appearance"
   | "notifications"
   | "security"
+  | "devices"
+  | "logs"
   | "billing"
   | "dangerZone"
 
@@ -43,6 +55,8 @@ const sections: { key: SectionKey; label: string; icon: (typeof icons)[keyof typ
   { key: "appearance", label: messages.settings.nav.appearance, icon: icons.sun },
   { key: "notifications", label: messages.settings.nav.notifications, icon: icons.notifications },
   { key: "security", label: messages.settings.nav.security, icon: icons.lock },
+  { key: "devices", label: messages.settings.nav.devices, icon: icons.apple },
+  { key: "logs", label: messages.settings.nav.logs, icon: icons.activity },
   { key: "billing", label: messages.settings.nav.billing, icon: icons.reports },
   { key: "dangerZone", label: messages.settings.nav.dangerZone, icon: icons.alertCircle },
 ]
@@ -91,7 +105,9 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [twoFactor, setTwoFactor] = useState(false)
+  const [mfaTotp, setMfaTotp] = useState(false)
+  const [mfaPasskey, setMfaPasskey] = useState(false)
+  const [mfaEmailOtp, setMfaEmailOtp] = useState(false)
 
   const [resetOpen, setResetOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -393,79 +409,241 @@ export function Settings() {
           )}
 
           {active === "security" && (
+            <div className="space-y-6">
+              <Card className="animate-fade-rise">
+                <CardHeader>
+                  <CardTitle>{messages.settings.security.title}</CardTitle>
+                  <CardDescription>
+                    {messages.settings.security.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <FormField
+                      label={messages.settings.security.currentPassword}
+                      htmlFor="current-password"
+                    >
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder={messages.settings.security.currentPasswordPlaceholder}
+                      />
+                    </FormField>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        label={messages.settings.security.newPassword}
+                        htmlFor="new-password"
+                      >
+                        <Input
+                          id="new-password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder={messages.settings.security.newPasswordPlaceholder}
+                        />
+                      </FormField>
+                      <FormField
+                        label={messages.settings.security.confirmPassword}
+                        htmlFor="confirm-password"
+                        error={passwordError ?? undefined}
+                      >
+                        <Input
+                          id="confirm-password"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder={messages.settings.security.confirmPasswordPlaceholder}
+                        />
+                      </FormField>
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {messages.settings.security.passwordHint}
+                    </p>
+                    <Button type="submit">
+                      <icons.shield /> {messages.settings.security.updatePassword}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
+                <CardHeader>
+                  <CardTitle>{messages.settings.security.mfa.title}</CardTitle>
+                  <CardDescription>
+                    {messages.settings.security.mfa.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    { key: "totp" as const, icon: icons.shield, enabled: mfaTotp, setEnabled: setMfaTotp },
+                    { key: "passkey" as const, icon: icons.lock, enabled: mfaPasskey, setEnabled: setMfaPasskey },
+                    { key: "emailOtp" as const, icon: icons.mail, enabled: mfaEmailOtp, setEnabled: setMfaEmailOtp },
+                  ].map(({ key, icon: MfaIcon, enabled, setEnabled }) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-[18px] ${
+                          enabled
+                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          <MfaIcon />
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {messages.settings.security.mfa[key].title}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {messages.settings.security.mfa[key].description}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={(value) => {
+                          setEnabled(value)
+                          toast.success(
+                            value
+                              ? messages.settings.security.mfa[key].enabled
+                              : messages.settings.security.mfa[key].disabled
+                          )
+                        }}
+                      />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {active === "devices" && (
             <Card className="animate-fade-rise">
               <CardHeader>
-                <CardTitle>{messages.settings.security.title}</CardTitle>
-                <CardDescription>
-                  {messages.settings.security.description}
-                </CardDescription>
+                <CardTitle>{messages.settings.devices.title}</CardTitle>
+                <CardDescription>{messages.settings.devices.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <form onSubmit={handleUpdatePassword} className="space-y-4">
-                  <FormField
-                    label={messages.settings.security.currentPassword}
-                    htmlFor="current-password"
-                  >
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder={messages.settings.security.currentPasswordPlaceholder}
-                    />
-                  </FormField>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      label={messages.settings.security.newPassword}
-                      htmlFor="new-password"
+              <CardContent>
+                <div className="space-y-3">
+                  {deviceList.map((device) => (
+                    <div
+                      key={device.id}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4"
                     >
-                      <Input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder={messages.settings.security.newPasswordPlaceholder}
-                      />
-                    </FormField>
-                    <FormField
-                      label={messages.settings.security.confirmPassword}
-                      htmlFor="confirm-password"
-                      error={passwordError ?? undefined}
-                    >
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder={messages.settings.security.confirmPasswordPlaceholder}
-                      />
-                    </FormField>
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {messages.settings.security.passwordHint}
-                  </p>
-                  <Button type="submit">
-                    <icons.shield /> {messages.settings.security.updatePassword}
-                  </Button>
-                </form>
-                <div className="border-t border-border/70 pt-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {messages.settings.security.twoFactor}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {messages.settings.security.twoFactorHint}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-[18px] ${
+                          device.isCurrent
+                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          <icons.apple />
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{device.name}</p>
+                            {device.isCurrent && (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+                                {messages.settings.devices.currentDevice}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span>{device.browser}</span>
+                            <span>{device.os}</span>
+                            <span>{device.ipAddress}</span>
+                          </div>
+                          <div className="mt-1 flex gap-4 text-[11px] text-muted-foreground/70">
+                            <span>{messages.settings.devices.lastSeen}: {device.lastSeen}</span>
+                            <span>{messages.settings.devices.firstSeen}: {device.firstSeen}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {!device.isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => toast.success(messages.settings.devices.removed)}
+                        >
+                          <icons.trash className="size-3.5" /> {messages.settings.devices.remove}
+                        </Button>
+                      )}
                     </div>
-                    <Switch
-                      checked={twoFactor}
-                      onCheckedChange={(value) => {
-                        setTwoFactor(value)
-                        toast.success(messages.settings.security.saved)
-                      }}
-                    />
-                  </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {active === "logs" && (
+            <Card className="animate-fade-rise">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>{messages.settings.logs.title}</CardTitle>
+                  <CardDescription>{messages.settings.logs.description}</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const header = "Timestamp,Action,Category,Screen,Browser,Device,IP Address,Request,Details\n"
+                    const csv = logList.map((l) =>
+                      `${l.timestamp},"${l.action}",${l.category},${l.screen},${l.browser},${l.device},${l.ipAddress},"${l.request}","${l.details}"`
+                    ).join("\n")
+                    const blob = new Blob([header + csv], { type: "text/csv" })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = `activity-logs-${new Date().toISOString().slice(0, 10)}.csv`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    toast.success(messages.settings.logs.exported)
+                  }}>
+                    <icons.download className="size-4" /> {messages.settings.logs.export}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead scope="col">{messages.settings.logs.timestamp}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.action}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.screen}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.browser}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.device}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.ipAddress}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.request}</TableHead>
+                        <TableHead scope="col">{messages.settings.logs.details}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {logList.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="whitespace-nowrap text-xs tabular-nums">{log.timestamp}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              log.category === "login" ? "success" :
+                              log.category === "security" ? "destructive" :
+                              log.category === "settings" ? "info" :
+                              log.category === "timesheet" ? "warning" :
+                              "default"
+                            }>
+                              {log.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{log.screen}</TableCell>
+                          <TableCell className="text-xs">{log.browser}</TableCell>
+                          <TableCell className="text-xs">{log.device}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs tabular-nums">{log.ipAddress}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs font-mono text-muted-foreground">{log.request}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{log.details}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
