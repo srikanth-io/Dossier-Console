@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EmptyState } from "@/components/empty-state"
 import { PageHeader } from "@/components/page-header"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { ROUTES, icons, messages, type IconName } from "@/constants"
 import { usePages } from "@/store/pages"
 import { cn } from "@/lib/utils"
@@ -60,28 +60,17 @@ export function Pages() {
         title={messages.pages.title}
         description={messages.pages.subtitle}
         actions={
-          <Button variant="gradient" onClick={handleCreate}>
+          <Button variant="default" onClick={handleCreate}>
             <icons.plus /> {messages.pages.newPage}
           </Button>
         }
       />
 
-      <Card className="animate-fade-rise">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative min-w-52 flex-1">
-              <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={messages.pages.searchPlaceholder}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-8"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={messages.pages.searchPlaceholder}
+      />
 
       {allPages.length === 0 ? (
         <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>

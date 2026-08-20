@@ -48,7 +48,7 @@ export function ForgotPassword() {
       <main className="flex flex-1 items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center lg:hidden">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-glow">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <icons.brand className="size-6" />
             </div>
             <p className="mt-3 font-heading text-xl font-bold">{APP.name}</p>

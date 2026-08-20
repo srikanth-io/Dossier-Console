@@ -4,12 +4,12 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/empty-state"
 import { PageHeader } from "@/components/page-header"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Breadcrumb,
@@ -86,46 +86,36 @@ export function Notepad() {
         title={messages.pages.title}
         description={messages.pages.subtitle}
         actions={
-          <Button variant="gradient" onClick={handleCreate}>
+          <Button variant="default" onClick={handleCreate}>
             <icons.plus /> {messages.pages.newPage}
           </Button>
         }
       />
 
-      <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative min-w-52 flex-1">
-              <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={messages.pages.searchPlaceholder}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-8"
-              />
-            </div>
-            <div className="flex items-center gap-1 rounded-lg border border-border/60 p-0.5">
-              <Button
-                variant={view === "grid" ? "default" : "ghost"}
-                size="icon-sm"
-                className="size-8"
-                onClick={() => setView("grid")}
-              >
-                <icons.grid className="size-4" />
-              </Button>
-              <Button
-                variant={view === "list" ? "default" : "ghost"}
-                size="icon-sm"
-                className="size-8"
-                onClick={() => setView("list")}
-              >
-                <icons.layoutList className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={messages.pages.searchPlaceholder}
+      >
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 p-0.5">
+          <Button
+            variant={view === "grid" ? "default" : "ghost"}
+            size="icon-sm"
+            className="size-8"
+            onClick={() => setView("grid")}
+          >
+            <icons.grid className="size-4" />
+          </Button>
+          <Button
+            variant={view === "list" ? "default" : "ghost"}
+            size="icon-sm"
+            className="size-8"
+            onClick={() => setView("list")}
+          >
+            <icons.layoutList className="size-4" />
+          </Button>
+        </div>
+      </SearchFilterBar>
 
       <div className="animate-fade-rise" style={{ animationDelay: "120ms" }}>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)}>

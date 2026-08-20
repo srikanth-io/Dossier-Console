@@ -44,7 +44,7 @@ export const chartColors = [
   "var(--chart-6)",
 ] as const
 
-export const gradientBrand = "linear-gradient(135deg, #27272a, #3f3f46)"
+export const gradientBrand = "linear-gradient(135deg, #1e1b4b, #312e81)"
 
 export const shadows = {
   xs: "var(--shadow-xs)",

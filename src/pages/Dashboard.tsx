@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -100,7 +100,7 @@ export function Dashboard() {
                 {messages.dashboard.actions.templates}
               </Link>
             </Button>
-            <Button asChild variant="gradient">
+            <Button asChild variant="default">
               <Link to={ROUTES.resumeCreator}>
                 <icons.newDossier /> {messages.dashboard.newDossier}
               </Link>
@@ -355,7 +355,7 @@ export function Dashboard() {
                 to={action.to}
                 className="group rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
               >
-                <span className="flex size-10 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow transition-transform duration-200 group-hover:scale-105 [&_svg]:size-5">
+                <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-hover:scale-105 [&_svg]:size-5">
                   <Icon />
                 </span>
                 <h3 className="mt-3 font-heading text-sm font-bold">

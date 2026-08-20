@@ -6,6 +6,7 @@ import { DocxPreview } from "@/components/docx-preview"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EmptyState } from "@/components/empty-state"
 import { PageHeader } from "@/components/page-header"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { StatusPill } from "@/components/status-pill"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,7 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -386,7 +386,7 @@ export function Dossiers() {
               <icons.upload /> {messages.dossiers.importFiles}
             </Button>
             <Button
-              variant="gradient"
+              variant="default"
               onClick={() => navigate(ROUTES.resumeCreator)}
             >
               <icons.fileCode /> {messages.dossiers.newDocument}
@@ -395,71 +395,63 @@ export function Dossiers() {
         }
       />
 
-      <Card className="animate-fade-rise">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-52 flex-1 sm:flex-initial">
-              <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={messages.dossiers.searchPlaceholder}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-8 sm:w-64"
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-            >
-              <SelectTrigger className="w-36" aria-label={messages.dossiers.filterStatus}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {messages.dossiers.statusFilterOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => setTypeFilter(value)}
-            >
-              <SelectTrigger className="w-32" aria-label={messages.dossiers.filterType}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{messages.dossiers.allTypes}</SelectItem>
-                {types.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={sort}
-              onValueChange={(value) => setSort(value as SortKey)}
-            >
-              <SelectTrigger className="w-36" aria-label={messages.dossiers.filterSort}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="updated">{messages.dossiers.sortUpdated}</SelectItem>
-                <SelectItem value="name">{messages.dossiers.sortName}</SelectItem>
-                <SelectItem value="type">{messages.dossiers.sortType}</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <icons.close /> {messages.dossiers.clearFilters}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={messages.dossiers.searchPlaceholder}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+          >
+            <SelectTrigger className="w-36" aria-label={messages.dossiers.filterStatus}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {messages.dossiers.statusFilterOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => setTypeFilter(value)}
+          >
+            <SelectTrigger className="w-32" aria-label={messages.dossiers.filterType}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{messages.dossiers.allTypes}</SelectItem>
+              {types.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={sort}
+            onValueChange={(value) => setSort(value as SortKey)}
+          >
+            <SelectTrigger className="w-36" aria-label={messages.dossiers.filterSort}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">{messages.dossiers.sortUpdated}</SelectItem>
+              <SelectItem value="name">{messages.dossiers.sortName}</SelectItem>
+              <SelectItem value="type">{messages.dossiers.sortType}</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <icons.close /> {messages.dossiers.clearFilters}
+            </Button>
+          )}
+        </div>
+      </SearchFilterBar>
 
       <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">

@@ -3,6 +3,10 @@ import { commonMessages } from "@/constants/messages/common"
 export const nav = {
   brand: "Dossier",
   console: "Admin Console",
+  sections: {
+    general: "General",
+    content: "Content",
+  },
   items: {
     dashboard: "Dashboard",
     templates: "Templates",

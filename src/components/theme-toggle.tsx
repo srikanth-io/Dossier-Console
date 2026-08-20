@@ -1,143 +1,159 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { icons, messages } from "@/constants"
+import { icons } from "@/constants"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-const THEME_KEY = "dossier-theme"
+/* ── Storage keys ── */
+const MODE_KEY = "dossier-theme-mode"
+const PRESET_KEY = "dossier-theme-preset"
 
-type Theme = "light" | "dark"
+/* ── Types ── */
+export type ThemeMode = "light" | "dark" | "system"
+export type ThemePreset = "monochrome" | "dracula" | "catppuccin" | "vercel" | "github"
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light"
-  const stored = localStorage.getItem(THEME_KEY)
-  if (stored === "light" || stored === "dark") return stored
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
+/* ── Preset helpers ── */
+function applyThemePreset(preset: ThemePreset) {
+  document.documentElement.setAttribute("data-theme", preset)
+  localStorage.setItem(PRESET_KEY, preset)
 }
 
+function getStoredThemePreset(): ThemePreset {
+  const v = localStorage.getItem(PRESET_KEY)
+  if (v === "monochrome" || v === "dracula" || v === "catppuccin" || v === "vercel" || v === "github") return v
+  return "monochrome"
+}
+
+/* ── Mode helpers ── */
+function resolveMode(mode: ThemeMode): "light" | "dark" {
+  if (mode === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  return mode
+}
+
+function applyMode(mode: ThemeMode) {
+  const root = document.documentElement
+  const resolved = resolveMode(mode)
+  root.classList.toggle("dark", resolved === "dark")
+  root.classList.toggle("light", resolved === "light")
+  root.style.colorScheme = resolved
+  localStorage.setItem(MODE_KEY, mode)
+}
+
+function getStoredMode(): ThemeMode {
+  const v = localStorage.getItem(MODE_KEY)
+  if (v === "light" || v === "dark" || v === "system") return v
+  return "dark"
+}
+
+/* ── Circle-spread animation ── */
+function circleSpreadAnimation(event: React.MouseEvent, callback: () => void) {
+  const root = document.documentElement
+  const x = event.clientX
+  const y = event.clientY
+  const maxDim = Math.max(window.innerWidth, window.innerHeight)
+  const radius = maxDim * 2.5
+
+  // Create the overlay circle
+  const overlay = document.createElement("div")
+  overlay.style.cssText = `
+    position: fixed;
+    top: ${y}px;
+    left: ${x}px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 99999;
+    background: ${root.classList.contains("dark") ? "#ffffff" : "#09090b"};
+    transition: width 550ms cubic-bezier(0.4, 0, 0.2, 1), height 550ms cubic-bezier(0.4, 0, 0.2, 1);
+  `
+  document.body.appendChild(overlay)
+
+  // Force reflow, then expand
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.style.width = `${radius}px`
+      overlay.style.height = `${radius}px`
+    })
+  })
+
+  // Apply the mode change halfway through the animation
+  setTimeout(() => {
+    callback()
+  }, 220)
+
+  // Remove overlay after animation
+  setTimeout(() => {
+    overlay.style.opacity = "0"
+    overlay.style.transition = "opacity 300ms ease-out"
+    setTimeout(() => overlay.remove(), 300)
+  }, 550)
+}
+
+/* ── ThemeToggle component ── */
 function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme)
-  const [animating, setAnimating] = useState(false)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [mode, setMode] = useState<ThemeMode>(getStoredMode)
+  const systemMediaRef = useRef<MediaQueryList | null>(null)
 
+  // Apply on mount and listen for system changes
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle("dark", theme === "dark")
-    root.style.colorScheme = theme
-    localStorage.setItem(THEME_KEY, theme)
-  }, [theme])
+    applyThemePreset(getStoredThemePreset())
+    applyMode(mode)
 
-  const toggle = () => {
-    if (animating) return
-    const btn = buttonRef.current
-    if (!btn) {
-      setTheme((t) => (t === "dark" ? "light" : "dark"))
-      return
+    if (mode === "system") {
+      const media = window.matchMedia("(prefers-color-scheme: dark)")
+      systemMediaRef.current = media
+      const handler = () => applyMode("system")
+      media.addEventListener("change", handler)
+      return () => media.removeEventListener("change", handler)
     }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    setAnimating(true)
+  const handleModeChange = useCallback(
+    (newMode: ThemeMode, event: React.MouseEvent) => {
+      circleSpreadAnimation(event, () => {
+        setMode(newMode)
+        applyMode(newMode)
+      })
+    },
+    []
+  )
 
-    const rect = btn.getBoundingClientRect()
-    const cx = rect.left + rect.width / 2
-    const cy = rect.top + rect.height / 2
-    const radius = Math.hypot(
-      Math.max(cx, window.innerWidth - cx),
-      Math.max(cy, window.innerHeight - cy)
-    )
-
-    const svgNS = "http://www.w3.org/2000/svg"
-    const svg = document.createElementNS(svgNS, "svg")
-    svg.setAttribute("width", "100%")
-    svg.setAttribute("height", "100%")
-    svg.style.cssText =
-      "position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:1;"
-
-    const defs = document.createElementNS(svgNS, "defs")
-    const clipPath = document.createElementNS(svgNS, "clipPath")
-    clipPath.id = "theme-clip"
-    const clipCircle = document.createElementNS(svgNS, "circle")
-    clipCircle.setAttribute("cx", String(cx))
-    clipCircle.setAttribute("cy", String(cy))
-    clipCircle.setAttribute("r", "0")
-    clipPath.appendChild(clipCircle)
-    defs.appendChild(clipPath)
-    svg.appendChild(defs)
-
-    const fill = document.createElementNS(svgNS, "rect")
-    fill.setAttribute("x", "0")
-    fill.setAttribute("y", "0")
-    fill.setAttribute("width", "100%")
-    fill.setAttribute("height", "100%")
-    fill.setAttribute("clip-path", "url(#theme-clip)")
-
-    const goingDark = theme === "light"
-    fill.setAttribute(
-      "fill",
-      goingDark ? "rgba(255,255,255,0.12)" : "rgba(15,18,28,0.12)"
-    )
-
-    svg.appendChild(fill)
-    document.body.appendChild(svg)
-
-    const duration = 420
-    const startTime = performance.now()
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-
-      clipCircle.setAttribute("r", String(eased * radius))
-
-      if (progress < 1) {
-        requestAnimationFrame(animate)
-      } else {
-        setTheme((t) => (t === "dark" ? "light" : "dark"))
-
-        svg.style.transition = "opacity 0.3s ease-out"
-        svg.style.opacity = "0"
-
-        setTimeout(() => {
-          svg.remove()
-          setAnimating(false)
-        }, 320)
-      }
-    }
-
-    requestAnimationFrame(animate)
+  const modeIcons: Record<ThemeMode, React.ReactNode> = {
+    light: <icons.sun className="size-4" />,
+    dark: <icons.moon className="size-4" />,
+    system: <icons.monitor className="size-4" />,
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          ref={buttonRef}
-          variant="ghost"
-          size="icon-sm"
-          className={className}
-          aria-label={
-            theme === "dark"
-              ? messages.layout.themeToggleLight
-              : messages.layout.themeToggleDark
-          }
-          onClick={toggle}
-        >
-          <span className="relative flex size-4 items-center justify-center">
-            {theme === "dark" ? (
-              <icons.sun className="size-4" />
-            ) : (
-              <icons.moon className="size-4" />
-            )}
-          </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" className={className}>
+          {modeIcons[mode]}
         </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        {theme === "dark" ? messages.layout.themeLight : messages.layout.themeDark}
-      </TooltipContent>
-    </Tooltip>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        <DropdownMenuItem onClick={(e) => handleModeChange("light", e)}>
+          <icons.sun className="size-4" />
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={(e) => handleModeChange("dark", e)}>
+          <icons.moon className="size-4" />
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={(e) => handleModeChange("system", e)}>
+          <icons.monitor className="size-4" />
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
-export { ThemeToggle }
+export { ThemeToggle, applyThemePreset, applyMode, getStoredThemePreset, getStoredMode, MODE_KEY, PRESET_KEY }

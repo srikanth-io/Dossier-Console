@@ -156,7 +156,7 @@ export function DocumentLibrary() {
         title={messages.studio.library.title}
         description={messages.studio.library.subtitle}
         actions={
-          <Button size="sm" variant="gradient" className="h-9 px-4" onClick={() => setWizardOpen(true)}>
+          <Button size="sm" variant="default" className="h-9 px-4" onClick={() => setWizardOpen(true)}>
             <icons.plus className="size-4" />
             {messages.studio.library.createTemplate}
           </Button>

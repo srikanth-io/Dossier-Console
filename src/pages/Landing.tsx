@@ -21,7 +21,7 @@ function LandingHeader() {
     <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-8 px-4 sm:px-6">
         <Link to={ROUTES.landing} className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-brand text-white shadow-glow">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <icons.brand className="size-4" />
           </div>
           <div className="leading-tight">
@@ -50,7 +50,7 @@ function LandingHeader() {
               {messages.landing.header.nav.signIn}
             </Link>
           </Button>
-          <Button asChild variant="gradient" size="sm" className="rounded-full">
+          <Button asChild variant="default" size="sm" className="rounded-full">
             <Link to={ROUTES.login}>
               {messages.landing.header.nav.getStarted}
             </Link>
@@ -94,7 +94,7 @@ function Hero() {
         </p>
 
         <div className="mt-9 flex animate-fade-rise flex-wrap items-center justify-center gap-3 [animation-delay:240ms]">
-          <Button asChild size="lg" variant="gradient" className="rounded-full">
+          <Button asChild size="lg" variant="default" className="rounded-full">
             <Link to={ROUTES.login}>
               {messages.landing.hero.primaryCta}
               <icons.arrowRight />
@@ -207,7 +207,7 @@ function Features() {
                 className={cn(
                   "relative flex items-center justify-center rounded-xl",
                   isWide
-                    ? "size-12 bg-gradient-brand text-white shadow-glow"
+                    ? "size-12 bg-primary text-primary-foreground shadow-sm"
                     : "size-10 bg-primary-soft text-primary"
                 )}
               >
@@ -341,7 +341,7 @@ function LandingFooter() {
         <div className="grid gap-12 md:grid-cols-4">
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-brand text-white shadow-glow">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                 <icons.brand className="size-4" />
               </div>
               <div className="leading-tight">

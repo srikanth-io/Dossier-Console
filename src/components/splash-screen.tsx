@@ -30,7 +30,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
       )}
       aria-hidden={leaving}
     >
-      <div className="animate-splash-scale-in flex size-16 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-glow">
+      <div className="animate-splash-scale-in flex size-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
         <icons.brand className="size-8" />
       </div>
 
@@ -44,7 +44,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
       </div>
 
       <div className="animate-splash-fade-in h-1 w-44 overflow-hidden rounded-full bg-muted">
-        <div className="animate-splash-bar h-full rounded-full bg-gradient-brand" />
+        <div className="animate-splash-bar h-full rounded-full bg-primary" />
       </div>
     </div>
   )

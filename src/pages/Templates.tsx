@@ -4,6 +4,7 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/empty-state"
 import { PageHeader } from "@/components/page-header"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { icons, messages, ROUTES } from "@/constants"
 import { resumeTemplates } from "@/data/resumeTemplates"
@@ -114,7 +114,7 @@ export function Templates() {
               <Link to={ROUTES.templates}>{messages.templates.openInStudio}</Link>
             </Button>
             <Button
-              variant="gradient"
+              variant="default"
               onClick={() => navigate(ROUTES.resumeCreator)}
             >
               <icons.fileCode /> {messages.templates.createResume}
@@ -123,37 +123,25 @@ export function Templates() {
         }
       />
 
-      <Card className="animate-fade-rise">
-        <CardContent className="space-y-3 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="relative w-full sm:w-64">
-              <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={messages.templates.searchPlaceholder}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-8"
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {messages.templates.count(filtered.length)}
-            </p>
-          </div>
-          <Tabs
-            value={category}
-            onValueChange={(value) => setCategory(value as Category)}
-          >
-            <TabsList variant="line" className="w-full justify-start">
-              {categories.map((key) => (
-                <TabsTrigger key={key} value={key}>
-                  {messages.templates.categories[key]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={messages.templates.searchPlaceholder}
+        count={messages.templates.count(filtered.length)}
+      >
+        <Tabs
+          value={category}
+          onValueChange={(value) => setCategory(value as Category)}
+        >
+          <TabsList variant="line" className="w-full justify-start">
+            {categories.map((key) => (
+              <TabsTrigger key={key} value={key}>
+                {messages.templates.categories[key]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </SearchFilterBar>
 
       {filtered.length === 0 ? (
         <EmptyState

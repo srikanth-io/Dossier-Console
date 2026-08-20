@@ -152,7 +152,7 @@ export function ProjectDetail() {
               <Badge variant={statusVariant[project.status]}>
                 {messages.projects.status[project.status]}
               </Badge>
-              <Button variant="gradient">
+              <Button variant="default">
                 <icons.play /> {messages.projects.detail.timesheet}
               </Button>
             </div>
@@ -438,7 +438,7 @@ export function ProjectDetail() {
                 <Button variant="outline">
                   <icons.save className="size-4" /> {messages.projects.timesheet.saveDraft}
                 </Button>
-                <Button variant="gradient">
+                <Button variant="default">
                   <icons.check className="size-4" /> {messages.projects.timesheet.submit}
                 </Button>
               </div>

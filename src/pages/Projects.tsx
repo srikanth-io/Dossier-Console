@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import { PageHeader } from "@/components/page-header"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { icons, messages, ROUTES } from "@/constants"
 import { projects, type ProjectStatus } from "@/data/projects"
@@ -45,7 +45,7 @@ export function Projects() {
         title={messages.projects.title}
         description={messages.projects.subtitle}
         actions={
-          <Button variant="gradient">
+          <Button variant="default">
             <icons.plus /> {messages.projects.newProject}
           </Button>
         }
@@ -93,15 +93,11 @@ export function Projects() {
         })}
       </div>
 
-      <div className="animate-fade-rise" style={{ animationDelay: "240ms" }}>
-        <Input
-          type="search"
-          placeholder={messages.projects.searchPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      <SearchFilterBar
+        query={search}
+        onQueryChange={setSearch}
+        placeholder={messages.projects.searchPlaceholder}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((project, index) => {

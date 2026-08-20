@@ -16,24 +16,41 @@ import {
 import { usePages } from "@/store/pages"
 import { cn } from "@/lib/utils"
 
-const navItems: {
+type NavItem = {
   label: string
   to: string
   icon: keyof typeof icons
   end?: boolean
-}[] = [
-  { label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true },
-  { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
-  { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
-  { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
-  { label: messages.nav.items.notepad, to: ROUTES.notepad, icon: "file" },
+}
+
+type NavSection = {
+  label: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+  {
+    label: messages.nav.sections.general,
+    items: [
+      { label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true },
+      { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
+    ],
+  },
+  {
+    label: messages.nav.sections.content,
+    items: [
+      { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
+      { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
+      { label: messages.nav.items.notepad, to: ROUTES.notepad, icon: "file" },
+    ],
+  },
 ]
 
 function NavItem({
   item,
   collapsed,
 }: {
-  item: (typeof navItems)[number]
+  item: NavItem
   collapsed: boolean
 }) {
   const link = (
@@ -102,7 +119,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand text-xs font-bold text-white"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold"
             onClick={() => setOpen(true)}
           >
             {currentWorkspace.icon}
@@ -136,68 +153,58 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
       </PopoverTrigger>
       <PopoverContent align="start" side="top" sideOffset={4} className="w-64 p-1.5">
         <p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          Account
+          Workspace
         </p>
-        <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-          <Avatar className="size-7">
-            <AvatarFallback className="text-xs">{messages.layout.userInitials}</AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-medium truncate">{messages.layout.userName}</span>
-            <span className="text-[11px] text-muted-foreground truncate">{messages.layout.userEmail}</span>
-          </div>
-        </div>
-        <div className="mt-1 border-t border-border/50 pt-1">
-          <p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Workspace
-          </p>
-          {workspaces.map((ws) => (
-            <button
-              key={ws.id}
-              type="button"
-              onClick={() => {
-                setCurrentWorkspace(ws.id)
-                setOpen(false)
-                navigate(ROUTES.notepad)
-              }}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
-                ws.id === currentWorkspace.id && "bg-primary/5"
-              )}
-            >
+        {workspaces.map((ws) => (
+          <button
+            key={ws.id}
+            type="button"
+            onClick={() => {
+              setCurrentWorkspace(ws.id)
+              setOpen(false)
+              navigate(ROUTES.notepad)
+            }}
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
+              ws.id === currentWorkspace.id && "bg-primary/5"
+            )}
+          >
+            <span className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
+              ws.id === currentWorkspace.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}>
+              {ws.icon}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
               <span className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
-                ws.id === currentWorkspace.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
+                "text-sm font-medium truncate",
+                ws.id === currentWorkspace.id && "text-primary"
               )}>
-                {ws.icon}
+                {ws.name}
               </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className={cn(
-                  "text-sm font-medium truncate",
-                  ws.id === currentWorkspace.id && "text-primary"
-                )}>
-                  {ws.name}
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {ws.pageCount} pages
-                </span>
+              <span className="text-[11px] text-muted-foreground">
+                {ws.pageCount} pages
               </span>
-              {ws.id === currentWorkspace.id && (
-                <icons.check className="size-3.5 shrink-0 text-primary" />
-              )}
-            </button>
-          ))}
-          <div className="mt-1 border-t border-border/50 pt-1">
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <icons.plus className="size-3.5" />
-              Connect workspace
-            </button>
-          </div>
+            </span>
+            {ws.id === currentWorkspace.id && (
+              <icons.check className="size-3.5 shrink-0 text-primary" />
+            )}
+          </button>
+        ))}
+        <div className="mt-1 border-t border-border/50 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              navigate(ROUTES.settings)
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <icons.settings className="size-3.5" />
+            Settings
+          </button>
         </div>
       </PopoverContent>
     </Popover>
@@ -215,7 +222,7 @@ export function AppSidebar() {
       )}
     >
       <div className="group/logo flex h-14 shrink-0 items-center gap-2.5 px-4">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
           <icons.brand className="size-4" />
         </div>
         {!collapsed && (
@@ -236,11 +243,23 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        <ul className="space-y-0.5">
-          {navItems.map((item) => (
-            <NavItem key={item.to + item.label} item={item} collapsed={collapsed} />
-          ))}
-        </ul>
+        {navSections.map((section, sIdx) => (
+          <div key={section.label} className={cn(sIdx > 0 && "mt-4")}>
+            {!collapsed && (
+              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                {section.label}
+              </p>
+            )}
+            {collapsed && sIdx > 0 && (
+              <div className="mx-auto my-2 h-px w-4 bg-sidebar-border/50" />
+            )}
+            <ul className="space-y-0.5">
+              {section.items.map((item) => (
+                <NavItem key={item.to + item.label} item={item} collapsed={collapsed} />
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="p-3">
