@@ -15,7 +15,7 @@ export const login = {
     quote:
       "Dossier replaced three spreadsheets and a folder of loose files. Reviews that took days now take minutes.",
     author: "Priya Nair",
-    role: "Operations Lead, Swiftant",
+    role: "Operations Lead, Dossier",
   },
   nameLabel: "Full name",
   namePlaceholder: "Jane Smith",

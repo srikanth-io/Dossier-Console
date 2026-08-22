@@ -14,8 +14,8 @@ function useMediaQuery(query: string) {
 import { StreamLanguage } from "@codemirror/language"
 import { stex } from "@codemirror/legacy-modes/mode/stex"
 
-import { CodeEditor, type CodeEditorApi } from "@/components/code-editor"
-import { TemplateManagerDialog } from "@/components/template-manager-dialog"
+import { CodeEditor, type CodeEditorApi } from "@/components/common/code-editor"
+import { TemplateManagerDialog } from "@/components/common/template-manager-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

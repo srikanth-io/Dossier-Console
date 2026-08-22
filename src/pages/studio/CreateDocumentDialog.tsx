@@ -46,7 +46,7 @@ const DOC_TYPE_ICONS: Record<string, keyof typeof icons> = {
   blank: "page",
   resume: "file",
   report: "text",
-  study: "eduBox",
+  study: "callout",
   vapt: "finding",
   invoice: "table",
   proposal: "link",

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from "react"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
-import { SplashScreen } from "@/components/splash-screen"
+import { SplashScreen } from "@/components/marketing/splash-screen"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ROUTES } from "@/constants"

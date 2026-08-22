@@ -126,7 +126,7 @@ export function MfaVerify() {
                     {messages.login.mfaVerifyPage.emailTitle}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    {messages.login.mfaVerifyPage.emailSubtitle} admin@swiftant.com
+                    {messages.login.mfaVerifyPage.emailSubtitle} admin@dossier.dev
                   </p>
                   <div className="relative">
                     <icons.mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />

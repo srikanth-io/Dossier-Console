@@ -2,9 +2,9 @@ import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
-import { EmptyState } from "@/components/empty-state"
-import { PageHeader } from "@/components/page-header"
-import { SearchFilterBar } from "@/components/search-filter-bar"
+import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
+import { SearchFilterBar } from "@/components/common/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

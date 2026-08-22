@@ -77,7 +77,7 @@ function template(options: TemplateOptions): LibraryDocument {
       sectionSpacing: 24,
       paragraphSpacing: 12,
       componentSpacing: 16,
-      companyName: "Swiftant",
+      companyName: "Dossier",
       footerText: "Confidential",
     },
     variables: options.variables ?? [],
@@ -110,7 +110,7 @@ export function seededLibraryTemplates(): LibraryDocument[] {
         ["project_name", "External Network & Web Pentest 2026"],
         ["report_date", "2026-08-10"],
         ["author", "Srikanth Sankar"],
-        ["company_name", "Swiftant"],
+        ["company_name", "Dossier"],
         ["vulnerability_count", "18"],
       ]),
       pages: [
@@ -167,7 +167,7 @@ export function seededLibraryTemplates(): LibraryDocument[] {
           createElement("text", 72, 120, 650, 200, {
             props: {
               content:
-                "Between {{report_date}}, Swiftant performed an external penetration test against {{client_name}}. A total of {{vulnerability_count}} findings were identified: 2 critical, 5 high, 8 medium and 3 low.\n\nThe most significant exposures were found in the authentication layer of the public web application. Detailed findings and remediation guidance are provided on the following pages.",
+                "Between {{report_date}}, Dossier performed an external penetration test against {{client_name}}. A total of {{vulnerability_count}} findings were identified: 2 critical, 5 high, 8 medium and 3 low.\n\nThe most significant exposures were found in the authentication layer of the public web application. Detailed findings and remediation guidance are provided on the following pages.",
               lineHeight: 1.7,
             },
           }),
@@ -279,17 +279,17 @@ export function seededLibraryTemplates(): LibraryDocument[] {
               content: "Chapter 1 — {{chapter}}",
             },
           }),
-          createElement("eduBox", 72, 140, 650, 120, {
+          createElement("callout", 72, 140, 650, 120, {
             props: {
-              variant: "definition",
-              title: "Authentication",
+              variant: "info",
+              title: "Definition — Authentication",
               content:
                 "Authentication verifies who the user is. It answers the question: are you who you claim to be?",
             },
           }),
-          createElement("eduBox", 72, 280, 650, 150, {
+          createElement("callout", 72, 280, 650, 150, {
             props: {
-              variant: "example",
+              variant: "tip",
               title: "Example",
               content:
                 "Logging in with a username and password is authentication. Multi-factor authentication adds a second proof such as a one-time code.",
@@ -297,15 +297,16 @@ export function seededLibraryTemplates(): LibraryDocument[] {
           }),
           createElement("callout", 72, 450, 650, 110, {
             props: {
-              variant: "tip",
+              variant: "quote",
               title: "Exam tip",
               content: "Remember: Authentication = identity. Authorization = access to resources.",
             },
           }),
-          createElement("checklist", 72, 580, 650, 200, {
+          createElement("list", 72, 580, 650, 200, {
             props: {
-              title: "Checklist",
+              kind: "bullet",
               items: "[x] Read chapter overview\n[x] Review key terms\n[ ] Complete practice questions\n[ ] Take the quiz",
+              spacing: 6,
             },
           }),
           createElement("footer", 72, 1020, 650, 40, {
@@ -316,23 +317,23 @@ export function seededLibraryTemplates(): LibraryDocument[] {
           createElement("heading", 72, 56, 650, 44, {
             props: { level: "h2", content: "Practice Questions" },
           }),
-          createElement("eduBox", 72, 120, 650, 130, {
+          createElement("callout", 72, 120, 650, 130, {
             props: {
-              variant: "question",
+              variant: "info",
               title: "Question 1",
               content: "What is the difference between authentication and authorization?",
             },
           }),
-          createElement("eduBox", 72, 270, 650, 130, {
+          createElement("callout", 72, 270, 650, 130, {
             props: {
-              variant: "answer",
+              variant: "success",
               title: "Answer",
               content: "Authentication confirms identity; authorization determines what an authenticated identity is allowed to do.",
             },
           }),
-          createElement("eduBox", 72, 420, 650, 110, {
+          createElement("callout", 72, 420, 650, 110, {
             props: {
-              variant: "takeaway",
+              variant: "warning",
               title: "Key takeaway",
               content: "Never rely on authentication alone. Combine it with authorization, auditing and least privilege.",
             },
@@ -456,7 +457,7 @@ export function seededLibraryTemplates(): LibraryDocument[] {
         ["issue_date", "2026-08-12"],
         ["due_date", "2026-09-12"],
         ["total_amount", "$4,200.00"],
-        ["company_name", "Swiftant"],
+        ["company_name", "Dossier"],
       ]),
       pages: [
         page("a4", "portrait", "Invoice", [
@@ -526,7 +527,7 @@ export function seededLibraryTemplates(): LibraryDocument[] {
         ["project_name", "Security Hardening Program"],
         ["total_price", "$18,000"],
         ["timeline", "6 weeks"],
-        ["company_name", "Swiftant"],
+        ["company_name", "Dossier"],
       ]),
       pages: [
         page("a4", "portrait", "Proposal", [

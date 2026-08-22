@@ -32,7 +32,7 @@
 **Product.** "Dossier" — an admin console for managing records, case files, and documents.
 Users manage **documents** (created documents/resumes) and **document templates**, and compose
 templates in a full visual **document studio** (canvas editor) with pages, elements, variables,
-version history, and PDF export. Built for the organization **Swiftant**.
+version history, and PDF export. Built by **Srikanth Sankar**.
 
 **Stack.** React 19 + TypeScript + Vite 8 + Tailwind CSS v4 + shadcn/ui (Radix) + Lucide icons.
 State: local stores (localStorage) via React context; document editing via a custom

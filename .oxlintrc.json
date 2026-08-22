@@ -4,5 +4,49 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/document-engine/**",
+        "src/components/studio/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              "motion",
+              "framer-motion",
+              "gsap",
+              "@gsap/*",
+              "ogl",
+              "three"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/document-engine/**",
+        "src/components/studio/**",
+        "src/components/common/**",
+        "src/components/domain/**",
+        "src/components/ui/**",
+        "src/components/icons/**",
+        "src/layouts/**",
+        "src/store/**",
+        "src/domain/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": ["@/components/marketing/*", "@/components/marketing"]
+          }
+        ]
+      }
+    }
+  ]
 }

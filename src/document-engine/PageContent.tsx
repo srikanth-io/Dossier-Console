@@ -1,7 +1,13 @@
 import type { CSSProperties, MouseEvent, PointerEvent, ReactNode } from "react"
 
 import { renderElement } from "@/document-engine/renderers"
-import type { DocDocument, DocElement, DocPage, EditSession } from "@/document-engine/types"
+import type {
+  DocDocument,
+  DocElement,
+  DocPage,
+  EditSession,
+  RenderTarget,
+} from "@/document-engine/types"
 import { variableMap } from "@/document-engine/variables"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +15,8 @@ export interface PageContentProps {
   doc: DocDocument
   page: DocPage
   pageIndex: number
+  /** Render target — export paths must pass "print" (§8 dual-renderer rule). */
+  target?: RenderTarget
   editMode?: boolean
   interactive?: boolean
   onElementPointerDown?: (el: DocElement, event: PointerEvent) => void
@@ -24,6 +32,7 @@ export function PageContent({
   doc,
   page,
   pageIndex,
+  target = "screen",
   editMode = false,
   interactive = false,
   onElementPointerDown,
@@ -39,6 +48,7 @@ export function PageContent({
     theme: doc.theme,
     variables: variableMap(doc.variables),
     mode: doc.mode,
+    target,
     pageIndex,
     totalPages: doc.pages.length,
     editSession,

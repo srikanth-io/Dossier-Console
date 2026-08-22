@@ -29,7 +29,7 @@ export async function exportDocumentToPdf(
             overflow: "hidden",
           }}
         >
-          <PageContent doc={doc} page={page} pageIndex={index} />
+          <PageContent doc={doc} page={page} pageIndex={index} target="print" />
         </div>
       ))}
     </div>

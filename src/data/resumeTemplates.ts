@@ -42,7 +42,7 @@ Software Analyst with 2 years of experience in software development and full sta
 
 \\section{Work Experience}
 \\textbf{Cybersecurity Trainee -- Web Application Penetration Testing} \\hfill Jan 2026 -- Present \\\\
-\\textit{Swiftant IT Solutions, Hosur, Tamil Nadu, India}
+\\textit{Dossier IT Solutions, Hosur, Tamil Nadu, India}
 \\begin{itemize}[leftmargin=1.5em]
   \\item Perform authorized vulnerability assessment and penetration testing (VAPT) of internal and client-facing web and mobile applications across all 10 OWASP Top 10 risk categories, including broken access control, SQL injection, cross-site scripting (XSS), and security misconfiguration.
   \\item Conduct reconnaissance and service enumeration with Nmap and manual security testing with Burp Suite; validate 100\\% of findings by hand to eliminate false positives and confirm exploitability.
@@ -51,7 +51,7 @@ Software Analyst with 2 years of experience in software development and full sta
 \\end{itemize}
 
 \\textbf{Software Analyst -- Full-Stack Developer} \\hfill Aug 2024 -- Present \\\\
-\\textit{Swiftant IT Solutions, Hosur, Tamil Nadu, India}
+\\textit{Dossier IT Solutions, Hosur, Tamil Nadu, India}
 \\begin{itemize}[leftmargin=1.5em]
   \\item Delivered 6 production applications end-to-end across insurance and logistics domains in Agile/Scrum sprints -- gathering requirements, building front-end and back-end components, integrating RESTful APIs, testing, debugging, and deployment.
   \\item Developed distributed, event-driven back-end microservices for a multi-geography insurance platform using C\\#/.NET 9, SQL Server, MongoDB, Redis, RabbitMQ, and Elasticsearch, enabling rapid product launches across multiple markets.
@@ -64,7 +64,7 @@ Software Analyst with 2 years of experience in software development and full sta
 \\end{itemize}
 
 \\textbf{Intern -- Electronic Data Interchange (EDI)} \\hfill Mar 2024 -- Jul 2024 \\\\
-\\textit{Swiftant IT Solutions, Hosur, Tamil Nadu, India}
+\\textit{Dossier IT Solutions, Hosur, Tamil Nadu, India}
 \\begin{itemize}[leftmargin=1.5em]
   \\item Built and monitored EDI mappings for 3 freight modes (sea, road, air); validated product tracking across FTP-based data exchanges supporting logistics and supply chain operations.
 \\end{itemize}

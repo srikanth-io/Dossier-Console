@@ -3,8 +3,7 @@ export const APP = {
   console: "Admin Console",
   tagline: "Manage records and case files",
   version: "v0.1.0",
-  organization: "Swiftant",
-  defaultWorkspaceName: "Swiftant",
+  organization: "Srikanth Sankar",
 } as const
 
 export const ROUTES = {

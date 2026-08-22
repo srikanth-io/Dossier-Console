@@ -5,12 +5,17 @@ export type ElementCategory =
   | "data"
   | "content"
   | "security"
-  | "education"
 
 export type Orientation = "portrait" | "landscape"
 export type PageSizeId = "a4" | "a3" | "a5" | "letter" | "legal" | "custom"
 export type DocumentMode = "freeform" | "flow"
 export type DocumentStatus = "draft" | "published" | "archived"
+/**
+ * Render target per docs/ui-architecture.md §8: screen renderers may use
+ * interactivity; print renderers must be synchronous and token-safe
+ * (severity colours switch to `--severity-*-print-*`).
+ */
+export type RenderTarget = "screen" | "print"
 
 export type TemplateCategory =
   | "all"
@@ -109,6 +114,7 @@ export interface RenderContext {
   theme: DocTheme
   variables: Record<string, string>
   mode: DocumentMode
+  target: RenderTarget
   pageIndex: number
   totalPages: number
   editSession?: EditSession

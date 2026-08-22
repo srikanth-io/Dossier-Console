@@ -65,6 +65,38 @@
   --color-brand-accent: var(--brand-accent);
   --color-brand-accent-soft: var(--brand-accent-soft);
 
+  /* Tier 3 — domain semantic (docs/ui-architecture.md §4.2) */
+  --color-severity-critical-bg: var(--severity-critical-bg);
+  --color-severity-critical-fg: var(--severity-critical-fg);
+  --color-severity-critical-border: var(--severity-critical-border);
+  --color-severity-high-bg: var(--severity-high-bg);
+  --color-severity-high-fg: var(--severity-high-fg);
+  --color-severity-high-border: var(--severity-high-border);
+  --color-severity-medium-bg: var(--severity-medium-bg);
+  --color-severity-medium-fg: var(--severity-medium-fg);
+  --color-severity-medium-border: var(--severity-medium-border);
+  --color-severity-low-bg: var(--severity-low-bg);
+  --color-severity-low-fg: var(--severity-low-fg);
+  --color-severity-low-border: var(--severity-low-border);
+  --color-severity-info-bg: var(--severity-info-bg);
+  --color-severity-info-fg: var(--severity-info-fg);
+  --color-severity-info-border: var(--severity-info-border);
+
+  --color-status-draft: var(--status-draft);
+  --color-status-in-review: var(--status-in-review);
+  --color-status-changes-requested: var(--status-changes-requested);
+  --color-status-approved: var(--status-approved);
+  --color-status-remediated: var(--status-remediated);
+  --color-status-risk-accepted: var(--status-risk-accepted);
+  --color-status-false-positive: var(--status-false-positive);
+
+  --color-classification-internal: var(--classification-internal);
+  --color-classification-confidential: var(--classification-confidential);
+  --color-classification-restricted: var(--classification-restricted);
+
+  --color-redaction-flagged: var(--redaction-flagged);
+  --color-redaction-applied: var(--redaction-applied);
+
   --shadow-xs: var(--shadow-elev-xs);
   --shadow-sm: var(--shadow-elev-sm);
   --shadow-md: var(--shadow-elev-md);
@@ -147,6 +179,58 @@
   --shadow-elev-lg: 0 10px 15px rgb(0 0 0 / 0.1), 0 4px 6px rgb(0 0 0 / 0.05);
   --shadow-elev-xl: 0 20px 25px rgb(0 0 0 / 0.1), 0 8px 10px rgb(0 0 0 / 0.04);
   --shadow-elev-glow: 0 8px 32px rgba(82, 82, 91, 0.06);
+
+  /* ============================================================
+     Tier 3 — domain semantic tokens (light)
+     Domain-fixed across brand themes; contrast ≥ 4.5:1 (fg on bg).
+     Print variants tuned for greyscale legibility.
+     ============================================================ */
+  --severity-critical-bg: #fee2e2;
+  --severity-critical-fg: #991b1b;
+  --severity-critical-border: #fca5a5;
+  --severity-high-bg: #ffedd5;
+  --severity-high-fg: #9a3412;
+  --severity-high-border: #fdba74;
+  --severity-medium-bg: #fef9c3;
+  --severity-medium-fg: #854d0e;
+  --severity-medium-border: #fde047;
+  --severity-low-bg: #dcfce7;
+  --severity-low-fg: #166534;
+  --severity-low-border: #86efac;
+  --severity-info-bg: #f4f4f5;
+  --severity-info-fg: #3f3f46;
+  --severity-info-border: #d4d4d8;
+
+  --severity-critical-print-bg: #111111;
+  --severity-critical-print-fg: #ffffff;
+  --severity-critical-print-border: #111111;
+  --severity-high-print-bg: #444444;
+  --severity-high-print-fg: #ffffff;
+  --severity-high-print-border: #444444;
+  --severity-medium-print-bg: #d4d4d8;
+  --severity-medium-print-fg: #27272a;
+  --severity-medium-print-border: #a1a1aa;
+  --severity-low-print-bg: #f4f4f5;
+  --severity-low-print-fg: #52525b;
+  --severity-low-print-border: #d4d4d8;
+  --severity-info-print-bg: #ffffff;
+  --severity-info-print-fg: #52525b;
+  --severity-info-print-border: #e4e4e7;
+
+  --status-draft: var(--muted-foreground);
+  --status-in-review: var(--info);
+  --status-changes-requested: var(--warning);
+  --status-approved: var(--success);
+  --status-remediated: var(--success);
+  --status-risk-accepted: var(--warning);
+  --status-false-positive: var(--destructive);
+
+  --classification-internal: var(--muted-foreground);
+  --classification-confidential: var(--warning);
+  --classification-restricted: var(--destructive);
+
+  --redaction-flagged: var(--destructive);
+  --redaction-applied: var(--success);
 }
 
 /* ============================================================
@@ -207,6 +291,40 @@
   --shadow-elev-lg: 0 12px 28px rgb(0 0 0 / 0.6);
   --shadow-elev-xl: 0 24px 60px rgb(0 0 0 / 0.7);
   --shadow-elev-glow: 0 8px 32px rgba(212, 212, 216, 0.06);
+
+  /* ============================================================
+     Tier 3 — domain semantic tokens (dark)
+     ============================================================ */
+  --severity-critical-bg: #450a0a;
+  --severity-critical-fg: #fecaca;
+  --severity-critical-border: #7f1d1d;
+  --severity-high-bg: #431407;
+  --severity-high-fg: #fed7aa;
+  --severity-high-border: #9a3412;
+  --severity-medium-bg: #422006;
+  --severity-medium-fg: #fef08a;
+  --severity-medium-border: #854d0e;
+  --severity-low-bg: #052e16;
+  --severity-low-fg: #bbf7d0;
+  --severity-low-border: #166534;
+  --severity-info-bg: #27272a;
+  --severity-info-fg: #d4d4d8;
+  --severity-info-border: #52525b;
+
+  --status-draft: var(--muted-foreground);
+  --status-in-review: var(--info);
+  --status-changes-requested: var(--warning);
+  --status-approved: var(--success);
+  --status-remediated: var(--success);
+  --status-risk-accepted: var(--warning);
+  --status-false-positive: var(--destructive);
+
+  --classification-internal: var(--muted-foreground);
+  --classification-confidential: var(--warning);
+  --classification-restricted: var(--destructive);
+
+  --redaction-flagged: var(--destructive);
+  --redaction-applied: var(--success);
 }
 
 /* ============================================================

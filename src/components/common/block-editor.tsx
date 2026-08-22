@@ -15,8 +15,8 @@ import {
   type BlockType,
 } from "@/lib/blocks"
 import { cn } from "@/lib/utils"
-import { SlashCommandMenu } from "@/components/slash-command-menu"
-import { RichTextToolbar } from "@/components/rich-text-toolbar"
+import { SlashCommandMenu } from "@/components/common/slash-command-menu"
+import { RichTextToolbar } from "@/components/common/rich-text-toolbar"
 import { icons } from "@/constants"
 
 type BlockEditorProps = {

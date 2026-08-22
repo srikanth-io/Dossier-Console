@@ -2,9 +2,9 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
-import { ConfirmDialog } from "@/components/confirm-dialog"
-import { FormField } from "@/components/form-field"
-import { PageHeader } from "@/components/page-header"
+import { ConfirmDialog } from "@/components/common/confirm-dialog"
+import { FormField } from "@/components/common/form-field"
+import { PageHeader } from "@/components/common/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,7 +49,7 @@ import {
   applyThemePreset,
   getStoredThemePreset,
   type ThemePreset,
-} from "@/components/theme-toggle"
+} from "@/components/common/theme-toggle"
 import { usePages } from "@/store/pages"
 import { cn } from "@/lib/utils"
 

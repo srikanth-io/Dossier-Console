@@ -388,30 +388,6 @@ export const elementCatalog: Record<string, ElementDefinition> = {
       ],
     ],
   },
-  progress: {
-    type: "progress",
-    name: c.types.progress.name,
-    description: c.types.progress.description,
-    category: "data",
-    icon: "progress",
-    defaultSize: { width: 320, height: 48 },
-    defaults: {
-      label: "Progress",
-      value: 60,
-      color: "",
-      showValue: true,
-      radius: 4,
-    },
-    schema: [
-      [
-        { kind: "text", key: "label", label: c.fields.label },
-        { kind: "number", key: "value", label: c.fields.value, min: 0, max: 100 },
-        { kind: "color", key: "color", label: c.fields.colorAccent },
-        { kind: "toggle", key: "showValue", label: c.fields.showValue },
-        { kind: "number", key: "radius", label: c.fields.radius, min: 0, max: 30 },
-      ],
-    ],
-  },
   callout: {
     type: "callout",
     name: c.types.callout.name,
@@ -451,25 +427,6 @@ export const elementCatalog: Record<string, ElementDefinition> = {
         { kind: "select", key: "kind", label: c.fields.kind, options: [{ value: "bullet", label: "Bulleted" }, { value: "numbered", label: "Numbered" }] },
         { kind: "textarea", key: "items", label: c.fields.items, rows: 5 },
         { kind: "number", key: "spacing", label: c.fields.value, min: 0, max: 30 },
-      ],
-    ],
-  },
-  checklist: {
-    type: "checklist",
-    name: c.types.checklist.name,
-    description: c.types.checklist.description,
-    category: "content",
-    icon: "checklist",
-    defaultSize: { width: 320, height: 120 },
-    defaults: {
-      title: "",
-      items: "[ ] Task one\n[ ] Task two\n[x] Task three",
-    },
-    textProp: "items",
-    schema: [
-      [
-        { kind: "text", key: "title", label: c.fields.title },
-        { kind: "textarea", key: "items", label: c.fields.items, rows: 6 },
       ],
     ],
   },
@@ -654,27 +611,6 @@ export const elementCatalog: Record<string, ElementDefinition> = {
       ],
     ],
   },
-  eduBox: {
-    type: "eduBox",
-    name: c.types.eduBox.name,
-    description: c.types.eduBox.description,
-    category: "education",
-    icon: "eduBox",
-    defaultSize: { width: 420, height: 96 },
-    defaults: {
-      variant: "definition",
-      title: "",
-      content: "Add your study note content here.",
-    },
-    textProp: "content",
-    schema: [
-      [
-        { kind: "select", key: "variant", label: c.fields.variant, options: options(c.eduBoxVariants) },
-        { kind: "text", key: "title", label: c.fields.title },
-        { kind: "textarea", key: "content", label: c.fields.content, rows: 4 },
-      ],
-    ],
-  },
   badge: {
     type: "badge",
     name: c.types.badge.name,
@@ -694,25 +630,6 @@ export const elementCatalog: Record<string, ElementDefinition> = {
       ],
     ],
   },
-  embed: {
-    type: "embed",
-    name: c.types.embed.name,
-    description: c.types.embed.description,
-    category: "layout",
-    icon: "embed",
-    defaultSize: { width: 400, height: 300 },
-    defaults: {
-      kind: "pdf",
-      url: "",
-      label: "Imported document",
-    },
-    schema: [
-      [
-        { kind: "text", key: "label", label: c.fields.label },
-        { kind: "select", key: "kind", label: c.fields.kind, options: [{ value: "pdf", label: "PDF" }, { value: "docx", label: "DOCX" }] },
-      ],
-    ],
-  },
 }
 
 export const CATEGORY_ORDER: ElementCategory[] = [
@@ -722,7 +639,6 @@ export const CATEGORY_ORDER: ElementCategory[] = [
   "data",
   "content",
   "security",
-  "education",
 ]
 
 export const CATEGORY_META: Record<ElementCategory, { label: string; icon: IconName }> = {
@@ -732,7 +648,6 @@ export const CATEGORY_META: Record<ElementCategory, { label: string; icon: IconN
   data: { label: c.categories.data, icon: "chart" },
   content: { label: c.categories.content, icon: "callout" },
   security: { label: c.categories.security, icon: "severity" },
-  education: { label: c.categories.education, icon: "eduBox" },
 }
 
 export function definitionFor(type: string): ElementDefinition | undefined {

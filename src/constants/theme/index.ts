@@ -1,4 +1,14 @@
-import { colors, chartColors, gradientBrand, shadows } from "@/constants/theme/colors"
+import {
+  chartColors,
+  classificationTokens,
+  colors,
+  gradientBrand,
+  redactionTokens,
+  severityPrintTokens,
+  severityTokens,
+  shadows,
+  statusTokens,
+} from "@/constants/theme/colors"
 import {
   fonts,
   fontSizes,
@@ -20,6 +30,11 @@ export const theme = {
   chartColors,
   gradientBrand,
   shadows,
+  severityTokens,
+  severityPrintTokens,
+  statusTokens,
+  classificationTokens,
+  redactionTokens,
   fonts,
   fontSizes,
   fontWeights,

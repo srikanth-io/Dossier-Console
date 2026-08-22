@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom"
 
-import { MacbookMockup, MobileMockup } from "@/components/device-mockups"
-import { StoreBadges } from "@/components/store-badges"
+import { MacbookMockup, MobileMockup } from "@/components/marketing/device-mockups"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -354,7 +353,6 @@ function LandingFooter() {
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               {messages.landing.footer.tagline}
             </p>
-            <StoreBadges className="pt-1" />
           </div>
 
           {columns.map((column) => (

@@ -24,7 +24,7 @@ export const DEFAULT_THEME: DocTheme = {
   sectionSpacing: 24,
   paragraphSpacing: 12,
   componentSpacing: 16,
-  companyName: "Swiftant",
+  companyName: "Dossier",
   footerText: "Confidential",
 }
 

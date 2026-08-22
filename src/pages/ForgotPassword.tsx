@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 
-import { FormField } from "@/components/form-field"
+import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { APP, ROUTES, icons, messages } from "@/constants"

@@ -283,7 +283,6 @@ export const studio = {
       data: "Data",
       content: "Content",
       security: "Security",
-      education: "Education",
       myComponents: "My Components",
     },
     types: {
@@ -298,10 +297,8 @@ export const studio = {
       pageNumber: { name: "Page number", description: "Current page indicator" },
       table: { name: "Table", description: "Editable grid of rows and columns" },
       chart: { name: "Chart", description: "Simple bar chart with data" },
-      progress: { name: "Progress bar", description: "Value indicator" },
       callout: { name: "Callout", description: "Info, warning, tip or error box" },
       list: { name: "List", description: "Bulleted or numbered list" },
-      checklist: { name: "Checklist", description: "Interactive task list" },
       code: { name: "Code block", description: "Formatted source code" },
       link: { name: "Hyperlink", description: "Clickable link" },
       severityBadge: { name: "Severity badge", description: "Critical to informational" },
@@ -309,9 +306,7 @@ export const studio = {
       evidence: { name: "Evidence block", description: "Screenshot, request or snippet" },
       apiRequest: { name: "API request", description: "Formatted request/response" },
       testCaseTable: { name: "Test case table", description: "Test case matrix" },
-      eduBox: { name: "Study note", description: "Definition, example, question and more" },
       badge: { name: "Badge", description: "Small status tag" },
-      embed: { name: "Embedded document", description: "Imported PDF or DOCX" },
     },
     fields: {
       content: "Content",
@@ -443,15 +438,6 @@ export const studio = {
       dashed: "Dashed",
       dotted: "Dotted",
     },
-    eduBoxVariants: {
-      definition: "Definition",
-      example: "Example",
-      question: "Question",
-      answer: "Answer",
-      takeaway: "Key takeaway",
-      summary: "Summary",
-      formula: "Formula",
-    },
     evidenceKinds: {
       screenshot: "Screenshot",
       request: "Request",
@@ -511,5 +497,31 @@ export const studio = {
       testCase: "Test cases",
       severity: "Severity matrix",
     },
+  },
+  render: {
+    findingSections: {
+      description: "Description",
+      impact: "Impact",
+      evidence: "Evidence",
+      recommendation: "Recommendation",
+      references: "References",
+    },
+    findingMeta: {
+      affected: "Affected",
+      cvss: "CVSS",
+      status: "Status",
+    },
+    evidenceLabel: "Evidence",
+    screenshotPlaceholder:
+      "Add screenshot evidence (paste into the Properties panel).",
+    testCaseHeaders: [
+      "ID",
+      "Test case",
+      "Expected",
+      "Actual",
+      "Status",
+      "Evidence",
+      "Remarks",
+    ],
   },
 } as const

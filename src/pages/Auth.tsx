@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import { FormField } from "@/components/form-field"
+import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"

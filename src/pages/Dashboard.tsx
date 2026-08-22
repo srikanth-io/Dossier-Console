@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom"
 
-import { PageHeader } from "@/components/page-header"
-import { StatCard } from "@/components/stat-card"
-import { StatusPill, type StatusKey } from "@/components/status-pill"
+import { PageHeader } from "@/components/common/page-header"
+import { StatCard } from "@/components/common/stat-card"
+import { StatusPill, type StatusKey } from "@/components/domain/status-pill"
 import { Button } from "@/components/ui/button"
 import {
   Card,

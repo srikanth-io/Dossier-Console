@@ -24,8 +24,8 @@ export const layout = {
   signOutDescription:
     "Are you sure you want to sign out? You can sign back in anytime.",
   userName: "Admin",
-  userInitials: "SA",
-  userEmail: "admin@swiftant.com",
+  userInitials: "SS",
+  userEmail: "admin@dossier.dev",
   themeToggleLight: "Switch to light mode",
   themeToggleDark: "Switch to dark mode",
   themeLight: "Light mode",

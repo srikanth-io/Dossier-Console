@@ -112,7 +112,7 @@ export const logs: LogEntry[] = [
     device: "Windows 11",
     ipAddress: "103.45.67.89",
     request: "POST /api/email/send",
-    details: "Daily report sent to admin@swiftant.com",
+    details: "Daily report sent to admin@dossier.dev",
   },
   {
     id: "LOG-005",

@@ -2,6 +2,7 @@ import { commonMessages } from "@/constants/messages/common"
 import { dashboard } from "@/constants/messages/dashboard"
 import { dossiers } from "@/constants/messages/dossiers"
 import { errorCodes, errorMessages } from "@/constants/messages/errors"
+import { findings } from "@/constants/messages/findings"
 import { landing } from "@/constants/messages/landing"
 import { layout, nav } from "@/constants/messages/layout"
 import { login } from "@/constants/messages/login"
@@ -21,6 +22,7 @@ export const messages = {
   nav,
   dashboard,
   dossiers,
+  findings,
   projects,
   pages: pagesMsg,
   settings,

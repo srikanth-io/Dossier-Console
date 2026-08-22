@@ -1,10 +1,45 @@
 import type { CSSProperties, ReactNode } from "react"
 
-import type { DocElement, RenderContext } from "@/document-engine/types"
+import { messages } from "@/constants"
+import { severityPrintTokens, severityTokens } from "@/constants/theme/colors"
+import type {
+  DocElement,
+  RenderContext,
+  RenderTarget,
+} from "@/document-engine/types"
 import { resolveText } from "@/document-engine/variables"
 
 type Props = Record<string, unknown>
 type RenderFn = (props: Props, ctx: RenderContext) => ReactNode
+
+function severityBand(severity: string): keyof typeof severityTokens {
+  switch (severity) {
+    case "critical":
+      return "critical"
+    case "high":
+      return "high"
+    case "low":
+      return "low"
+    case "informational":
+      return "info"
+    default:
+      return "medium"
+  }
+}
+
+function severityColors(
+  severity: string,
+  ctx: RenderTarget | RenderContext
+): { bg: string; fg: string; border: string } {
+  const band = severityBand(severity)
+  const target = typeof ctx === "string" ? ctx : ctx.target
+  if (target === "print") {
+    const tokens = severityPrintTokens[band]
+    return { bg: tokens.bg, fg: tokens.fg, border: tokens.border }
+  }
+  const tokens = severityTokens[band]
+  return { bg: tokens.bg, fg: tokens.fg, border: tokens.border }
+}
 
 function S(props: Props, key: string, fallback = ""): string {
   return typeof props[key] === "string" ? (props[key] as string) : fallback
@@ -604,64 +639,6 @@ function renderList(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-function renderChecklist(props: Props, ctx: RenderContext): ReactNode {
-  const title = resolve(S(props, "title", ""), ctx)
-  const lines = S(props, "items", "")
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-  const entries = lines.map((line) => {
-    const trimmed = line.trim()
-    const checked =
-      trimmed.startsWith("[x]") || trimmed.startsWith("[X]") || trimmed.startsWith("☑")
-    const cleaned = trimmed.replace(/^\[[ xX]\]\s*/, "").replace(/^[☑☐]\s*/, "")
-    return { checked, label: resolve(cleaned, ctx) }
-  })
-  return (
-    <div
-      style={{
-        ...fullBox,
-        fontFamily: ctx.theme.bodyFont,
-        fontSize: 14,
-        color: ctx.theme.text,
-        lineHeight: 1.6,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-      }}
-    >
-      {title && (
-        <div style={{ fontWeight: 700, marginBottom: 2 }}>{title}</div>
-      )}
-      {entries.map((entry, index) => (
-        <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <span
-            style={{
-              width: 14,
-              height: 14,
-              marginTop: 3,
-              flexShrink: 0,
-              border: `1.5px solid ${ctx.theme.primary}`,
-              borderRadius: 3,
-              backgroundColor: entry.checked ? ctx.theme.primary : "transparent",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#ffffff",
-              fontSize: 10,
-              fontWeight: 700,
-            }}
-          >
-            {entry.checked ? "✓" : ""}
-          </span>
-          <span style={{ flex: 1, wordBreak: "break-word", textDecoration: entry.checked ? "line-through" : "none", opacity: entry.checked ? 0.6 : 1 }}>
-            {entry.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function renderLink(props: Props, ctx: RenderContext): ReactNode {
   const text = resolve(S(props, "text", ""), ctx)
   const href = resolve(S(props, "href", ""), ctx)
@@ -687,31 +664,15 @@ function renderLink(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-const SEVERITY_META: Record<
-  string,
-  { bg: string; color: string; dot: string }
-> = {
-  critical: { bg: "#fee2e2", color: "#b91c1c", dot: "#dc2626" },
-  high: { bg: "#ffedd5", color: "#c2410c", dot: "#ea580c" },
-  medium: { bg: "#fef3c7", color: "#b45309", dot: "#d97706" },
-  low: { bg: "#dbeafe", color: "#1d4ed8", dot: "#2563eb" },
-  informational: { bg: "#f3f4f6", color: "#4b5563", dot: "#6b7280" },
-}
-
 function severityLabel(severity: string): string {
-  const labels: Record<string, string> = {
-    critical: "Critical",
-    high: "High",
-    medium: "Medium",
-    low: "Low",
-    informational: "Informational",
-  }
-  return labels[severity] ?? severity
+  const options = messages.studio.components
+    .severityOptions as Record<string, string>
+  return options[severity] ?? severity
 }
 
-function renderSeverityBadge(props: Props, _ctx: RenderContext): ReactNode {
+function renderSeverityBadge(props: Props, ctx: RenderContext): ReactNode {
   const severity = S(props, "severity", "medium")
-  const meta = SEVERITY_META[severity] ?? SEVERITY_META.medium
+  const meta = severityColors(severity, ctx)
   const label = S(props, "label") || severityLabel(severity)
   return (
     <div
@@ -720,7 +681,8 @@ function renderSeverityBadge(props: Props, _ctx: RenderContext): ReactNode {
         alignItems: "center",
         gap: 6,
         backgroundColor: meta.bg,
-        color: meta.color,
+        color: meta.fg,
+        border: `1px solid ${meta.border}`,
         borderRadius: 999,
         padding: "4px 12px",
         fontSize: 13,
@@ -733,7 +695,7 @@ function renderSeverityBadge(props: Props, _ctx: RenderContext): ReactNode {
           width: 8,
           height: 8,
           borderRadius: "50%",
-          backgroundColor: meta.dot,
+          backgroundColor: meta.fg,
           flexShrink: 0,
         }}
       />
@@ -743,21 +705,22 @@ function renderSeverityBadge(props: Props, _ctx: RenderContext): ReactNode {
 }
 
 const META_LABELS = [
-  { key: "affected", label: "Affected" },
-  { key: "cvss", label: "CVSS" },
-  { key: "status", label: "Status" },
+  { key: "affected", label: messages.studio.render.findingMeta.affected },
+  { key: "cvss", label: messages.studio.render.findingMeta.cvss },
+  { key: "status", label: messages.studio.render.findingMeta.status },
 ] as const
 
 function renderFinding(props: Props, ctx: RenderContext): ReactNode {
   const title = resolve(S(props, "title", ""), ctx)
   const severity = S(props, "severity", "medium")
-  const meta = SEVERITY_META[severity] ?? SEVERITY_META.medium
+  const meta = severityColors(severity, ctx)
+  const sectionLabels = messages.studio.render.findingSections
   const sections = [
-    { label: "Description", value: S(props, "description") },
-    { label: "Impact", value: S(props, "impact") },
-    { label: "Evidence", value: S(props, "evidence") },
-    { label: "Recommendation", value: S(props, "recommendation") },
-    { label: "References", value: S(props, "references") },
+    { label: sectionLabels.description, value: S(props, "description") },
+    { label: sectionLabels.impact, value: S(props, "impact") },
+    { label: sectionLabels.evidence, value: S(props, "evidence") },
+    { label: sectionLabels.recommendation, value: S(props, "recommendation") },
+    { label: sectionLabels.references, value: S(props, "references") },
   ].filter((section) => section.value.trim() !== "")
   return (
     <div
@@ -780,7 +743,8 @@ function renderFinding(props: Props, ctx: RenderContext): ReactNode {
         <span
           style={{
             backgroundColor: meta.bg,
-            color: meta.color,
+            color: meta.fg,
+            border: `1px solid ${meta.border}`,
             borderRadius: 999,
             padding: "2px 10px",
             fontSize: 11,
@@ -797,7 +761,7 @@ function renderFinding(props: Props, ctx: RenderContext): ReactNode {
           display: "flex",
           gap: 16,
           flexWrap: "wrap",
-          backgroundColor: "#f8fafc",
+          backgroundColor: "var(--muted)",
           border: `1px solid ${ctx.theme.border}`,
           borderRadius: 8,
           padding: "8px 12px",
@@ -825,17 +789,44 @@ function renderFinding(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
+/**
+ * Evidence chrome uses semantic vars only (§7.5) — kind is conveyed by the
+ * label, not colour, so screen and print stay consistent.
+ */
 const EVIDENCE_META: Record<string, { bg: string; border: string; color: string }> = {
-  screenshot: { bg: "#f8fafc", border: "#cbd5e1", color: "#475569" },
-  request: { bg: "#f0f9ff", border: "#7dd3fc", color: "#075985" },
-  response: { bg: "#ecfdf5", border: "#6ee7b7", color: "#065f46" },
-  code: { bg: "#f8fafc", border: "#cbd5e1", color: "#1e293b" },
-  command: { bg: "#f5f3ff", border: "#c4b5fd", color: "#4c1d95" },
+  screenshot: {
+    bg: "var(--muted)",
+    border: "var(--border)",
+    color: "var(--muted-foreground)",
+  },
+  request: {
+    bg: "var(--muted)",
+    border: "var(--border)",
+    color: "var(--muted-foreground)",
+  },
+  response: {
+    bg: "var(--muted)",
+    border: "var(--border)",
+    color: "var(--muted-foreground)",
+  },
+  code: {
+    bg: "var(--muted)",
+    border: "var(--border)",
+    color: "var(--foreground)",
+  },
+  command: {
+    bg: "var(--muted)",
+    border: "var(--border)",
+    color: "var(--foreground)",
+  },
 }
 
 function renderEvidence(props: Props, ctx: RenderContext): ReactNode {
   const kind = S(props, "kind", "code")
-  const label = resolve(S(props, "label", "Evidence"), ctx)
+  const label = resolve(
+    S(props, "label", messages.studio.render.evidenceLabel),
+    ctx
+  )
   const content = S(props, "content", "")
   const meta = EVIDENCE_META[kind] ?? EVIDENCE_META.code
   if (kind === "screenshot") {
@@ -858,7 +849,7 @@ function renderEvidence(props: Props, ctx: RenderContext): ReactNode {
           {label}
         </span>
         <div style={{ flex: 1, fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8 }}>
-          {content || "Add screenshot evidence (paste into the Properties panel)."}
+          {content || messages.studio.render.screenshotPlaceholder}
         </div>
       </div>
     )
@@ -887,13 +878,20 @@ function renderEvidence(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-const METHOD_COLORS: Record<string, string> = {
-  GET: "#059669",
-  POST: "#2563eb",
-  PUT: "#d97706",
-  PATCH: "#7c3aed",
-  DELETE: "#dc2626",
-  OPTIONS: "#475569",
+/**
+ * HTTP verb colours map to severity bands so print output automatically
+ * switches to the greyscale `--severity-*-print-*` set (§8).
+ */
+function methodColor(method: string, ctx: RenderContext): string {
+  const band: Record<string, Parameters<typeof severityBand>[0]> = {
+    GET: "low",
+    POST: "informational",
+    PUT: "medium",
+    PATCH: "high",
+    DELETE: "critical",
+    OPTIONS: "informational",
+  }
+  return severityColors(band[method] ?? "informational", ctx).fg
 }
 
 function renderApiRequest(props: Props, ctx: RenderContext): ReactNode {
@@ -920,7 +918,7 @@ function renderApiRequest(props: Props, ctx: RenderContext): ReactNode {
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span
           style={{
-            backgroundColor: METHOD_COLORS[method] ?? "#475569",
+            backgroundColor: methodColor(method, ctx),
             color: "#ffffff",
             borderRadius: 6,
             padding: "2px 10px",
@@ -972,7 +970,7 @@ function renderApiRequest(props: Props, ctx: RenderContext): ReactNode {
               wordBreak: "break-word",
             }}
           >
-            <div style={{ color: "#94a3b8", marginBottom: 4 }}>{responseStatus}</div>
+            <div style={{ color: "var(--muted-foreground)", marginBottom: 4 }}>{responseStatus}</div>
             {responseBody}
           </div>
         </div>
@@ -981,18 +979,29 @@ function renderApiRequest(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-const TEST_CASE_HEADERS = ["ID", "Test case", "Expected", "Actual", "Status", "Evidence", "Remarks"]
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pass: { bg: "#dcfce7", color: "#166534" },
-  passed: { bg: "#dcfce7", color: "#166534" },
-  fail: { bg: "#fee2e2", color: "#991b1b" },
-  failed: { bg: "#fee2e2", color: "#991b1b" },
-  wip: { bg: "#fef3c7", color: "#92400e" },
-  blocked: { bg: "#fed7aa", color: "#9a3412" },
-  "not run": { bg: "#f3f4f6", color: "#4b5563" },
-  "n/a": { bg: "#f3f4f6", color: "#4b5563" },
-  "pass with notes": { bg: "#ecfdf5", color: "#065f46" },
+/**
+ * Test-case status colours map onto severity bands so screen and print
+ * stay token-driven (§7.5, §8).
+ */
+function testCaseStatusColors(
+  status: string,
+  ctx: RenderContext
+): { bg: string; color: string } {
+  const band: Record<string, Parameters<typeof severityBand>[0]> = {
+    pass: "low",
+    passed: "low",
+    "pass with notes": "low",
+    fail: "critical",
+    failed: "critical",
+    wip: "medium",
+    blocked: "high",
+    "not run": "info",
+    "n/a": "info",
+  }
+  const key = band[status]
+  if (!key) return { bg: "transparent", color: "" }
+  const meta = severityColors(key, ctx)
+  return { bg: meta.bg, color: meta.fg }
 }
 
 function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
@@ -1017,13 +1026,13 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
       {headerRow && (
         <thead>
           <tr>
-            {TEST_CASE_HEADERS.map((header) => (
+            {messages.studio.render.testCaseHeaders.map((header) => (
               <th
                 key={header}
                 style={{
                   border,
                   padding: 6,
-                  backgroundColor: "#f3f4f6",
+                  backgroundColor: "var(--muted)",
                   color: ctx.theme.text,
                   fontWeight: 600,
                   textAlign: "left",
@@ -1038,10 +1047,10 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
       <tbody>
         {body.map((row, rowIndex) => {
           const status = (row[4] ?? "").toLowerCase()
-          const statusMeta = STATUS_COLORS[status] ?? { bg: "transparent", color: ctx.theme.text }
+          const statusMeta = testCaseStatusColors(status, ctx)
           return (
             <tr key={rowIndex}>
-              {TEST_CASE_HEADERS.map((_, colIndex) => {
+              {messages.studio.render.testCaseHeaders.map((_, colIndex) => {
                 const value = row[colIndex] ?? ""
                 const isStatus = colIndex === 4
                 const editing =
@@ -1059,7 +1068,11 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
                       wordBreak: "break-word",
                       verticalAlign: "top",
                       position: "relative",
-                      backgroundColor: isStatus ? statusMeta.bg : rowIndex % 2 === 1 ? "#f9fafb" : "transparent",
+                      backgroundColor: isStatus
+                        ? statusMeta.bg || "transparent"
+                        : rowIndex % 2 === 1
+                          ? "var(--muted)"
+                          : "transparent",
                     }}
                   >
                     {editing ? (
@@ -1095,62 +1108,6 @@ function renderTestCaseTable(props: Props, ctx: RenderContext): ReactNode {
         })}
       </tbody>
     </table>
-  )
-}
-
-const EDU_META: Record<string, { label: string; bg: string; border: string; color: string; glyph: string; mono?: boolean }> = {
-  definition: { label: "Definition", bg: "#eff6ff", border: "#93c5fd", color: "#1e3a8a", glyph: "ℹ" },
-  example: { label: "Example", bg: "#ecfdf5", border: "#6ee7b7", color: "#065f46", glyph: "✎" },
-  question: { label: "Question", bg: "#fffbeb", border: "#fcd34d", color: "#92400e", glyph: "?" },
-  answer: { label: "Answer", bg: "#f0fdfa", border: "#5eead4", color: "#134e4a", glyph: "✓" },
-  takeaway: { label: "Key takeaway", bg: "#faf5ff", border: "#d8b4fe", color: "#6b21a8", glyph: "✦" },
-  summary: { label: "Summary", bg: "#f8fafc", border: "#94a3b8", color: "#334155", glyph: "▤" },
-  formula: { label: "Formula", bg: "#1e293b", border: "#334155", color: "#e2e8f0", glyph: "ƒ", mono: true },
-}
-
-function renderEduBox(props: Props, ctx: RenderContext): ReactNode {
-  const variant = S(props, "variant", "definition")
-  const meta = EDU_META[variant] ?? EDU_META.definition
-  const title = resolve(S(props, "title", ""), ctx)
-  const content = resolve(S(props, "content", ""), ctx)
-  return (
-    <div
-      style={{
-        ...fullBox,
-        overflowY: "auto",
-        backgroundColor: meta.bg,
-        border: `1px solid ${meta.border}`,
-        borderLeft: `4px solid ${meta.color}`,
-        borderRadius: 8,
-        padding: 12,
-        color: meta.color,
-        fontFamily: meta.mono ? ctx.theme.codeFont : ctx.theme.bodyFont,
-        fontSize: meta.mono ? 13 : 13.5,
-        lineHeight: 1.55,
-      }}
-    >
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          backgroundColor: meta.color,
-          color: "#ffffff",
-          borderRadius: 6,
-          padding: "2px 8px",
-          fontSize: 10.5,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          marginBottom: 8,
-          fontStyle: meta.mono ? "italic" : "normal",
-        }}
-      >
-        {meta.glyph} {meta.label}
-      </div>
-      {title && <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>}
-      <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{content}</div>
-    </div>
   )
 }
 
@@ -1287,50 +1244,6 @@ function renderChart(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-function renderProgress(props: Props, ctx: RenderContext): ReactNode {
-  const label = resolve(S(props, "label", ""), ctx)
-  const value = Math.min(100, Math.max(0, N(props, "value", 0)))
-  const color = S(props, "color") || ctx.theme.accent
-  return (
-    <div
-      style={{
-        ...fullBox,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        gap: 6,
-        fontFamily: ctx.theme.bodyFont,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: ctx.theme.text }}>{label}</span>
-        {B(props, "showValue", true) && (
-          <span style={{ fontSize: 12, fontWeight: 700, color }}>{value}%</span>
-        )}
-      </div>
-      <div
-        style={{
-          width: "100%",
-          height: N(props, "radius", 4) * 2 + 6,
-          backgroundColor: "#e5e7eb",
-          borderRadius: N(props, "radius", 4),
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${value}%`,
-            height: "100%",
-            backgroundColor: color,
-            borderRadius: N(props, "radius", 4),
-            transition: "width 0.3s",
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
 const BADGE_META: Record<string, (theme: RenderContext["theme"]) => { bg: string; color: string }> = {
   primary: (theme) => ({ bg: theme.primary, color: "#ffffff" }),
   secondary: (theme) => ({ bg: theme.secondary, color: theme.text }),
@@ -1364,51 +1277,6 @@ function renderBadge(props: Props, ctx: RenderContext): ReactNode {
   )
 }
 
-function renderEmbed(props: Props, ctx: RenderContext): ReactNode {
-  const kind = S(props, "kind", "pdf")
-  const url = S(props, "url")
-  const label = resolve(S(props, "label", "Imported document"), ctx)
-  if (!url) {
-    return (
-      <div
-        style={{
-          ...fullBox,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          border: `1.5px dashed ${ctx.theme.border}`,
-          borderRadius: 8,
-          backgroundColor: "#f8fafc",
-          color: ctx.theme.text,
-          fontFamily: ctx.theme.bodyFont,
-          fontSize: 13,
-        }}
-      >
-        <span style={{ fontSize: 24 }}>{kind === "pdf" ? "PDF" : "DOCX"}</span>
-        {label}
-      </div>
-    )
-  }
-  if (kind === "docx") {
-    return (
-      <div style={{ ...fullBox, backgroundColor: "#ffffff" }}>
-        <p style={{ fontFamily: ctx.theme.bodyFont, fontSize: 12, color: ctx.theme.text, padding: 8 }}>
-          {label}
-        </p>
-      </div>
-    )
-  }
-  return (
-    <iframe
-      src={url}
-      title={label}
-      style={{ width: "100%", height: "100%", border: 0, backgroundColor: "#ffffff" }}
-    />
-  )
-}
-
 const RENDERERS: Record<string, RenderFn> = {
   text: renderText,
   heading: renderHeading,
@@ -1421,10 +1289,8 @@ const RENDERERS: Record<string, RenderFn> = {
   pageNumber: renderPageNumber,
   table: renderTable,
   chart: renderChart,
-  progress: renderProgress,
   callout: renderCallout,
   list: renderList,
-  checklist: renderChecklist,
   code: renderCode,
   link: renderLink,
   severityBadge: renderSeverityBadge,
@@ -1432,9 +1298,7 @@ const RENDERERS: Record<string, RenderFn> = {
   evidence: renderEvidence,
   apiRequest: renderApiRequest,
   testCaseTable: renderTestCaseTable,
-  eduBox: renderEduBox,
   badge: renderBadge,
-  embed: renderEmbed,
 }
 
 export function renderElement(el: DocElement, ctx: RenderContext): ReactNode {

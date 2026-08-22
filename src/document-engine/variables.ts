@@ -1,6 +1,11 @@
 export const SYSTEM_VARIABLES = [
   { name: "page_number", value: "1" },
   { name: "total_pages", value: "1" },
+  { name: "client_name", value: "" },
+  { name: "engagement_name", value: "" },
+  { name: "classification", value: "Confidential" },
+  { name: "report_version", value: "1.0" },
+  { name: "export_date", value: "" },
 ] as const
 
 const VARIABLE_RE = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g

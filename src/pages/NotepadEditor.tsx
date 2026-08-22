@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { BlockEditor } from "@/components/block-editor"
-import { FolderBreadcrumb } from "@/components/folder-breadcrumb"
-import { GiphyPicker } from "@/components/giphy-picker"
+import { BlockEditor } from "@/components/common/block-editor"
+import { FolderBreadcrumb } from "@/components/common/folder-breadcrumb"
+import { GiphyPicker } from "@/components/common/giphy-picker"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

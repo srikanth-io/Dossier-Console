@@ -1,8 +1,8 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
-import { PageHeader } from "@/components/page-header"
-import { SearchFilterBar } from "@/components/search-filter-bar"
+import { PageHeader } from "@/components/common/page-header"
+import { SearchFilterBar } from "@/components/common/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
