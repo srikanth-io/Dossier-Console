@@ -20,6 +20,13 @@ export const commonMessages = {
   all: "All",
   status: "Status",
   none: "None",
+  selectDate: "Select date",
+  jumpToToday: "Jump to today",
+  networkLost: "Network lost",
+  networkLostHint: "You're offline. Changes are saved on this device and will sync automatically.",
+  networkRestored: "Back online",
+  offlineSynced: (count: number) =>
+    `${count} ${count === 1 ? "change" : "changes"} synced from offline`,
   emptyResult: "No records found.",
   updated: "Updated",
   department: "Department",
@@ -41,6 +48,15 @@ export const statusLabels = {
   active: "Active",
   invited: "Invited",
   suspended: "Suspended",
+  archived: "Archived",
+} as const
+
+export const relativeTime = {
+  justNow: "Just now",
+  minutesAgo: (m: number): string => `${m}m ago`,
+  hoursAgo: (h: number): string => `${h}h ago`,
+  yesterday: "Yesterday",
+  daysAgo: (d: number): string => `${d} days ago`,
 } as const
 
 export const roleLabels = {

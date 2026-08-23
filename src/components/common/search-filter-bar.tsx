@@ -6,37 +6,39 @@ interface SearchFilterBarProps {
   query: string
   onQueryChange: (value: string) => void
   placeholder: string
-  count?: React.ReactNode
   children?: React.ReactNode
   className?: string
 }
 
+/**
+ * Single-line toolbar: search input pinned to the left, filter controls
+ * (dropdowns / view toggles) pushed to the far right. Full-width children
+ * wrap onto their own row below.
+ */
 export function SearchFilterBar({
   query,
   onQueryChange,
   placeholder,
-  count,
   children,
   className,
 }: SearchFilterBarProps) {
   return (
-    <div className={cn("space-y-3 animate-fade-rise", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full sm:w-64">
-          <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder={placeholder}
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            className="w-full pl-8"
-          />
-        </div>
-        {count && (
-          <p className="text-sm text-muted-foreground">{count}</p>
-        )}
+    <div className={cn("flex flex-wrap items-center gap-3 animate-fade-rise", className)}>
+      <div className="relative w-full sm:w-64 shrink-0">
+        <icons.search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          className="w-full pl-8"
+        />
       </div>
-      {children}
+      {children && (
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

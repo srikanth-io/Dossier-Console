@@ -1,0 +1,29 @@
+# Single-port entry point for the local Supabase stack (published as localhost:3001).
+#
+#	Routing (by Host header):
+#	  http://127.0.0.1:3001/*          -> Kong gateway (REST, Auth, Storage,
+#	                                      Functions, GraphQL, Realtime, pg-meta, MCP)
+#	  http://studio.localhost:3001/*   -> Supabase Studio dashboard
+#	  http://mailpit.localhost:3001/*  -> Mailpit email testing UI
+#
+# Upstreams use the service aliases on the supabase_network_<project> network.
+
+{
+	auto_https off
+}
+
+:80 {
+	@studio host studio.localhost
+	handle @studio {
+		reverse_proxy studio:3000
+	}
+
+	@mailpit host mailpit.localhost
+	handle @mailpit {
+		reverse_proxy inbucket:8025
+	}
+
+	handle {
+		reverse_proxy kong:8000
+	}
+}

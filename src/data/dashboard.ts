@@ -17,19 +17,19 @@ export const dashboardStats: StatCard[] = [
     icon: "dossiers",
   },
   {
-    label: dashboard.stats.activeUsers,
+    label: dashboard.stats.drafts,
     value: "342",
     delta: "+8%",
     icon: "users",
   },
   {
-    label: dashboard.stats.pendingReviews,
+    label: dashboard.stats.publishedDocs,
     value: "47",
     delta: "-5%",
     icon: "pendingReviews",
   },
   {
-    label: dashboard.stats.reportsGenerated,
+    label: dashboard.stats.projects,
     value: "96",
     delta: "+23%",
     icon: "reports",

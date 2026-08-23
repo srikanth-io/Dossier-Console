@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { Link } from "react-router-dom"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -27,34 +28,40 @@ import {
   statusLabels,
   theme,
 } from "@/constants"
-import { dashboardStats, recentDossiers } from "@/data/dashboard"
-import {
-  documentTypes,
-  weeklyCreated,
-  type DocumentTypeKey,
-} from "@/data/dashboardCharts"
+import type { TemplateCategory } from "@/document-engine/types"
+import { formatRelative } from "@/lib/time"
+import { useAuth } from "@/store/auth"
+import { useDocumentLibrary } from "@/store/documents"
+import { useProjects } from "@/store/projects"
 
 const statTones = ["primary", "info", "warning", "success"] as const
 
-const statHints = [
-  messages.dashboard.stats.hints.totalDossiers,
-  messages.dashboard.stats.hints.activeUsers,
-  messages.dashboard.stats.hints.pendingReviews,
-  messages.dashboard.stats.hints.reportsGenerated,
-]
+const weekDayKeys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
 
-const typeLabel: Record<DocumentTypeKey, string> = {
-  vapt: messages.dashboard.charts.typeVapt,
-  invoices: messages.dashboard.charts.typeInvoices,
+const typeLabel: Record<Exclude<TemplateCategory, "all">, string> = {
   resume: messages.dashboard.charts.typeResume,
+  reports: messages.dashboard.charts.typeReports,
   study: messages.dashboard.charts.typeStudy,
+  vapt: messages.dashboard.charts.typeVapt,
+  business: messages.dashboard.charts.typeBusiness,
+  education: messages.dashboard.charts.typeEducation,
+  certificates: messages.dashboard.charts.typeCertificates,
+  invoices: messages.dashboard.charts.typeInvoices,
   proposals: messages.dashboard.charts.typeProposals,
+  custom: messages.dashboard.charts.typeCustom,
 }
 
 const statusKeyFor = (label: string): StatusKey | undefined =>
   (Object.keys(statusLabels) as (keyof typeof statusLabels)[]).find(
     (key) => statusLabels[key] === label
   )
+
+const documentStatusLabel = (status: string): string =>
+  status === "published"
+    ? statusLabels.complete
+    : status === "archived"
+      ? statusLabels.archived
+      : statusLabels.draft
 
 const quickActions = [
   {
@@ -83,10 +90,70 @@ const quickActions = [
   },
 ]
 
-const maxWeekly = Math.max(...weeklyCreated)
-const typesTotal = documentTypes.reduce((sum, item) => sum + item.value, 0)
-
 export function Dashboard() {
+  const { user } = useAuth()
+  const { documents } = useDocumentLibrary()
+  const { projects } = useProjects()
+
+  // Every number below is derived from the signed-in user's own rows.
+  const stats = useMemo(
+    () => [
+      { label: messages.dashboard.stats.totalDossiers, value: String(documents.length), hint: messages.dashboard.stats.hints.totalDossiers },
+      { label: messages.dashboard.stats.drafts, value: String(documents.filter((d) => d.status === "draft").length), hint: messages.dashboard.stats.hints.drafts },
+      { label: messages.dashboard.stats.publishedDocs, value: String(documents.filter((d) => d.status === "published").length), hint: messages.dashboard.stats.hints.publishedDocs },
+      { label: messages.dashboard.stats.projects, value: String(projects.length), hint: messages.dashboard.stats.hints.projects },
+    ],
+    [documents, projects]
+  )
+
+  // Documents created per day of the current week (Mon..Sun).
+  const weeklyCreated = useMemo(() => {
+    const now = new Date()
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+    monday.setHours(0, 0, 0, 0)
+
+    return weekDayKeys.map((_, index) => {
+      const start = new Date(monday)
+      start.setDate(monday.getDate() + index)
+      const end = new Date(start)
+      end.setDate(start.getDate() + 1)
+      return documents.filter((doc) => {
+        const created = new Date(doc.createdAt).getTime()
+        return (
+          !Number.isNaN(created) &&
+          created >= start.getTime() &&
+          created < end.getTime()
+        )
+      }).length
+    })
+  }, [documents])
+
+  const documentTypes = useMemo(() => {
+    const counts = new Map<Exclude<TemplateCategory, "all">, number>()
+    for (const doc of documents) {
+      if (doc.category === "all") continue
+      counts.set(doc.category, (counts.get(doc.category) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([key, value]) => ({ key, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [documents])
+
+  const recentDossiers = useMemo(
+    () =>
+      documents.slice(0, 5).map((doc) => ({
+        id: doc.id,
+        subject: doc.name,
+        owner: user?.name || user?.email || commonMessages.none,
+        status: documentStatusLabel(doc.status),
+        updated: formatRelative(doc.updatedAt),
+      })),
+    [documents, user]
+  )
+
+  const maxWeekly = Math.max(...weeklyCreated, 1)
+  const typesTotal = documentTypes.reduce((sum, item) => sum + item.value, 0)
   return (
     <div className="space-y-6">
       <PageHeader
@@ -110,8 +177,10 @@ export function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {dashboardStats.map((stat, index) => {
-          const Icon = icons[stat.icon]
+        {stats.map((stat, index) => {
+          const tone = statTones[index % statTones.length]
+          const statIcons = [icons.dossiers, icons.fileCode, icons.checkCircle, icons.activity]
+          const Icon = statIcons[index % statIcons.length]
           return (
             <div
               key={stat.label}
@@ -121,11 +190,9 @@ export function Dashboard() {
               <StatCard
                 title={stat.label}
                 value={stat.value}
-                delta={stat.delta}
-                trend={stat.delta.startsWith("-") ? "down" : "up"}
-                hint={statHints[index]}
+                hint={stat.hint}
                 icon={<Icon />}
-                iconTone={statTones[index % statTones.length]}
+                iconTone={tone}
               />
             </div>
           )

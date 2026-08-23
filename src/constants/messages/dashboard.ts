@@ -8,14 +8,14 @@ export const dashboard = {
   },
   stats: {
     totalDossiers: "Total Dossiers",
-    activeUsers: "Active Users",
-    pendingReviews: "Pending Reviews",
-    reportsGenerated: "Reports Generated",
+    drafts: "Drafts",
+    publishedDocs: "Published",
+    projects: "Projects",
     hints: {
-      totalDossiers: "Across all workspaces",
-      activeUsers: "Active in the last 30 days",
-      pendingReviews: "Awaiting your review",
-      reportsGenerated: "Exported this month",
+      totalDossiers: "In your library",
+      drafts: "Not yet published",
+      publishedDocs: "Live in your library",
+      projects: "Assigned to you",
     },
   },
   charts: {
@@ -35,6 +35,11 @@ export const dashboard = {
     typeResume: "Resumes",
     typeStudy: "Study material",
     typeProposals: "Proposals",
+    typeReports: "Reports",
+    typeBusiness: "Business",
+    typeEducation: "Education",
+    typeCertificates: "Certificates",
+    typeCustom: "Custom",
   },
   recent: {
     title: "Recent documents",

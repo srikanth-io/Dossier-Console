@@ -4,6 +4,14 @@ import { toast } from "sonner"
 
 import { ConfirmDialog } from "@/components/common/confirm-dialog"
 import { EmptyState } from "@/components/common/empty-state"
+import { CollectionSection } from "@/components/common/collection-page"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { PageHeader } from "@/components/common/page-header"
 import { SearchFilterBar } from "@/components/common/search-filter-bar"
 import { Badge } from "@/components/ui/badge"
@@ -30,11 +38,19 @@ export function Pages() {
   const navigate = useNavigate()
   const { rootPages, getChildPages, addPage, deletePage, updatePage, currentWorkspace } = usePages()
   const [query, setQuery] = useState("")
+  const [favoriteOnly, setFavoriteOnly] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const allPages = rootPages.filter((p) =>
-    p.title.toLowerCase().includes(query.toLowerCase())
+  const allPages = rootPages.filter(
+    (p) => (!favoriteOnly || p.favorite) && p.title.toLowerCase().includes(query.toLowerCase())
   )
+
+  const hasActiveFilters = query !== "" || favoriteOnly
+
+  const clearFilters = () => {
+    setQuery("")
+    setFavoriteOnly(false)
+  }
 
   const handleCreate = () => {
     const page = addPage("Untitled")
@@ -70,25 +86,46 @@ export function Pages() {
         query={query}
         onQueryChange={setQuery}
         placeholder={messages.pages.searchPlaceholder}
-      />
+      >
+        <Select
+          value={favoriteOnly ? "favorites" : "all"}
+          onValueChange={(value) => setFavoriteOnly(value === "favorites")}
+        >
+          <SelectTrigger className="w-40" aria-label={messages.pages.filterLabel}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{messages.pages.allPages}</SelectItem>
+            <SelectItem value="favorites">{messages.pages.favoritePages}</SelectItem>
+          </SelectContent>
+        </Select>
+      </SearchFilterBar>
 
+      <CollectionSection
+        title={messages.pages.title}
+        description={messages.pages.count(allPages.length)}
+      >
       {allPages.length === 0 ? (
-        <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
-          <CardContent className="py-16">
-            <EmptyState
-              icon={<icons.file />}
-              title={query ? "No pages found" : messages.pages.noPages}
-              description={query ? "Try a different search term." : messages.pages.noPagesHint}
-              action={
-                !query ? (
-                  <Button onClick={handleCreate}>
-                    <icons.plus /> {messages.pages.newPage}
-                  </Button>
-                ) : undefined
-              }
-            />
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={hasActiveFilters ? <icons.search /> : <icons.file />}
+          title={
+            hasActiveFilters ? "No pages found" : messages.pages.noPages
+          }
+          description={
+            hasActiveFilters ? undefined : messages.pages.noPagesHint
+          }
+          action={
+            hasActiveFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                <icons.close /> {messages.dossiers.clearFilters}
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <icons.plus /> {messages.pages.newPage}
+              </Button>
+            )
+          }
+        />
       ) : (
         <div className="space-y-3">
           {allPages.map((page, index) => {
@@ -180,6 +217,7 @@ export function Pages() {
           })}
         </div>
       )}
+      </CollectionSection>
 
       <ConfirmDialog
         open={deleteId !== null}

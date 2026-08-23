@@ -1,8 +1,18 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { PageHeader } from "@/components/common/page-header"
 import { SearchFilterBar } from "@/components/common/search-filter-bar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { EmptyState } from "@/components/common/empty-state"
+import { CollectionGrid, CollectionSection } from "@/components/common/collection-page"
+import { ProjectFormDialog } from "@/components/projects/project-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,9 +23,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { icons, messages, ROUTES } from "@/constants"
-import { projects, type ProjectStatus } from "@/data/projects"
+import type { ProjectStatus } from "@/data/projects"
+import { useProjects, type Project } from "@/store/projects"
 
 const statusVariant: Record<ProjectStatus, "success" | "warning" | "info" | "default" | "destructive"> = {
   active: "success",
@@ -27,16 +52,42 @@ const statusVariant: Record<ProjectStatus, "success" | "warning" | "info" | "def
 
 export function Projects() {
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all")
+  const { projects, deleteProject } = useProjects()
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState<Project | undefined>(undefined)
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
 
-  const filtered = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.client.toLowerCase().includes(search.toLowerCase())
-  )
+  const openCreate = useCallback(() => {
+    setEditingProject(undefined)
+    setFormOpen(true)
+  }, [])
 
-  const activeCount = projects.filter((p) => p.status === "active").length
-  const completedCount = projects.filter((p) => p.status === "completed").length
-  const totalHours = projects.reduce((sum, p) => sum + p.hoursLogged, 0)
+  const openEdit = useCallback((project: Project) => {
+    setEditingProject(project)
+    setFormOpen(true)
+  }, [])
+
+  const handleDelete = useCallback(() => {
+    if (!deleteTarget) return
+    deleteProject(deleteTarget.id)
+    setDeleteTarget(null)
+  }, [deleteTarget, deleteProject])
+
+  const filtered = projects.filter((project) => {
+    if (statusFilter !== "all" && project.status !== statusFilter) return false
+    return (
+      project.name.toLowerCase().includes(search.toLowerCase()) ||
+      project.client.toLowerCase().includes(search.toLowerCase())
+    )
+  })
+
+  const hasActiveFilters = search !== "" || statusFilter !== "all"
+
+  const clearFilters = () => {
+    setSearch("")
+    setStatusFilter("all")
+  }
 
   return (
     <div className="space-y-6">
@@ -45,96 +96,106 @@ export function Projects() {
         title={messages.projects.title}
         description={messages.projects.subtitle}
         actions={
-          <Button variant="default">
+          <Button variant="default" onClick={openCreate}>
             <icons.plus /> {messages.projects.newProject}
           </Button>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: messages.projects.stats.totalProjects, value: String(projects.length), icon: "dossiers" as const, tone: "primary" as const },
-          { label: messages.projects.stats.activeProjects, value: String(activeCount), icon: "activity" as const, tone: "success" as const },
-          { label: messages.projects.stats.completedProjects, value: String(completedCount), icon: "checkCircle" as const, tone: "info" as const },
-          { label: messages.projects.stats.totalHoursLogged, value: `${totalHours}`, icon: "pendingReviews" as const, tone: "warning" as const },
-        ].map((stat, index) => {
-          const Icon = icons[stat.icon]
-          return (
-            <div
-              key={stat.label}
-              className="animate-fade-rise"
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
-              <Card size="sm">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-[18px] ${
-                      stat.tone === "primary"
-                        ? "bg-primary-soft/70 text-primary dark:bg-primary/15"
-                        : stat.tone === "success"
-                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                          : stat.tone === "info"
-                            ? "bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400"
-                            : "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400"
-                    }`}
-                  >
-                    <Icon />
-                  </span>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    <p className="font-heading text-xl font-extrabold tabular-nums">
-                      {stat.value}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )
-        })}
-      </div>
-
       <SearchFilterBar
         query={search}
         onQueryChange={setSearch}
         placeholder={messages.projects.searchPlaceholder}
-      />
+      >
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setStatusFilter(value as "all" | ProjectStatus)}
+        >
+          <SelectTrigger className="w-40" aria-label={messages.projects.filterStatus}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{messages.projects.allStatuses}</SelectItem>
+            {(["planning", "active", "onHold", "completed", "cancelled"] as const).map(
+              (key) => (
+                <SelectItem key={key} value={key}>
+                  {messages.projects.status[key]}
+                </SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
+      </SearchFilterBar>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((project, index) => {
-          const progress = Math.round((project.tasksCompleted / project.tasksTotal) * 100)
+      <CollectionSection
+        title={messages.projects.title}
+        description={messages.projects.count(filtered.length)}
+      >
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={hasActiveFilters ? <icons.search /> : <icons.dossiers />}
+            title={
+              hasActiveFilters
+                ? messages.projects.emptyFilteredTitle
+                : messages.projects.emptyTitle
+            }
+            description={
+              hasActiveFilters ? undefined : messages.projects.emptyHint
+            }
+            action={
+              hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  <icons.close /> {messages.dossiers.clearFilters}
+                </Button>
+              ) : (
+                <Button onClick={openCreate}>
+                  <icons.plus /> {messages.projects.newProject}
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <CollectionGrid>
+            {filtered.map((project, index) => {
+          const progress = Math.round(
+            (project.tasksCompleted / Math.max(1, project.tasksTotal)) * 100
+          )
           const Icon = icons[project.icon]
 
           return (
-            <Link
+            <div
               key={project.id}
-              to={`${ROUTES.projects}/${project.id}`}
-              className="group animate-fade-rise"
+              className="group relative animate-fade-rise"
               style={{ animationDelay: `${(index + 4) * 60}ms` }}
             >
-              <Card className="h-full transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="flex size-10 shrink-0 items-center justify-center rounded-lg text-white transition-transform duration-200 group-hover:scale-105 [&_svg]:size-5"
-                        style={{ background: project.color }}
-                      >
-                        <Icon />
-                      </span>
-                      <div className="min-w-0">
-                        <CardTitle className="truncate text-base">
-                          {project.name}
-                        </CardTitle>
-                        <CardDescription className="truncate">
-                          {project.client}
-                        </CardDescription>
+              <Link
+                to={`${ROUTES.projects}/${project.id}`}
+                className="block h-full"
+              >
+                <Card className="h-full transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary/25 group-hover:shadow-md">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="flex size-10 shrink-0 items-center justify-center rounded-lg text-white transition-transform duration-200 group-hover:scale-105 [&_svg]:size-5"
+                          style={{ background: project.color }}
+                        >
+                          <Icon />
+                        </span>
+                        <div className="min-w-0">
+                          <CardTitle className="truncate text-base">
+                            {project.name}
+                          </CardTitle>
+                          <CardDescription className="truncate">
+                            {project.client}
+                          </CardDescription>
+                        </div>
                       </div>
+                      <Badge variant={statusVariant[project.status]} className="mr-7 shrink-0">
+                        {messages.projects.status[project.status]}
+                      </Badge>
                     </div>
-                    <Badge variant={statusVariant[project.status]}>
-                      {messages.projects.status[project.status]}
-                    </Badge>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
                 <CardContent className="space-y-4">
                   <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
@@ -178,20 +239,63 @@ export function Projects() {
                 </CardFooter>
               </Card>
             </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={project.name}
+                    className="absolute right-2 top-2 z-10 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+                  >
+                    <icons.moreVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => openEdit(project)}>
+                    <icons.pencil className="size-4" />
+                    {messages.projects.detail.edit}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setDeleteTarget(project)}
+                  >
+                    <icons.trash className="size-4" />
+                    {messages.projects.detail.deleteProject}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )
         })}
-      </div>
+          </CollectionGrid>
+        )}
+      </CollectionSection>
 
-      {filtered.length === 0 && (
-        <Card className="animate-fade-rise">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <icons.dossiers className="mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
-              {messages.projects.emptyState}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <ProjectFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        project={editingProject}
+      />
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{messages.projects.deleteDialog.title}</DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.name} — {messages.projects.deleteDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {messages.common.cancel}
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              <icons.trash /> {messages.projects.deleteDialog.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -14,7 +14,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { usePages } from "@/store/pages"
+import { useAuth } from "@/store/auth"
 import { cn } from "@/lib/utils"
+
+function initialsOf(name: string, fallback: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return fallback
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
 
 type NavItem = {
   label: string
@@ -110,8 +118,11 @@ function NavItem({
 
 function UserCard({ collapsed }: { collapsed: boolean }) {
   const { workspaces, currentWorkspace, setCurrentWorkspace } = usePages()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const displayName = user?.name || messages.layout.userName
+  const displayInitials = initialsOf(displayName, messages.layout.userInitials)
 
   if (collapsed) {
     return (
@@ -138,11 +149,11 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
           className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-2.5 py-2.5 transition-colors hover:bg-sidebar-accent"
         >
           <Avatar className="size-8 shrink-0">
-            <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
+            <AvatarFallback>{displayInitials}</AvatarFallback>
           </Avatar>
           <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
             <span className="text-sm font-semibold">
-              {messages.layout.userName}
+              {displayName}
             </span>
             <span className="truncate text-xs text-sidebar-foreground/60">
               {currentWorkspace.name}

@@ -1,16 +1,31 @@
-import { useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
 import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { APP, ROUTES, icons, messages } from "@/constants"
-import { errorMessages } from "@/constants/messages/errors"
+import {
+  errorCodes,
+  errorMessages,
+} from "@/constants/messages/errors"
+import { AppError } from "@/lib/errors"
 import { getErrorMessage, safeAsync } from "@/lib/async"
+import {
+  getPasswordStrength,
+  validateConfirmPassword,
+  validateEmail,
+  validateName,
+  validatePassword,
+  validateUsername,
+} from "@/lib/validation"
 import { signIn, signUp } from "@/services/auth"
+import { useAuth } from "@/store/auth"
 
 function BrandPanel() {
   return (
@@ -77,6 +92,7 @@ function PasswordField({
   placeholder,
   showPassword,
   onToggle,
+  invalid,
 }: {
   id: string
   value: string
@@ -84,6 +100,7 @@ function PasswordField({
   placeholder: string
   showPassword: boolean
   onToggle: () => void
+  invalid?: boolean
 }) {
   return (
     <div className="relative">
@@ -95,6 +112,7 @@ function PasswordField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
+        aria-invalid={invalid || undefined}
         className="h-12 pr-12 text-base"
       />
       <Button
@@ -115,73 +133,157 @@ function PasswordField({
   )
 }
 
+function strengthTone(score: number) {
+  if (score <= 1) return { variant: "default", label: "text-destructive" } as const
+  if (score <= 2)
+    return { variant: "warning", label: "text-amber-600 dark:text-amber-500" } as const
+  return {
+    variant: "success",
+    label: "text-emerald-600 dark:text-emerald-500",
+  } as const
+}
+
 export function Auth() {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
   const activeTab = pathname === ROUTES.register ? "signup" : "signin"
+  const { refresh } = useAuth()
 
   const [signInError, setSignInError] = useState<string | null>(null)
-  const [signUpError, setSignUpError] = useState<string | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(false)
-  const [isSigningUp, setIsSigningUp] = useState(false)
-  const [signInUsername, setSignInUsername] = useState("")
+  const [signInEmail, setSignInEmail] = useState("")
+  const [signInEmailTouched, setSignInEmailTouched] = useState(false)
+  const [signInPasswordTouched, setSignInPasswordTouched] = useState(false)
   const [signInPassword, setSignInPassword] = useState("")
   const [showSignInPassword, setShowSignInPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
+
   const [name, setName] = useState("")
   const [signUpUsername, setSignUpUsername] = useState("")
   const [signUpEmail, setSignUpEmail] = useState("")
   const [signUpPassword, setSignUpPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [attemptedSignUp, setAttemptedSignUp] = useState(false)
+  const [serverEmailError, setServerEmailError] = useState<string | null>(null)
+  const [isSigningUp, setIsSigningUp] = useState(false)
   const [showSignUpPassword, setShowSignUpPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showConfirmationNotice, setShowConfirmationNotice] = useState(false)
+
+  const markTouched = (field: string) =>
+    setTouched((prev) => ({ ...prev, [field]: true }))
+
+  const signUpErrors = useMemo(
+    () => ({
+      name: validateName(name),
+      username: validateUsername(signUpUsername),
+      email: serverEmailError ?? validateEmail(signUpEmail),
+      password: validatePassword(signUpPassword),
+      confirm: validateConfirmPassword(signUpPassword, confirmPassword),
+    }),
+    [name, signUpUsername, signUpEmail, signUpPassword, confirmPassword, serverEmailError]
+  )
+
+  const signInErrors = useMemo(
+    () => ({
+      email: validateEmail(signInEmail),
+      password: signInPassword
+        ? null
+        : messages.login.validation.passwordRequired,
+    }),
+    [signInEmail, signInPassword]
+  )
+
+  const strength = getPasswordStrength(signUpPassword)
+  const tone = strengthTone(Math.max(0, strength.score))
+
+  const shouldShow = (field: keyof typeof signUpErrors, isTouched: boolean) =>
+    Boolean(signUpErrors[field]) && (isTouched || attemptedSignUp)
 
   async function handleSignIn(event: FormEvent) {
     event.preventDefault()
     setSignInError(null)
+
+    if (signInErrors.email || signInErrors.password) {
+      return
+    }
+
     setIsSigningIn(true)
 
-    const user = await safeAsync(() => signIn(signInUsername, signInPassword), {
+    const user = await safeAsync(() => signIn(signInEmail, signInPassword), {
       context: "AuthPage.signIn",
-      onError: (e) => setSignInError(getErrorMessage(e)),
+      onError: (e) => {
+        const message = getErrorMessage(e)
+        setSignInError(message)
+        toast.error(message, { description: messages.login.toasts.signInFailed })
+      },
     })
 
     setIsSigningIn(false)
 
     if (user) {
-      navigate(ROUTES.app)
+      // The provider derives the full state (identity, account status, AAL).
+      const nextStatus = await refresh()
+
+      if (nextStatus === "mfaChallenge") {
+        navigate(ROUTES.mfaVerify, { replace: true })
+        return
+      }
+
+      toast.success(messages.login.toasts.signedInAs(user.name))
+
+      const state = location.state as { from?: string } | null
+      navigate(state?.from ?? ROUTES.app, { replace: true })
     }
   }
 
   async function handleSignUp(event: FormEvent) {
     event.preventDefault()
-    setSignUpError(null)
+    setAttemptedSignUp(true)
+    setServerEmailError(null)
 
-    if (!acceptedTerms) {
-      setSignUpError(errorMessages.termsRequired)
-      return
-    }
-
-    if (signUpPassword !== confirmPassword) {
-      setSignUpError(errorMessages.passwordMismatch)
+    const hasFieldErrors = Object.values(signUpErrors).some(Boolean)
+    if (hasFieldErrors || !acceptedTerms) {
       return
     }
 
     setIsSigningUp(true)
 
-    const user = await safeAsync(
+    const result = await safeAsync(
       () => signUp(name, signUpUsername, signUpEmail, signUpPassword),
       {
         context: "AuthPage.signUp",
-        onError: (e) => setSignUpError(getErrorMessage(e)),
+        onError: (e) => {
+          const message = getErrorMessage(e)
+          toast.error(message, {
+            description: messages.login.toasts.signUpFailed,
+          })
+          if (
+            e instanceof AppError &&
+            e.code === errorCodes.emailAlreadyRegistered
+          ) {
+            setServerEmailError(message)
+          }
+        },
       }
     )
 
     setIsSigningUp(false)
 
-    if (user) {
-      navigate(ROUTES.app)
+    if (result) {
+      if (result.needsEmailConfirmation) {
+        setShowConfirmationNotice(true)
+        toast.success(messages.login.toasts.confirmationSent)
+        return
+      }
+      toast.success(
+        messages.login.toasts.accountCreatedFor(result.user?.name ?? "")
+      )
+      await refresh()
+      navigate(ROUTES.app, { replace: true })
     }
   }
 
@@ -235,22 +337,35 @@ export function Auth() {
               </Tabs>
 
               {isSignIn ? (
-                <form onSubmit={handleSignIn} className="space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-4" noValidate>
                   <FormField
-                    label={messages.login.usernameLabel}
-                    htmlFor="signin-username"
+                    label={messages.login.emailLabel}
+                    htmlFor="signin-email"
                     required
+                    error={
+                      signInErrors.email && signInEmailTouched
+                        ? signInErrors.email
+                        : undefined
+                    }
                   >
                     <div className="relative">
-                      <icons.user className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
+                      <icons.mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        id="signin-username"
-                        type="text"
-                        autoComplete="username"
-                        placeholder={messages.login.usernamePlaceholder}
-                        value={signInUsername}
-                        onChange={(e) => setSignInUsername(e.target.value)}
+                        id="signin-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder={messages.login.emailPlaceholder}
+                        value={signInEmail}
+                        onChange={(e) => {
+                          setSignInEmail(e.target.value)
+                          setSignInEmailTouched(true)
+                        }}
                         required
+                        aria-invalid={
+                          Boolean(signInErrors.email) && signInEmailTouched
+                            ? true
+                            : undefined
+                        }
                         className="h-12 pl-11 text-base"
                       />
                     </div>
@@ -260,14 +375,23 @@ export function Auth() {
                     label={messages.login.passwordLabel}
                     htmlFor="signin-password"
                     required
+                    error={
+                      signInErrors.password && signInPasswordTouched
+                        ? signInErrors.password
+                        : undefined
+                    }
                   >
                     <PasswordField
                       id="signin-password"
                       value={signInPassword}
-                      onChange={setSignInPassword}
+                      onChange={(value) => {
+                        setSignInPassword(value)
+                        setSignInPasswordTouched(true)
+                      }}
                       placeholder={messages.login.passwordPlaceholder}
                       showPassword={showSignInPassword}
                       onToggle={() => setShowSignInPassword((show) => !show)}
+                      invalid={Boolean(signInErrors.password) && signInPasswordTouched}
                     />
                   </FormField>
 
@@ -320,11 +444,35 @@ export function Auth() {
                   </Button>
                 </form>
               ) : (
-                <form onSubmit={handleSignUp} className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-4" noValidate>
+                  {showConfirmationNotice ? (
+                    <div className="space-y-4 text-center" role="status">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary-soft/70 text-primary dark:bg-primary/15">
+                        <icons.mail className="size-6" />
+                      </div>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {messages.login.emailConfirmation.success}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => switchTab("signin")}
+                      >
+                        {messages.login.emailConfirmation.backToSignIn}
+                      </Button>
+                    </div>
+                  ) : (
+                  <>
                   <FormField
                     label={messages.login.nameLabel}
                     htmlFor="signup-name"
                     required
+                    error={
+                      shouldShow("name", Boolean(touched.name))
+                        ? signUpErrors.name ?? undefined
+                        : undefined
+                    }
                   >
                     <div className="relative">
                       <icons.user className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -334,8 +482,14 @@ export function Auth() {
                         autoComplete="name"
                         placeholder={messages.login.namePlaceholder}
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value)
+                          markTouched("name")
+                        }}
                         required
+                        aria-invalid={
+                          shouldShow("name", Boolean(touched.name)) || undefined
+                        }
                         className="h-12 pl-11 text-base"
                       />
                     </div>
@@ -345,6 +499,11 @@ export function Auth() {
                     label={messages.login.signUpUsernameLabel}
                     htmlFor="signup-username"
                     required
+                    error={
+                      shouldShow("username", Boolean(touched.username))
+                        ? signUpErrors.username ?? undefined
+                        : undefined
+                    }
                   >
                     <div className="relative">
                       <icons.user className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -354,8 +513,15 @@ export function Auth() {
                         autoComplete="username"
                         placeholder={messages.login.signUpUsernamePlaceholder}
                         value={signUpUsername}
-                        onChange={(e) => setSignUpUsername(e.target.value)}
+                        onChange={(e) => {
+                          setSignUpUsername(e.target.value)
+                          markTouched("username")
+                        }}
                         required
+                        aria-invalid={
+                          shouldShow("username", Boolean(touched.username)) ||
+                          undefined
+                        }
                         className="h-12 pl-11 text-base"
                       />
                     </div>
@@ -365,6 +531,11 @@ export function Auth() {
                     label={messages.login.emailLabel}
                     htmlFor="signup-email"
                     required
+                    error={
+                      shouldShow("email", Boolean(touched.email))
+                        ? signUpErrors.email ?? undefined
+                        : undefined
+                    }
                   >
                     <div className="relative">
                       <icons.mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -374,8 +545,15 @@ export function Auth() {
                         autoComplete="email"
                         placeholder={messages.login.emailPlaceholder}
                         value={signUpEmail}
-                        onChange={(e) => setSignUpEmail(e.target.value)}
+                        onChange={(e) => {
+                          setSignUpEmail(e.target.value)
+                          setServerEmailError(null)
+                          markTouched("email")
+                        }}
                         required
+                        aria-invalid={
+                          shouldShow("email", Boolean(touched.email)) || undefined
+                        }
                         className="h-12 pl-11 text-base"
                       />
                     </div>
@@ -385,65 +563,107 @@ export function Auth() {
                     label={messages.login.passwordLabel}
                     htmlFor="signup-password"
                     required
+                    hint={
+                      signUpPassword && !signUpErrors.password
+                        ? messages.login.validation.strengthHint
+                        : undefined
+                    }
+                    error={
+                      shouldShow("password", Boolean(touched.password))
+                        ? signUpErrors.password ?? undefined
+                        : undefined
+                    }
                   >
                     <PasswordField
                       id="signup-password"
                       value={signUpPassword}
-                      onChange={setSignUpPassword}
+                      onChange={(value) => {
+                        setSignUpPassword(value)
+                        markTouched("password")
+                      }}
                       placeholder={messages.login.passwordPlaceholder}
                       showPassword={showSignUpPassword}
                       onToggle={() => setShowSignUpPassword((show) => !show)}
+                      invalid={
+                        shouldShow("password", Boolean(touched.password)) ||
+                        undefined
+                      }
                     />
+                    {signUpPassword.length > 0 && !signUpErrors.password && (
+                      <div className="flex items-center gap-3 pt-0.5">
+                        <Progress
+                          value={(Math.max(0, strength.score) + 1) * 20}
+                          variant={tone.variant}
+                          className="h-1.5"
+                          aria-label={strength.label}
+                        />
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap ${tone.label}`}
+                        >
+                          {strength.label}
+                        </span>
+                      </div>
+                    )}
                   </FormField>
 
                   <FormField
                     label={messages.login.confirmPasswordLabel}
                     htmlFor="signup-confirm-password"
                     required
+                    error={
+                      shouldShow("confirm", Boolean(touched.confirm))
+                        ? signUpErrors.confirm ?? undefined
+                        : undefined
+                    }
                   >
                     <PasswordField
                       id="signup-confirm-password"
                       value={confirmPassword}
-                      onChange={setConfirmPassword}
+                      onChange={(value) => {
+                        setConfirmPassword(value)
+                        markTouched("confirm")
+                      }}
                       placeholder={messages.login.confirmPasswordPlaceholder}
                       showPassword={showConfirmPassword}
                       onToggle={() => setShowConfirmPassword((show) => !show)}
+                      invalid={
+                        shouldShow("confirm", Boolean(touched.confirm)) ||
+                        undefined
+                      }
                     />
                   </FormField>
 
-                  <div className="flex items-start gap-2.5">
-                    <Checkbox
-                      id="terms"
-                      className="mt-0.5"
-                      checked={acceptedTerms}
-                      onCheckedChange={(checked) =>
-                        setAcceptedTerms(checked === true)
-                      }
-                      aria-required="true"
-                    />
-                    <Label
-                      htmlFor="terms"
-                      className="text-sm leading-relaxed font-normal text-muted-foreground"
-                    >
-                      {messages.login.termsLabel}{" "}
-                      <a href="#" className="font-medium text-foreground underline underline-offset-4">
-                        {messages.login.termsOfService}
-                      </a>{" "}
-                      {messages.login.and}{" "}
-                      <a href="#" className="font-medium text-foreground underline underline-offset-4">
-                        {messages.login.privacyPolicy}
-                      </a>
-                    </Label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-2.5">
+                      <Checkbox
+                        id="terms"
+                        className="mt-0.5"
+                        checked={acceptedTerms}
+                        onCheckedChange={(checked) =>
+                          setAcceptedTerms(checked === true)
+                        }
+                        aria-required="true"
+                      />
+                      <Label
+                        htmlFor="terms"
+                        className="text-sm leading-relaxed font-normal text-muted-foreground"
+                      >
+                        {messages.login.termsLabel}{" "}
+                        <a href="#" className="font-medium text-foreground underline underline-offset-4">
+                          {messages.login.termsOfService}
+                        </a>{" "}
+                        {messages.login.and}{" "}
+                        <a href="#" className="font-medium text-foreground underline underline-offset-4">
+                          {messages.login.privacyPolicy}
+                        </a>
+                      </Label>
+                    </div>
+                    {attemptedSignUp && !acceptedTerms && (
+                      <p className="text-xs text-destructive" role="alert">
+                        {errorMessages.termsRequired}
+                      </p>
+                    )}
                   </div>
-
-                  {signUpError && (
-                    <p
-                      role="alert"
-                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-                    >
-                      {signUpError}
-                    </p>
-                  )}
 
                   <Button
                     type="submit"
@@ -455,6 +675,8 @@ export function Auth() {
                       ? messages.login.creatingAccount
                       : messages.login.createAccount}
                   </Button>
+                  </>
+                  )}
                 </form>
               )}
 

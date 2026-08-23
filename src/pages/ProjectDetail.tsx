@@ -1,10 +1,12 @@
-import { useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useCallback, useMemo, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { PageHeader } from "@/components/common/page-header"
+import { DateField } from "@/components/common/date-field"
+import { EmptyState } from "@/components/common/empty-state"
+import { ProjectFormDialog } from "@/components/projects/project-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import {
   Card,
   CardContent,
@@ -12,13 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -39,20 +44,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/common/time-picker"
 import { icons, messages, ROUTES } from "@/constants"
-import { projects, timeEntries } from "@/data/projects"
+import { taskTypes } from "@/data/projects"
+import { toast } from "sonner"
+import { useProjects, type TimeEntry } from "@/store/projects"
 
-type TaskRow = {
-  id: string
-  task: string
-  description: string
-  startTime: string
-  endTime: string
-  breakMinutes: number
-  hours: number
-  priority: "high" | "medium" | "low"
-}
-
-const priorityVariant: Record<string, "destructive" | "warning" | "default"> = {
+const priorityVariant: Record<TimeEntry["priority"], "destructive" | "warning" | "default"> = {
   high: "destructive",
   medium: "warning",
   low: "default",
@@ -66,75 +62,124 @@ const statusVariant: Record<string, "success" | "warning" | "info" | "default" |
   planning: "default",
 }
 
+function toDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function recalcHours(entry: TimeEntry): TimeEntry {
+  if (entry.startTime && entry.endTime) {
+    const [sh, sm] = entry.startTime.split(":").map(Number)
+    const [eh, em] = entry.endTime.split(":").map(Number)
+    const mins = eh * 60 + em - (sh * 60 + sm) - entry.breakMinutes
+    return { ...entry, hours: Math.max(0, Math.round((mins / 60) * 10) / 10) }
+  }
+  return entry
+}
+
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
-  const project = projects.find((p) => p.id === id)
-  const projectEntries = timeEntries.filter((e) => e.projectId === id)
+  const navigate = useNavigate()
+  const { getProject, getTimeEntries, deleteProject, upsertTimeEntry, removeTimeEntry } =
+    useProjects()
+  const project = getProject(id ?? "")
 
-  const [tasks, setTasks] = useState<TaskRow[]>([
-    { id: "1", task: "Development", description: "", startTime: "09:30", endTime: "12:00", breakMinutes: 0, hours: 2.5, priority: "high" },
-  ])
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [remarks, setRemarks] = useState("")
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date("2026-08-17"))
-  const [dateOpen, setDateOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  const dateKey = toDateKey(selectedDate)
+  const dayEntries = useMemo(
+    () => getTimeEntries(id ?? "").filter((entry) => entry.date === dateKey),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getTimeEntries, id, dateKey]
+  )
+
+  const dailyTotal = dayEntries.reduce((sum, t) => sum + t.hours, 0)
+
+  const handleAddTask = () => {
+    if (!id) return
+    upsertTimeEntry({
+      id: crypto.randomUUID(),
+      projectId: id,
+      date: dateKey,
+      task: taskTypes[0],
+      description: "",
+      startTime: "09:00",
+      endTime: "17:00",
+      breakMinutes: 0,
+      hours: 8,
+      status: "inProgress",
+      priority: "medium",
+    })
+  }
+
+  const handleUpdateTask = useCallback(
+    (taskId: string, field: keyof TimeEntry, value: string | number) => {
+      const source = getTimeEntries(id ?? "").find((t) => t.id === taskId)
+      if (!source) return
+      let updated: TimeEntry = { ...source, [field]: value }
+      if (field === "startTime" || field === "endTime" || field === "breakMinutes") {
+        updated = recalcHours(updated)
+      }
+      upsertTimeEntry(updated)
+    },
+    [id, getTimeEntries, upsertTimeEntry]
+  )
+
+  const handleRemoveTask = (taskId: string) => {
+    removeTimeEntry(taskId)
+  }
+
+  const setDayStatus = (status: TimeEntry["status"]) => {
+    dayEntries.forEach((entry) => {
+      if (entry.status !== status) upsertTimeEntry({ ...entry, status })
+    })
+  }
+
+  const handleSubmit = () => {
+    setDayStatus("completed")
+    toast.success(messages.projects.timesheet.submitToast)
+  }
+
+  const handleSaveDraft = () => {
+    setDayStatus("inProgress")
+    toast.success(messages.projects.timesheet.draftSavedToast)
+  }
+
+  const handleDeleteProject = () => {
+    if (!id) return
+    deleteProject(id)
+    setDeleteOpen(false)
+    toast.success(messages.projects.form.deletedToast)
+    navigate(ROUTES.projects)
+  }
 
   if (!project) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Project not found" />
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <icons.alertCircle className="mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">This project does not exist.</p>
-            <Button asChild variant="outline" className="mt-4">
+        <PageHeader title={messages.projects.detail.notFoundTitle} />
+        <EmptyState
+          className="animate-fade-rise"
+          icon={<icons.alertCircle />}
+          title={messages.projects.detail.notFoundTitle}
+          description={messages.projects.detail.notFoundDescription}
+          action={
+            <Button asChild variant="outline">
               <Link to={ROUTES.projects}>{messages.projects.detail.back}</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       </div>
     )
   }
 
-  const progress = Math.round((project.tasksCompleted / project.tasksTotal) * 100)
-  const hoursProgress = Math.round((project.hoursLogged / project.estimatedHours) * 100)
+  const progress = Math.round((project.tasksCompleted / Math.max(1, project.tasksTotal)) * 100)
+  const hoursProgress = Math.round((project.hoursLogged / Math.max(1, project.estimatedHours)) * 100)
   const Icon = icons[project.icon]
-  const dailyTotal = tasks.reduce((sum, t) => sum + t.hours, 0)
-
-  const addTask = () => {
-    setTasks((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        task: "",
-        description: "",
-        startTime: "",
-        endTime: "",
-        breakMinutes: 0,
-        hours: 0,
-        priority: "medium",
-      },
-    ])
-  }
-
-  const removeTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId))
-  }
-
-  const updateTask = (taskId: string, field: keyof TaskRow, value: string | number) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id !== taskId) return t
-        const updated = { ...t, [field]: value }
-        if ((field === "startTime" || field === "endTime" || field === "breakMinutes") && updated.startTime && updated.endTime) {
-          const [sh, sm] = updated.startTime.split(":").map(Number)
-          const [eh, em] = updated.endTime.split(":").map(Number)
-          const mins = eh * 60 + em - (sh * 60 + sm) - updated.breakMinutes
-          updated.hours = Math.max(0, Math.round((mins / 60) * 10) / 10)
-        }
-        return updated
-      })
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -152,8 +197,11 @@ export function ProjectDetail() {
               <Badge variant={statusVariant[project.status]}>
                 {messages.projects.status[project.status]}
               </Badge>
-              <Button variant="default">
-                <icons.play /> {messages.projects.detail.timesheet}
+              <Button variant="outline" onClick={() => setFormOpen(true)}>
+                <icons.pencil className="size-4" /> {messages.projects.detail.edit}
+              </Button>
+              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <icons.trash className="size-4" /> {messages.projects.detail.deleteProject}
               </Button>
             </div>
           }
@@ -164,7 +212,7 @@ export function ProjectDetail() {
         {[
           { label: messages.projects.detail.totalHours, value: `${project.hoursLogged}h`, icon: "pendingReviews" as const, tone: "primary" as const },
           { label: messages.projects.detail.tasksCompleted, value: `${project.tasksCompleted}/${project.tasksTotal}`, icon: "checkCircle" as const, tone: "success" as const },
-          { label: "Hours Used", value: `${hoursProgress}%`, icon: "chart" as const, tone: "warning" as const },
+          { label: messages.projects.detail.hoursUsed, value: `${hoursProgress}%`, icon: "chart" as const, tone: "warning" as const },
           { label: messages.projects.detail.teamSize, value: `${project.teamSize}`, icon: "users" as const, tone: "info" as const },
         ].map((stat, index) => {
           const SIcon = icons[stat.icon]
@@ -214,7 +262,9 @@ export function ProjectDetail() {
               </span>
               <div>
                 <CardTitle>{project.name}</CardTitle>
-                <CardDescription>{project.client} &middot; Started {project.startDate}</CardDescription>
+                <CardDescription>
+                  {project.client} &middot; {messages.projects.detail.startedOn} {project.startDate}
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -228,7 +278,7 @@ export function ProjectDetail() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Hours Budget</span>
+                <span className="text-muted-foreground">{messages.projects.detail.hoursBudget}</span>
                 <span className="font-semibold tabular-nums">{project.hoursLogged}/{project.estimatedHours}h</span>
               </div>
               <Progress value={hoursProgress} variant={hoursProgress > 90 ? "warning" : "default"} />
@@ -241,11 +291,11 @@ export function ProjectDetail() {
             <CardTitle>{messages.projects.detail.recentActivity}</CardTitle>
           </CardHeader>
           <CardContent>
-            {projectEntries.length === 0 ? (
+            {getTimeEntries(id ?? "").length === 0 ? (
               <p className="text-xs text-muted-foreground">{messages.projects.detail.noEntries}</p>
             ) : (
               <ul className="space-y-3">
-                {projectEntries.slice(0, 4).map((entry) => (
+                {getTimeEntries(id ?? "").slice(0, 4).map((entry) => (
                   <li key={entry.id} className="flex items-start gap-2.5">
                     <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
                     <div className="min-w-0 flex-1">
@@ -265,86 +315,61 @@ export function ProjectDetail() {
       <Card className="animate-fade-rise" style={{ animationDelay: "360ms" }}>
         <CardHeader>
           <CardTitle>{messages.projects.detail.entries}</CardTitle>
-          <CardDescription>Track your time for this project.</CardDescription>
+          <CardDescription>{messages.projects.detail.trackTime}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="timesheet">
             <TabsList variant="line" className="mb-4">
               <TabsTrigger value="timesheet">{messages.projects.timesheet.title}</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
+              <TabsTrigger value="history">{messages.projects.detail.history}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="timesheet" className="space-y-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1.5">
                   <Label>{messages.projects.timesheet.date}</Label>
-                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-[200px] justify-start text-left font-normal"
-                      >
-                        <icons.pendingReviews className="mr-2 size-4" />
-                        {selectedDate.toLocaleDateString("en-US", {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(day) => {
-                          if (day) {
-                            setSelectedDate(day)
-                            setDateOpen(false)
-                          }
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <DateField
+                    className="w-[240px]"
+                    value={selectedDate}
+                    onChange={(day) => {
+                      if (day) setSelectedDate(day)
+                    }}
+                    ariaLabel={messages.projects.timesheet.date}
+                  />
                 </div>
               </div>
 
               <div className="space-y-3">
-                {tasks.map((task, index) => (
+                {dayEntries.map((task, index) => (
                   <div
                     key={task.id}
                     className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted-foreground">
-                        Task {index + 1}
+                        {messages.projects.detail.taskN} {index + 1}
                       </span>
-                      {tasks.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTask(task.id)}
-                          className="h-7 text-destructive hover:text-destructive"
-                        >
-                          <icons.trash className="size-3.5" /> {messages.projects.timesheet.removeTask}
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveTask(task.id)}
+                        className="h-7 text-destructive hover:text-destructive"
+                      >
+                        <icons.trash className="size-3.5" /> {messages.projects.timesheet.removeTask}
+                      </Button>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.task}</Label>
-                        <Select value={task.task} onValueChange={(v) => updateTask(task.id, "task", v)}>
+                        <Select value={task.task} onValueChange={(v) => handleUpdateTask(task.id, "task", v)}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select task" />
+                            <SelectValue placeholder={messages.projects.detail.selectTask} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Development">Development</SelectItem>
-                            <SelectItem value="Testing">Testing</SelectItem>
-                            <SelectItem value="Design">Design</SelectItem>
-                            <SelectItem value="Meeting">Meeting</SelectItem>
-                            <SelectItem value="Documentation">Documentation</SelectItem>
-                            <SelectItem value="Research">Research</SelectItem>
+                            {taskTypes.map((option) => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -352,13 +377,13 @@ export function ProjectDetail() {
                         <Label>{messages.projects.timesheet.description}</Label>
                         <Input
                           value={task.description}
-                          onChange={(e) => updateTask(task.id, "description", e.target.value)}
-                          placeholder="What did you work on?"
+                          onChange={(e) => handleUpdateTask(task.id, "description", e.target.value)}
+                          placeholder={messages.projects.detail.descriptionPlaceholder}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.priority}</Label>
-                        <Select value={task.priority} onValueChange={(v) => updateTask(task.id, "priority", v)}>
+                        <Select value={task.priority} onValueChange={(v) => handleUpdateTask(task.id, "priority", v)}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -376,7 +401,7 @@ export function ProjectDetail() {
                           min="0"
                           step="0.5"
                           value={task.hours}
-                          onChange={(e) => updateTask(task.id, "hours", Number(e.target.value))}
+                          onChange={(e) => handleUpdateTask(task.id, "hours", Number(e.target.value))}
                           className="font-semibold tabular-nums"
                         />
                       </div>
@@ -387,14 +412,14 @@ export function ProjectDetail() {
                         <Label>{messages.projects.timesheet.startTime}</Label>
                         <TimePicker
                           value={task.startTime}
-                          onChange={(v) => updateTask(task.id, "startTime", v)}
+                          onChange={(v) => handleUpdateTask(task.id, "startTime", v)}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label>{messages.projects.timesheet.endTime}</Label>
                         <TimePicker
                           value={task.endTime}
-                          onChange={(v) => updateTask(task.id, "endTime", v)}
+                          onChange={(v) => handleUpdateTask(task.id, "endTime", v)}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -404,7 +429,7 @@ export function ProjectDetail() {
                           min="0"
                           step="15"
                           value={task.breakMinutes}
-                          onChange={(e) => updateTask(task.id, "breakMinutes", Number(e.target.value))}
+                          onChange={(e) => handleUpdateTask(task.id, "breakMinutes", Number(e.target.value))}
                         />
                       </div>
                     </div>
@@ -412,7 +437,7 @@ export function ProjectDetail() {
                 ))}
               </div>
 
-              <Button variant="outline" size="sm" onClick={addTask}>
+              <Button variant="outline" size="sm" onClick={handleAddTask}>
                 <icons.plus className="size-4" /> {messages.projects.timesheet.addTask}
               </Button>
 
@@ -422,7 +447,7 @@ export function ProjectDetail() {
                   <Textarea
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="Any additional notes..."
+                    placeholder={messages.projects.detail.remarksPlaceholder}
                     className="mt-1.5"
                   />
                 </div>
@@ -435,20 +460,28 @@ export function ProjectDetail() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleSaveDraft}>
                   <icons.save className="size-4" /> {messages.projects.timesheet.saveDraft}
                 </Button>
-                <Button variant="default">
+                <Button variant="default" onClick={handleSubmit}>
                   <icons.check className="size-4" /> {messages.projects.timesheet.submit}
                 </Button>
               </div>
             </TabsContent>
 
             <TabsContent value="history">
-              {projectEntries.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  {messages.projects.detail.noEntries}
-                </p>
+              {getTimeEntries(id ?? "").length === 0 ? (
+                <EmptyState
+                  className="animate-fade-rise"
+                  icon={<icons.pendingReviews />}
+                  title={messages.projects.detail.noEntries}
+                  description={messages.projects.detail.trackTime}
+                  action={
+                    <Button variant="outline" size="sm" onClick={handleAddTask}>
+                      <icons.plus className="size-4" /> {messages.projects.timesheet.addTask}
+                    </Button>
+                  }
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -461,10 +494,11 @@ export function ProjectDetail() {
                       <TableHead scope="col" className="text-right">{messages.projects.timesheet.totalHours}</TableHead>
                       <TableHead scope="col">{messages.projects.timesheet.status}</TableHead>
                       <TableHead scope="col">{messages.projects.timesheet.priority}</TableHead>
+                      <TableHead scope="col" aria-label={messages.projects.detail.deleteProject} />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projectEntries.map((entry) => (
+                    {getTimeEntries(id ?? "").map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell className="font-medium">{entry.date}</TableCell>
                         <TableCell>{entry.task}</TableCell>
@@ -474,13 +508,24 @@ export function ProjectDetail() {
                         <TableCell className="text-right font-semibold tabular-nums">{entry.hours}h</TableCell>
                         <TableCell>
                           <Badge variant={entry.status === "completed" ? "success" : entry.status === "inProgress" ? "warning" : "default"}>
-                            {entry.status}
+                            {messages.projects.timesheet[entry.status]}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={priorityVariant[entry.priority]}>
-                            {entry.priority}
+                            {messages.projects.timesheet[entry.priority]}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={messages.projects.detail.deleteProject}
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => removeTimeEntry(entry.id)}
+                          >
+                            <icons.trash />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -491,6 +536,29 @@ export function ProjectDetail() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <ProjectFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        project={project}
+      />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{messages.projects.deleteDialog.title}</DialogTitle>
+            <DialogDescription>{messages.projects.deleteDialog.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              {messages.common.cancel}
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteProject}>
+              <icons.trash /> {messages.projects.deleteDialog.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

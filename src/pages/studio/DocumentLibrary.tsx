@@ -24,7 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EmptyState } from "@/components/common/empty-state"
+import { SearchFilterBar } from "@/components/common/search-filter-bar"
+import { CollectionGrid, CollectionSection } from "@/components/common/collection-page"
 import { commonMessages, icons, messages, ROUTES } from "@/constants"
 import { createBlankDocument } from "@/document-engine/defaults"
 import { exportDocumentToPdf } from "@/document-engine/export"
@@ -85,6 +87,13 @@ export function DocumentLibrary() {
   const categoryOptions: { value: TemplateCategory; label: string }[] = (
     Object.keys(messages.studio.categories) as TemplateCategory[]
   ).map((value) => ({ value, label: messages.studio.categories[value] }))
+
+  const clearFilters = () => {
+    setQuery("")
+    setCategory("all")
+  }
+
+  const hasActiveFilters = query !== "" || category !== "all"
 
   const filtered = useMemo(() => {
     let list = documents.filter(
@@ -163,18 +172,13 @@ export function DocumentLibrary() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-56">
-          <icons.search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={messages.studio.library.searchPlaceholder}
-            className="h-9 pl-8"
-          />
-        </div>
+      <SearchFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={messages.studio.library.searchPlaceholder}
+      >
         <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
-          <SelectTrigger className="h-9 w-44 text-xs">
+          <SelectTrigger className="w-40" aria-label={messages.studio.library.sortLabel}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -185,32 +189,49 @@ export function DocumentLibrary() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+        <Select
+          value={category}
+          onValueChange={(value) => setCategory(value as TemplateCategory)}
+        >
+          <SelectTrigger className="w-40" aria-label={messages.studio.library.categoriesLabel}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {categoryOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SearchFilterBar>
 
-      <Tabs value={category} onValueChange={(value) => setCategory(value as TemplateCategory)} className="w-full">
-        <TabsList variant="line" className="h-9 w-full justify-start gap-1 overflow-x-auto">
-          {categoryOptions.map((option) => (
-            <TabsTrigger key={option.value} value={option.value}>
-              {option.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
+      <CollectionSection
+        title={messages.studio.library.title}
+        description={messages.studio.library.templatesCount(filtered.length)}
+      >
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">
-          <icons.file className="size-10 text-muted-foreground/40" />
-          <p className="mt-3 text-sm font-medium">
-            {query || category !== "all" ? messages.studio.library.emptyResult : messages.studio.library.empty}
-          </p>
-          {!query && category === "all" && (
-            <Button className="mt-4" size="sm" onClick={() => setWizardOpen(true)}>
-              {messages.studio.library.createFirst}
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={hasActiveFilters ? <icons.search /> : <icons.file />}
+          title={
+            hasActiveFilters
+              ? messages.studio.library.emptyResult
+              : messages.studio.library.empty
+          }
+          action={
+            hasActiveFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                <icons.close /> {messages.dossiers.clearFilters}
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setWizardOpen(true)}>
+                <icons.plus /> {messages.studio.library.createFirst}
+              </Button>
+            )
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <CollectionGrid>
           {filtered.map((doc) => (
             <div
               key={doc.id}
@@ -318,8 +339,9 @@ export function DocumentLibrary() {
               </div>
             </div>
           ))}
-        </div>
+        </CollectionGrid>
       )}
+      </CollectionSection>
 
       <p className="text-xs text-muted-foreground">{messages.studio.library.usingLegacyResume}</p>
 

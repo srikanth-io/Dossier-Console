@@ -1,3 +1,4 @@
+import { account } from "@/constants/messages/account"
 import { commonMessages } from "@/constants/messages/common"
 import { dashboard } from "@/constants/messages/dashboard"
 import { dossiers } from "@/constants/messages/dossiers"
@@ -16,6 +17,7 @@ import { templates } from "@/constants/messages/templates"
 
 export const messages = {
   common: commonMessages,
+  account,
   errors: errorMessages,
   errorCodes,
   layout,

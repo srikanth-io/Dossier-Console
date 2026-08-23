@@ -1,7 +1,13 @@
 import { Suspense, lazy, useState } from "react"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
+import {
+  RedirectIfAuthenticated,
+  RequireAuth,
+  RequireMfaChallenge,
+} from "@/components/common/protected-route"
 import { SplashScreen } from "@/components/marketing/splash-screen"
+import { PublicThemeScope } from "@/components/common/public-theme-scope"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ROUTES } from "@/constants"
@@ -21,10 +27,13 @@ import { Projects } from "@/pages/Projects"
 import { Settings } from "@/pages/Settings"
 import { Templates } from "@/pages/Templates"
 import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
+import { AuthProvider } from "@/store/auth"
+import { ConnectivityWatcher } from "@/components/common/connectivity-watcher"
 import { ResumeLibraryProvider } from "@/store/resumes"
 import { DocumentLibraryProvider } from "@/store/documents"
 import { NotificationsProvider } from "@/store/notifications"
 import { PagesProvider } from "@/store/pages"
+import { ProjectsProvider } from "@/store/projects"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
@@ -47,20 +56,69 @@ function App() {
         <SplashScreen onFinished={() => setShowSplash(false)} />
       )}
       <Toaster />
+      <ConnectivityWatcher />
       <BrowserRouter>
         <TooltipProvider>
+          <AuthProvider>
           <ResumeLibraryProvider>
             <DocumentLibraryProvider>
               <NotificationsProvider>
                 <PagesProvider>
+                  <ProjectsProvider>
                   <Routes>
-                    <Route path={ROUTES.landing} element={<Landing />} />
-                    <Route path={ROUTES.login} element={<Auth />} />
-                    <Route path={ROUTES.register} element={<Auth />} />
-                    <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
-                    <Route path={ROUTES.resetPassword} element={<ForgotPassword />} />
-                    <Route path={ROUTES.mfaVerify} element={<MfaVerify />} />
-                    <Route path={ROUTES.app} element={<AppLayout />}>
+                    <Route
+                      path={ROUTES.landing}
+                      element={
+                        <PublicThemeScope>
+                          <Landing />
+                        </PublicThemeScope>
+                      }
+                    />
+                    <Route element={<RedirectIfAuthenticated />}>
+                      <Route
+                        path={ROUTES.login}
+                        element={
+                          <PublicThemeScope>
+                            <Auth />
+                          </PublicThemeScope>
+                        }
+                      />
+                      <Route
+                        path={ROUTES.register}
+                        element={
+                          <PublicThemeScope>
+                            <Auth />
+                          </PublicThemeScope>
+                        }
+                      />
+                      <Route
+                        path={ROUTES.forgotPassword}
+                        element={
+                          <PublicThemeScope>
+                            <ForgotPassword />
+                          </PublicThemeScope>
+                        }
+                      />
+                      <Route
+                        path={ROUTES.mfaVerify}
+                        element={
+                          <RequireMfaChallenge>
+                            <PublicThemeScope>
+                              <MfaVerify />
+                            </PublicThemeScope>
+                          </RequireMfaChallenge>
+                        }
+                      />
+                    </Route>
+                    <Route
+                      path={ROUTES.resetPassword}
+                      element={
+                        <PublicThemeScope>
+                          <ForgotPassword />
+                        </PublicThemeScope>
+                      }
+                    />
+                  <Route path={ROUTES.app} element={<RequireAuth><AppLayout /></RequireAuth>}>
                       <Route index element={<Dashboard />} />
                       <Route path="pages" element={<Pages />} />
                       <Route path="pages/:id" element={<PageDetail />} />
@@ -96,10 +154,12 @@ function App() {
                     </Route>
                     <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
                   </Routes>
+                  </ProjectsProvider>
                 </PagesProvider>
               </NotificationsProvider>
             </DocumentLibraryProvider>
           </ResumeLibraryProvider>
+          </AuthProvider>
         </TooltipProvider>
       </BrowserRouter>
     </>

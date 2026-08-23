@@ -1,4 +1,4 @@
-import { APP, API, ROUTES, SPLASH } from "@/constants/app"
+import { APP, API, ROUTES, SPLASH, AUTH_SESSION } from "@/constants/app"
 import { icons, resolveIcon, type IconName } from "@/constants/icons"
 import { messages } from "@/constants/messages"
 import {
@@ -14,6 +14,7 @@ export {
   API,
   ROUTES,
   SPLASH,
+  AUTH_SESSION,
   icons,
   resolveIcon,
   type IconName,

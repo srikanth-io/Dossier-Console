@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -6,13 +6,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { APP, ROUTES, icons, messages } from "@/constants"
+import { errorCodes } from "@/constants/messages/errors"
+import { getErrorMessage, safeAsync } from "@/lib/async"
+import { AppError } from "@/lib/errors"
+import { listMfaFactors, verifyMfaCode } from "@/services/auth"
+import { useAuth } from "@/store/auth"
 
 export function MfaVerify() {
   const navigate = useNavigate()
+  const { user, refresh } = useAuth()
   const [method, setMethod] = useState("totp")
   const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user) {
+      navigate(ROUTES.login, { replace: true })
+      return
+    }
+
+    void safeAsync(async () => {
+      const factors = await listMfaFactors()
+      if (factors.length === 0) {
+        navigate(ROUTES.app, { replace: true })
+      }
+    }, { context: "MfaVerify.loadFactors" })
+  }, [user, navigate])
 
   async function handleVerify(e: FormEvent) {
     e.preventDefault()
@@ -24,9 +44,21 @@ export function MfaVerify() {
     }
 
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
+    const ok = await safeAsync(() => verifyMfaCode(code), {
+      context: "MfaVerify.verify",
+      onError: (err) =>
+        setError(
+          err instanceof AppError && err.code === errorCodes.validation
+            ? messages.login.mfaVerifyPage.invalidCode
+            : getErrorMessage(err)
+        ),
+    })
     setLoading(false)
-    navigate(ROUTES.app)
+
+    if (ok) {
+      await refresh()
+      navigate(ROUTES.app, { replace: true })
+    }
   }
 
   return (
@@ -126,7 +158,7 @@ export function MfaVerify() {
                     {messages.login.mfaVerifyPage.emailTitle}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    {messages.login.mfaVerifyPage.emailSubtitle} admin@dossier.dev
+                    {messages.login.mfaVerifyPage.emailSubtitle} {user?.email}
                   </p>
                   <div className="relative">
                     <icons.mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />

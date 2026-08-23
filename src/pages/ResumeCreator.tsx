@@ -43,6 +43,7 @@ export function ResumeCreator() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get("edit")
   const templateParam = searchParams.get("template")
+  const nameParam = searchParams.get("name")
   const { resumes, addResume, updateResume } = useResumeLibrary()
   const isLg = useMediaQuery("(min-width: 1024px)")
 
@@ -106,7 +107,11 @@ export function ResumeCreator() {
     if (!editId && templateParam) {
       loadTemplate(templateParam)
     }
-  }, [editId, templateParam, loadTemplate])
+    if (!editId && nameParam?.trim()) {
+      const base = nameParam.trim().replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_")
+      if (base) setFileName(`${base}.tex`)
+    }
+  }, [editId, templateParam, nameParam, loadTemplate])
 
   useEffect(() => {
     if (!editId && !templateParam && !templateId) {

@@ -1,5 +1,11 @@
 export const resume = {
   createResume: "Create Resume",
+  setupTitle: "New Resume",
+  setupDescription: "Tell us what this resume is for and pick a starting style.",
+  aboutLabel: "What is this resume about?",
+  aboutPlaceholder: "e.g. Backend Engineer - Product startup application",
+  templateLabel: "Template style",
+  startCta: "Start Writing",
   title: "Resume Creator",
   subtitle: "Write LaTeX and preview your resume in real time.",
   editor: "LaTeX Source",

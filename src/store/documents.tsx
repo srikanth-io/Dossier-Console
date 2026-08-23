@@ -8,7 +8,7 @@ import {
 } from "react"
 import type { ReactNode } from "react"
 
-import { seededLibraryTemplates } from "@/data/documentTemplates"
+import { errorCodes } from "@/constants/messages/errors"
 import { uid } from "@/document-engine/history"
 import type {
   DocDocument,
@@ -16,26 +16,41 @@ import type {
   LibraryDocument,
   MyComponent,
 } from "@/document-engine/types"
-
-const DOCUMENTS_KEY = "dossier.documents.v1"
-const COMPONENTS_KEY = "dossier.myComponents.v1"
+import { AppError } from "@/lib/errors"
+import { getSupabase } from "@/lib/supabase"
+import { safeAsync } from "@/lib/async"
+import { persistOrQueue } from "@/lib/mutation-queue"
+import { useAuth } from "@/store/auth"
 
 function nowIso(): string {
   return new Date().toISOString()
 }
 
-function readStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    if (raw) return JSON.parse(raw) as T
-  } catch {
-    /* ignore corrupt storage */
-  }
-  return fallback
+type DocumentRow = {
+  id: string
+  user_id: string
+  name: string
+  description: string
+  category: string
+  status: string
+  version: string
+  author: string
+  data: LibraryDocument
+  created_at: string
+  updated_at: string
+}
+
+type ComponentRow = {
+  id: string
+  user_id: string
+  name: string
+  elements: DocElement[]
+  created_at: string
 }
 
 interface DocumentLibraryValue {
   documents: LibraryDocument[]
+  loading: boolean
   getDocument: (id: string) => LibraryDocument | undefined
   saveDocument: (doc: DocDocument) => LibraryDocument
   updateMeta: (
@@ -58,33 +73,82 @@ interface DocumentLibraryValue {
 
 const DocumentLibraryContext = createContext<DocumentLibraryValue | null>(null)
 
+function documentRow(record: LibraryDocument) {
+  return {
+    id: record.id,
+    name: record.name,
+    description: record.description,
+    category: record.category,
+    status: record.status,
+    version: record.version,
+    author: record.author,
+    data: record,
+  }
+}
+
 export function DocumentLibraryProvider({
   children,
 }: {
   children: ReactNode
 }) {
-  const [documents, setDocuments] = useState<LibraryDocument[]>(() =>
-    readStorage(DOCUMENTS_KEY, seededLibraryTemplates())
-  )
-  const [components, setComponents] = useState<MyComponent[]>(() =>
-    readStorage(COMPONENTS_KEY, [])
-  )
+  const { status } = useAuth()
+  const authenticated = status === "authenticated"
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(documents))
-    } catch {
-      /* storage full or unavailable */
-    }
-  }, [documents])
+  const [documents, setDocuments] = useState<LibraryDocument[]>([])
+  const [components, setComponents] = useState<MyComponent[]>([])
+  const [loading, setLoading] = useState(false)
 
+  // Hydrate the signed-in user's library straight from Postgres. RLS scopes
+  // every row to auth.uid(), so no other account's data can ever appear.
   useEffect(() => {
-    try {
-      localStorage.setItem(COMPONENTS_KEY, JSON.stringify(components))
-    } catch {
-      /* storage full or unavailable */
+    if (!authenticated) {
+      setDocuments([])
+      setComponents([])
+      return
     }
-  }, [components])
+
+    let cancelled = false
+    setLoading(true)
+
+    void safeAsync(async () => {
+      const client = getSupabase()
+      const [docs, comps] = await Promise.all([
+        client
+          .from("documents")
+          .select("*")
+          .order("updated_at", { ascending: false }),
+        client
+          .from("document_components")
+          .select("*")
+          .order("created_at", { ascending: false }),
+      ])
+
+      if (docs.error) {
+        throw new AppError(errorCodes.dataLoadFailed, docs.error.message)
+      }
+      if (comps.error) {
+        throw new AppError(errorCodes.dataLoadFailed, comps.error.message)
+      }
+
+      if (!cancelled) {
+        setDocuments(((docs.data ?? []) as DocumentRow[]).map((row) => row.data))
+        setComponents(
+          ((comps.data ?? []) as ComponentRow[]).map((row) => ({
+            id: row.id,
+            name: row.name,
+            createdAt: row.created_at,
+            elements: row.elements ?? [],
+          }))
+        )
+      }
+    }, { context: "DocumentLibrary.load" }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authenticated])
 
   const getDocument = useCallback(
     (id: string) => documents.find((doc) => doc.id === id),
@@ -104,6 +168,14 @@ export function DocumentLibraryProvider({
           ? prev.map((item) => (item.id === doc.id ? record : item))
           : [record, ...prev]
       )
+
+      void safeAsync(async () => {
+        await persistOrQueue(
+          { kind: "upsert", table: "documents", row: documentRow(record), context: "DocumentLibrary.saveDocument" },
+          () => getSupabase().from("documents").upsert(documentRow(record))
+        )
+      }, { context: "DocumentLibrary.saveDocument" })
+
       return record
     },
     [documents]
@@ -111,13 +183,25 @@ export function DocumentLibraryProvider({
 
   const updateMeta: DocumentLibraryValue["updateMeta"] = useCallback(
     (id, patch) => {
+      const stamp = nowIso()
+      let next: LibraryDocument | undefined
       setDocuments((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...item, ...patch, updatedAt: nowIso() }
-            : item
-        )
+        prev.map((item) => {
+          if (item.id !== id) return item
+          next = { ...item, ...patch, updatedAt: stamp }
+          return next
+        })
       )
+
+      if (next) {
+        const record = next
+        void safeAsync(async () => {
+          await persistOrQueue(
+            { kind: "upsert", table: "documents", row: documentRow(record), context: "DocumentLibrary.updateMeta" },
+            () => getSupabase().from("documents").update(documentRow(record)).eq("id", id)
+          )
+        }, { context: "DocumentLibrary.updateMeta" })
+      }
     },
     []
   )
@@ -126,7 +210,7 @@ export function DocumentLibraryProvider({
     (id: string, name?: string) => {
       const source = documents.find((item) => item.id === id)
       if (!source) return undefined
-      const copy = structuredClone(source)
+      const copy: LibraryDocument = structuredClone(source)
       copy.id = uid()
       copy.name = name ?? `${source.name} (copy)`
       copy.createdAt = nowIso()
@@ -135,6 +219,14 @@ export function DocumentLibraryProvider({
       copy.versions = []
       copy.status = "draft"
       setDocuments((prev) => [copy, ...prev])
+
+      void safeAsync(async () => {
+        await persistOrQueue(
+          { kind: "upsert", table: "documents", row: documentRow(copy), context: "DocumentLibrary.duplicateDocument" },
+          () => getSupabase().from("documents").upsert(documentRow(copy))
+        )
+      }, { context: "DocumentLibrary.duplicateDocument" })
+
       return copy
     },
     [documents]
@@ -142,27 +234,46 @@ export function DocumentLibraryProvider({
 
   const removeDocument = useCallback((id: string) => {
     setDocuments((prev) => prev.filter((item) => item.id !== id))
+
+    void safeAsync(async () => {
+      await persistOrQueue(
+        { kind: "delete", table: "documents", column: "id", value: id, context: "DocumentLibrary.removeDocument" },
+        () => getSupabase().from("documents").delete().eq("id", id)
+      )
+    }, { context: "DocumentLibrary.removeDocument" })
   }, [])
 
   const addVersion: DocumentLibraryValue["addVersion"] = useCallback(
     (id, version, note, snapshot) => {
+      const entry = {
+        id: uid(),
+        version,
+        note,
+        savedAt: nowIso(),
+        snapshot: structuredClone(snapshot),
+      }
+      let next: LibraryDocument | undefined
       setDocuments((prev) =>
         prev.map((item) => {
           if (item.id !== id) return item
-          const entry = {
-            id: uid(),
-            version,
-            note,
-            savedAt: nowIso(),
-            snapshot: structuredClone(snapshot),
-          }
-          return {
+          next = {
             ...item,
             version,
             versions: [entry, ...item.versions].slice(0, 20),
           }
+          return next
         })
       )
+
+      if (next) {
+        const record = next
+        void safeAsync(async () => {
+          await persistOrQueue(
+            { kind: "upsert", table: "documents", row: documentRow(record), context: "DocumentLibrary.addVersion" },
+            () => getSupabase().from("documents").update(documentRow(record)).eq("id", id)
+          )
+        }, { context: "DocumentLibrary.addVersion" })
+      }
     },
     []
   )
@@ -175,22 +286,55 @@ export function DocumentLibraryProvider({
       elements: structuredClone(elements),
     }
     setComponents((prev) => [component, ...prev])
+
+    void safeAsync(async () => {
+      await persistOrQueue(
+        {
+          kind: "upsert",
+          table: "document_components",
+          row: { id: component.id, name: component.name, elements: component.elements },
+          context: "DocumentLibrary.saveComponent",
+        },
+        () =>
+          getSupabase().from("document_components").upsert({
+            id: component.id,
+            name: component.name,
+            elements: component.elements,
+          })
+      )
+    }, { context: "DocumentLibrary.saveComponent" })
+
     return component
   }, [])
 
   const removeComponent = useCallback((id: string) => {
     setComponents((prev) => prev.filter((item) => item.id !== id))
+
+    void safeAsync(async () => {
+      await persistOrQueue(
+        { kind: "delete", table: "document_components", column: "id", value: id, context: "DocumentLibrary.removeComponent" },
+        () => getSupabase().from("document_components").delete().eq("id", id)
+      )
+    }, { context: "DocumentLibrary.removeComponent" })
   }, [])
 
   const resetLibrary = useCallback(() => {
-    const seeded = seededLibraryTemplates()
-    setDocuments(seeded)
+    setDocuments([])
     setComponents([])
+
+    void safeAsync(async () => {
+      const client = getSupabase()
+      await Promise.all([
+        client.from("documents").delete().neq("id", ""),
+        client.from("document_components").delete().neq("id", ""),
+      ])
+    }, { context: "DocumentLibrary.resetLibrary" })
   }, [])
 
   const value = useMemo<DocumentLibraryValue>(
     () => ({
       documents,
+      loading,
       getDocument,
       saveDocument,
       updateMeta,
@@ -204,13 +348,14 @@ export function DocumentLibraryProvider({
     }),
     [
       documents,
-      components,
+      loading,
       getDocument,
       saveDocument,
       updateMeta,
       duplicateDocument,
       removeDocument,
       addVersion,
+      components,
       saveComponent,
       removeComponent,
       resetLibrary,

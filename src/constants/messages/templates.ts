@@ -11,6 +11,7 @@ export const templates = {
     "Pick a template to load its layout and sample content into the editor.",
   useTemplate: "Use this template",
   searchPlaceholder: "Search templates...",
+  filterCategory: "Filter by category",
   categories: {
     all: "All",
     professional: "Professional",

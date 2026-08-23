@@ -1,22 +1,116 @@
 import { useState, type FormEvent } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { APP, ROUTES, icons, messages } from "@/constants"
+import { getErrorMessage, safeAsync } from "@/lib/async"
+import { requestPasswordReset, updatePassword } from "@/services/auth"
+import { useAuth } from "@/store/auth"
+
+function PasswordField({
+  id,
+  value,
+  onChange,
+  placeholder,
+  showPassword,
+  onToggle,
+  autoComplete = "new-password",
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  showPassword: boolean
+  onToggle: () => void
+  autoComplete?: string
+}) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={showPassword ? "text" : "password"}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        className="h-12 pr-12 text-base"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-1/2 right-1.5 size-9 -translate-y-1/2 text-muted-foreground"
+        aria-label={showPassword ? messages.login.hidePassword : messages.login.showPassword}
+        onClick={onToggle}
+      >
+        {showPassword ? (
+          <icons.eyeOff className="size-5" />
+        ) : (
+          <icons.eye className="size-5" />
+        )}
+      </Button>
+    </div>
+  )
+}
+
+import { errorMessages } from "@/constants/messages/errors"
 
 export function ForgotPassword() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
+
+  const isResetMode = location.pathname === ROUTES.resetPassword
+
   const [email, setEmail] = useState("")
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: FormEvent) {
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
+
+  async function handleRequestReset(e: FormEvent) {
     e.preventDefault()
+    setError(null)
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
+
+    await safeAsync(() => requestPasswordReset(email), {
+      context: "ForgotPage.requestReset",
+      onError: (err) => setError(getErrorMessage(err)),
+    })
+
     setLoading(false)
     setSent(true)
+  }
+
+  async function handleSetNewPassword(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (newPassword !== confirmNewPassword) {
+      setError(errorMessages.passwordMismatch)
+      return
+    }
+
+    setLoading(true)
+
+    const ok = await safeAsync(() => updatePassword(newPassword), {
+      context: "ForgotPage.updatePassword",
+      onError: (err) => setError(getErrorMessage(err)),
+    })
+
+    setLoading(false)
+
+    if (ok) {
+      await signOut()
+      navigate(ROUTES.login, { replace: true })
+    }
   }
 
   return (
@@ -60,14 +154,72 @@ export function ForgotPassword() {
                 <icons.lock className="size-6" />
               </div>
               <h1 className="font-heading text-2xl font-bold tracking-tight">
-                {messages.login.forgotPasswordPage.title}
+                {isResetMode
+                  ? messages.login.resetPasswordPage.title
+                  : messages.login.forgotPasswordPage.title}
               </h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                {messages.login.forgotPasswordPage.subtitle}
+                {isResetMode
+                  ? messages.login.resetPasswordPage.subtitle
+                  : messages.login.forgotPasswordPage.subtitle}
               </p>
             </div>
 
-            {sent ? (
+            {isResetMode ? (
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
+                <FormField
+                  label={messages.login.resetPasswordPage.newPasswordLabel}
+                  htmlFor="new-password"
+                  required
+                >
+                  <PasswordField
+                    id="new-password"
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    placeholder={messages.login.resetPasswordPage.newPasswordPlaceholder}
+                    showPassword={showNewPassword}
+                    onToggle={() => setShowNewPassword((show) => !show)}
+                    autoComplete="new-password"
+                  />
+                </FormField>
+
+                <FormField
+                  label={messages.login.resetPasswordPage.confirmPasswordLabel}
+                  htmlFor="confirm-new-password"
+                  required
+                >
+                  <PasswordField
+                    id="confirm-new-password"
+                    value={confirmNewPassword}
+                    onChange={setConfirmNewPassword}
+                    placeholder={messages.login.resetPasswordPage.confirmPasswordPlaceholder}
+                    showPassword={showConfirmNewPassword}
+                    onToggle={() => setShowConfirmNewPassword((show) => !show)}
+                    autoComplete="new-password"
+                  />
+                </FormField>
+
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  loading={loading}
+                  className="h-12 w-full text-base"
+                >
+                  {loading
+                    ? messages.login.resetPasswordPage.resetting
+                    : messages.login.resetPasswordPage.resetButton}
+                </Button>
+              </form>
+            ) : sent ? (
               <div className="space-y-4 text-center">
                 <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
                   <icons.checkCircle className="size-6" />
@@ -82,7 +234,7 @@ export function ForgotPassword() {
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleRequestReset} className="space-y-4">
                 <FormField
                   label={messages.login.forgotPasswordPage.emailLabel}
                   htmlFor="forgot-email"

@@ -46,6 +46,39 @@ export const login = {
   showPassword: "Show password",
   hidePassword: "Hide password",
   backToLanding: "Back to home",
+  validation: {
+    nameRequired: "Enter your full name.",
+    nameTooShort: "Name must be at least 2 characters.",
+    usernameRequired: "Choose a username.",
+    usernameInvalid:
+      "Use 3-30 characters: letters, numbers, dots or underscores.",
+    emailRequired: "Enter your email address.",
+    emailInvalid: "Enter a valid email address.",
+    passwordRequired: "Enter your password.",
+    passwordTooShort: "Password must be at least 8 characters.",
+    passwordWeak: "Include at least one letter and one number.",
+    confirmRequired: "Re-enter your password.",
+    passwordMismatch: "Passwords do not match.",
+    strengthLabels: ["Too weak", "Weak", "Fair", "Good", "Strong"],
+    strengthHint:
+      "Use 8+ characters with upper and lower case letters, a number, and a symbol for a stronger password.",
+  },
+  toasts: {
+    accountCreatedFor: (name: string): string =>
+      `Account created. Welcome, ${name}!`,
+    signedInAs: (name: string): string => `${name} signed in`,
+    confirmationSent:
+      "Confirmation link sent. Check your inbox to activate your account.",
+    signInFailed: "Sign in failed",
+    signUpFailed: "Could not create account",
+    sessionExpired:
+      "Your session expired after 60 minutes. Please sign in again.",
+  },
+  emailConfirmation: {
+    success:
+      "Account created. We've sent a confirmation link to your email address. Click it to activate your account, then sign in.",
+    backToSignIn: "Back to sign in",
+  },
   copyright: (year: number): string => `© ${year} Dossier`,
   forgotPasswordPage: {
     title: "Reset your password",

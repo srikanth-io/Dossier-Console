@@ -7,16 +7,10 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { SearchFilterBar } from "@/components/common/search-filter-bar"
+import { CollectionSection } from "@/components/common/collection-page"
 import { StatusPill } from "@/components/domain/status-pill"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -35,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -51,7 +46,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { commonMessages, icons, messages, ROUTES, statusLabels } from "@/constants"
+import { resumeTemplates } from "@/data/resumeTemplates"
 import { getErrorMessage } from "@/lib/async"
+import { cn } from "@/lib/utils"
 import { RESUME_PREVIEW_CLASSES, renderLatex } from "@/lib/latexPreview"
 import { useResumeLibrary } from "@/store/resumes"
 import {
@@ -118,6 +115,9 @@ export function Dossiers() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [state, setState] = useState<UploadState>({ phase: "idle" })
+  const [resumeSetupOpen, setResumeSetupOpen] = useState(false)
+  const [resumeName, setResumeName] = useState("")
+  const [resumeTemplateId, setResumeTemplateId] = useState(resumeTemplates[0]?.id ?? "")
   const [dragActive, setDragActive] = useState(false)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState>(null)
@@ -192,6 +192,20 @@ export function Dossiers() {
   useEffect(() => {
     setSelected(new Set())
   }, [query, statusFilter, typeFilter, sort])
+
+  const openResumeSetup = useCallback(() => {
+    setResumeName("")
+    setResumeTemplateId(resumeTemplates[0]?.id ?? "")
+    setResumeSetupOpen(true)
+  }, [])
+
+  const handleStartResume = useCallback(() => {
+    const params = new URLSearchParams()
+    if (resumeTemplateId) params.set("template", resumeTemplateId)
+    if (resumeName.trim()) params.set("name", resumeName.trim())
+    setResumeSetupOpen(false)
+    navigate(`${ROUTES.resumeCreator}?${params.toString()}`)
+  }, [navigate, resumeName, resumeTemplateId])
 
   const clearFilters = useCallback(() => {
     setQuery("")
@@ -387,7 +401,7 @@ export function Dossiers() {
             </Button>
             <Button
               variant="default"
-              onClick={() => navigate(ROUTES.resumeCreator)}
+              onClick={openResumeSetup}
             >
               <icons.fileCode /> {messages.dossiers.newDocument}
             </Button>
@@ -453,16 +467,10 @@ export function Dossiers() {
         </div>
       </SearchFilterBar>
 
-      <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
-          <div>
-            <CardTitle>{messages.dossiers.myResumes}</CardTitle>
-            <CardDescription>
-              {messages.dossiers.recordsCount(filtered.length)}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <CollectionSection
+        title={messages.dossiers.myResumes}
+        description={messages.dossiers.recordsCount(filtered.length)}
+      >
           {selected.size > 0 && (
             <div className="mb-3 flex animate-fade-in flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary-soft/80 px-4 py-2.5 dark:bg-primary/10">
               <p className="text-sm font-semibold text-primary">
@@ -513,7 +521,7 @@ export function Dossiers() {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button onClick={() => navigate(ROUTES.resumeCreator)}>
+                    <Button onClick={openResumeSetup}>
                       <icons.fileCode /> {messages.resume.createResume}
                     </Button>
                     <Button variant="outline" onClick={openDialog}>
@@ -713,8 +721,7 @@ export function Dossiers() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+      </CollectionSection>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? openDialog() : closeDialog())}>
         <DialogContent className="sm:max-w-md" showCloseButton={uploadState !== "uploading"}>
@@ -1012,6 +1019,76 @@ export function Dossiers() {
         }
         onConfirm={handleConfirm}
       />
+
+      <Dialog open={resumeSetupOpen} onOpenChange={setResumeSetupOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{messages.resume.setupTitle}</DialogTitle>
+            <DialogDescription>{messages.resume.setupDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="resume-about" className="text-sm font-medium">
+                {messages.resume.aboutLabel}
+              </label>
+              <Input
+                id="resume-about"
+                value={resumeName}
+                onChange={(e) => setResumeName(e.target.value)}
+                placeholder={messages.resume.aboutPlaceholder}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{messages.resume.templateLabel}</p>
+              <div
+                role="radiogroup"
+                aria-label={messages.resume.templateLabel}
+                className="grid gap-2"
+              >
+                {resumeTemplates.map((template) => {
+                  const activeTemplate = resumeTemplateId === template.id
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={activeTemplate}
+                      onClick={() => setResumeTemplateId(template.id)}
+                      className={cn(
+                        "flex items-start justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
+                        activeTemplate
+                          ? "border-primary bg-primary-soft/50 ring-1 ring-primary/30"
+                          : "border-border/70 hover:border-border"
+                      )}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">
+                          {template.name}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {template.description}
+                        </span>
+                      </span>
+                      {activeTemplate && (
+                        <icons.checkCircle className="size-5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setResumeSetupOpen(false)}>
+              {commonMessages.cancel}
+            </Button>
+            <Button onClick={handleStartResume} disabled={!resumeTemplateId}>
+              <icons.fileCode /> {messages.resume.startCta}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

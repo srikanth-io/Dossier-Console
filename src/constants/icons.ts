@@ -7,6 +7,7 @@ import { BadgeAlertIcon } from "@/components/icons/badge-alert"
 import { BellIcon } from "@/components/icons/bell"
 import { ChartColumnIncreasingIcon } from "@/components/icons/chart-column-increasing"
 import { CheckIcon } from "@/components/icons/check"
+import { CalendarIcon } from "@/components/icons/calendar"
 import { ChevronDownIcon } from "@/components/icons/chevron-down"
 import { ChevronLeftIcon } from "@/components/icons/chevron-left"
 import { ChevronRightIcon } from "@/components/icons/chevron-right"
@@ -129,6 +130,7 @@ export const icons = {
   trendUp: ArrowUpRightIcon,
   arrowRight: ArrowRightIcon,
   check: CheckIcon,
+  calendar: CalendarIcon,
   shield: ShieldCheckIcon,
   lock: LockKeyholeIcon,
   sparkles: SparklesIcon,

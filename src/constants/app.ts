@@ -42,3 +42,12 @@ export const SPLASH = {
   logoMs: 1600,
   fadeMs: 500,
 } as const
+
+/**
+ * Absolute client-side session cap. Mirrors [auth.sessions] timebox in
+ * supabase/config.toml; the server remains the authoritative enforcement.
+ */
+export const AUTH_SESSION = {
+  ttlMs: 60 * 60 * 1000,
+  checkIntervalMs: 30 * 1000,
+} as const

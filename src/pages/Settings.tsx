@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
@@ -42,16 +42,51 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ROUTES, icons, messages } from "@/constants"
-import { devices as deviceList, logs as logList } from "@/data/security"
-import { services as serviceList, type ServiceEntry } from "@/data/services"
 import {
+  commonMessages,
+  ROUTES,
+  icons,
+  messages,
+} from "@/constants"
+import { errorCodes } from "@/constants/messages/errors"
+import {
+  securityEventCategory,
+  securityEventLabel,
+} from "@/constants/messages/security-events"
+import {
+  applyMode,
   applyThemePreset,
+  getStoredMode,
   getStoredThemePreset,
+  accentChoices,
+  applyAccent,
+  getStoredAccent,
+  applyFontScale,
+  getStoredFontScale,
+  applyReducedMotion,
+  getStoredReducedMotion,
+  type ThemeMode,
   type ThemePreset,
+  type FontScale,
 } from "@/components/common/theme-toggle"
 import { usePages } from "@/store/pages"
+import { useAuth } from "@/store/auth"
+import { safeAsync } from "@/lib/async"
+import { AppError } from "@/lib/errors"
+import { getSupabase } from "@/lib/supabase"
+import { formatTimestamp } from "@/lib/time"
+import { browserFromUserAgent, osFromUserAgent } from "@/lib/userAgent"
 import { cn } from "@/lib/utils"
+
+type SecurityEventRow = {
+  id: string
+  event_type: string
+  success: boolean
+  ip_address: string | null
+  user_agent: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
 
 const RADIUS_KEY = "dossier-radius"
 
@@ -130,6 +165,16 @@ export function Settings() {
 
   const [themePreset, setThemePreset] = useState<ThemePreset>(getInitialTheme)
   const [radius, setRadius] = useState<string>(getInitialRadius)
+  const [mode, setMode] = useState<ThemeMode>(getStoredMode)
+  const [accent, setAccent] = useState<string | null>(getStoredAccent)
+  const [fontScale, setFontScale] = useState<FontScale>(getStoredFontScale)
+  const [reducedMotion, setReducedMotion] = useState<boolean>(getStoredReducedMotion)
+
+  const modeOptions: { value: ThemeMode; label: string; icon: (typeof icons)["sun"] }[] = [
+    { value: "light", label: messages.settings.appearance.modeLight, icon: icons.sun },
+    { value: "dark", label: messages.settings.appearance.modeDark, icon: icons.moon },
+    { value: "system", label: messages.settings.appearance.modeSystem, icon: icons.monitor },
+  ]
 
   const [reviewRequired, setReviewRequired] = useState(true)
   const [notifications, setNotifications] = useState(true)
@@ -147,15 +192,44 @@ export function Settings() {
   const [logPage, setLogPage] = useState(1)
   const [logPageSize, setLogPageSize] = useState(10)
 
-  const [serviceStates, setServiceStates] = useState<Record<string, ServiceEntry>>(
-    () => Object.fromEntries(serviceList.map((s) => [s.id, { ...s }]))
-  )
-  const [restartingService, setRestartingService] = useState<string | null>(null)
+  const [securityEvents, setSecurityEvents] = useState<SecurityEventRow[]>([])
 
   const [resetOpen, setResetOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [signOutOpen, setSignOutOpen] = useState(false)
   const navigate = useNavigate()
+  const { signOut, status, user } = useAuth()
+  const authenticated = status === "authenticated"
+
+  const accountInitials = useMemo(() => {
+    const source = (user?.name || user?.email || "?").trim()
+    return source.slice(0, 2).toUpperCase()
+  }, [user])
+
+  // Activity logs are the signed-in user's real audit trail (RLS-scoped).
+  useEffect(() => {
+    if (!authenticated) {
+      setSecurityEvents([])
+      return
+    }
+
+    let cancelled = false
+    void safeAsync(async () => {
+      const { data, error } = await getSupabase()
+        .from("security_events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200)
+      if (error) throw new AppError(errorCodes.dataLoadFailed, error.message)
+      if (!cancelled) {
+        setSecurityEvents((data ?? []) as SecurityEventRow[])
+      }
+    }, { context: "Settings.loadSecurityEvents" })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authenticated])
 
   const [wsCreateOpen, setWsCreateOpen] = useState(false)
   const [wsCreateName, setWsCreateName] = useState("")
@@ -173,6 +247,12 @@ export function Settings() {
     localStorage.setItem(RADIUS_KEY, radius)
   }, [radius])
 
+  const fontScaleOptions: { value: FontScale; label: string }[] = [
+    { value: "compact", label: messages.settings.appearance.fontCompact },
+    { value: "default", label: messages.settings.appearance.fontDefault },
+    { value: "large", label: messages.settings.appearance.fontLarge },
+  ]
+
   const handleUpdatePassword = (e: FormEvent) => {
     e.preventDefault()
     if (newPassword !== confirmPassword) {
@@ -186,9 +266,31 @@ export function Settings() {
     toast.success(messages.settings.security.passwordUpdated)
   }
 
-  const logPageCount = Math.max(1, Math.ceil(logList.length / logPageSize))
+  const logRows = useMemo(
+    () =>
+      securityEvents.map((event) => {
+        const meta = event.metadata ?? {}
+        const metaString = (key: string): string | null =>
+          typeof meta[key] === "string" ? (meta[key] as string) : null
+        return {
+          id: event.id,
+          timestamp: formatTimestamp(event.created_at),
+          action: securityEventLabel(event.event_type),
+          category: securityEventCategory(event.event_type),
+          screen: metaString("screen") ?? commonMessages.none,
+          browser: browserFromUserAgent(event.user_agent),
+          device: osFromUserAgent(event.user_agent),
+          ipAddress: event.ip_address ?? commonMessages.none,
+          request: metaString("request") ?? commonMessages.none,
+          details: metaString("details") ?? commonMessages.none,
+        }
+      }),
+    [securityEvents]
+  )
+
+  const logPageCount = Math.max(1, Math.ceil(logRows.length / logPageSize))
   const safeLogPage = Math.min(logPage, logPageCount)
-  const visibleLogs = logList.slice(
+  const visibleLogs = logRows.slice(
     (safeLogPage - 1) * logPageSize,
     safeLogPage * logPageSize
   )
@@ -198,32 +300,6 @@ export function Settings() {
       setLogPage(logPageCount)
     }
   }, [logPage, logPageCount])
-
-  const handleRestartService = (serviceId: string) => {
-    setRestartingService(serviceId)
-    setTimeout(() => {
-      setServiceStates((prev) => ({
-        ...prev,
-        [serviceId]: {
-          ...prev[serviceId],
-          status: "operational",
-          responseTime: Math.floor(Math.random() * 50) + 10,
-          lastChecked: "Just now",
-          lastRestart: new Date().toLocaleString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          }),
-        },
-      }))
-      const name = serviceList.find((s) => s.id === serviceId)?.name ?? serviceId
-      toast.success(messages.settings.services.restartSuccess(name))
-      setRestartingService(null)
-    }, 2000)
-  }
 
   return (
     <div className="space-y-6">
@@ -277,7 +353,9 @@ export function Settings() {
                 <CardContent className="space-y-6">
                   <div className="flex items-center gap-5">
                     <Avatar className="size-16">
-                      <AvatarFallback className="text-lg">{messages.layout.userInitials}</AvatarFallback>
+                      <AvatarFallback className="text-lg">
+                        {accountInitials}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
                       <p className="text-sm font-medium">{messages.settings.account.avatar}</p>
@@ -296,7 +374,7 @@ export function Settings() {
                     <FormField label={messages.settings.account.name} htmlFor="account-name">
                       <Input
                         id="account-name"
-                        defaultValue={messages.layout.userName}
+                        defaultValue={user?.name ?? ""}
                         placeholder={messages.settings.account.namePlaceholder}
                       />
                     </FormField>
@@ -304,7 +382,7 @@ export function Settings() {
                       <Input
                         id="account-email"
                         type="email"
-                        defaultValue={messages.layout.userEmail}
+                        defaultValue={user?.email ?? ""}
                         placeholder={messages.settings.account.emailPlaceholder}
                       />
                     </FormField>
@@ -492,38 +570,14 @@ export function Settings() {
                       <div className="flex items-center justify-between rounded-xl border border-border/70 p-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
-                            <AvatarFallback>{messages.layout.userInitials}</AvatarFallback>
+                            <AvatarFallback>{accountInitials}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-medium">{messages.layout.userName}</p>
-                            <p className="text-xs text-muted-foreground">{messages.layout.userEmail}</p>
+                            <p className="text-sm font-medium">{user?.name || commonMessages.none}</p>
+                            <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
                           </div>
                         </div>
                         <Badge>{messages.settings.workspace.roleAdmin}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between rounded-xl border border-border/70 p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-8">
-                            <AvatarFallback>JD</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">Jane Doe</p>
-                            <p className="text-xs text-muted-foreground">jane@example.com</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline">{messages.settings.workspace.roleEditor}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between rounded-xl border border-border/70 p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-8">
-                            <AvatarFallback>AS</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">Alex Smith</p>
-                            <p className="text-xs text-muted-foreground">alex@example.com</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline">{messages.settings.workspace.roleViewer}</Badge>
                       </div>
                     </div>
                   </CardContent>
@@ -650,54 +704,241 @@ export function Settings() {
                   {messages.settings.appearance.description}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-8">
+                {/* Live preview */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {messages.settings.appearance.previewTitle}
+                  </p>
+                  <div className="rounded-xl border border-border/70 bg-muted/30 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold">
+                        {messages.settings.appearance.previewTitle}
+                      </p>
+                      <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {messages.settings.appearance.previewBadge}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {messages.settings.appearance.previewDescription}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button size="sm">
+                        <icons.sparkles /> {messages.settings.appearance.previewPrimary}
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        {messages.settings.appearance.previewSecondary}
+                      </Button>
+                      <Button size="sm" variant="ghost">
+                        {commonMessages.cancel}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Colour mode */}
                 <FormField
-                  label={messages.settings.appearance.theme}
-                  hint={messages.settings.appearance.themeHint}
-                  htmlFor="appearance-theme"
+                  label={messages.settings.appearance.mode}
+                  hint={messages.settings.appearance.modeHint}
                 >
-                  <Select value={themePreset} onValueChange={(v) => setThemePreset(v as ThemePreset)}>
-                    <SelectTrigger id="appearance-theme" className="w-56">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {themePresets.map((preset) => (
-                        <SelectItem key={preset.key} value={preset.key}>
-                          <span className="flex items-center gap-2">
-                            <span className="flex size-4 shrink-0 items-center justify-center gap-px overflow-hidden rounded border border-border/50">
-                              {preset.previewColors.map((color, i) => (
-                                <span key={i} className="h-full flex-1" style={{ backgroundColor: color }} />
-                              ))}
-                            </span>
-                            {preset.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div
+                    role="radiogroup"
+                    aria-label={messages.settings.appearance.mode}
+                    className="grid grid-cols-3 gap-3"
+                  >
+                    {modeOptions.map((option) => {
+                      const ModeIcon = option.icon
+                      const activeMode = mode === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={activeMode}
+                          onClick={() => {
+                            setMode(option.value)
+                            applyMode(option.value)
+                          }}
+                          className={cn(
+                            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors",
+                            activeMode
+                              ? "border-primary bg-primary-soft text-primary shadow-sm"
+                              : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
+                          )}
+                        >
+                          <ModeIcon className="size-5" />
+                          <span className="text-sm font-medium">{option.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </FormField>
 
-                <FormField
-                  label={messages.settings.appearance.radius}
-                  hint={messages.settings.appearance.radiusHint}
-                  htmlFor="appearance-radius"
-                >
-                  <Select value={radius} onValueChange={setRadius}>
-                    <SelectTrigger
-                      id="appearance-radius"
-                      className="w-48"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {radiusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Theme preset swatches */}
+                <FormField label={messages.settings.appearance.theme} hint={messages.settings.appearance.themeHint}>
+                  <div
+                    role="radiogroup"
+                    aria-label={messages.settings.appearance.theme}
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-5"
+                  >
+                    {themePresets.map((preset) => {
+                      const activePreset = themePreset === preset.key
+                      return (
+                        <button
+                          key={preset.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={activePreset}
+                          title={preset.hint}
+                          onClick={() => setThemePreset(preset.key)}
+                          className={cn(
+                            "group relative overflow-hidden rounded-xl border text-left transition-colors",
+                            activePreset
+                              ? "border-primary ring-2 ring-primary/30"
+                              : "border-border/70 hover:border-border"
+                          )}
+                        >
+                          <span className="flex h-12">
+                            {preset.previewColors.map((color, i) => (
+                              <span key={i} className="h-full flex-1" style={{ backgroundColor: color }} />
+                            ))}
+                          </span>
+                          <span className="flex items-center justify-between gap-1 px-2.5 py-2">
+                            <span className="truncate text-xs font-medium">{preset.label}</span>
+                            {activePreset && <icons.check className="size-3.5 shrink-0 text-primary" />}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </FormField>
+
+                {/* Accent colour */}
+                <FormField
+                  label={messages.settings.appearance.accent}
+                  hint={messages.settings.appearance.accentHint}
+                >
+                  <div
+                    role="radiogroup"
+                    aria-label={messages.settings.appearance.accent}
+                    className="flex flex-wrap items-center gap-3"
+                  >
+                    {accentChoices.map((choice) => {
+                      const activeAccent = accent === choice.key
+                      return (
+                        <button
+                          key={choice.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={activeAccent}
+                          title={
+                            choice.key === "auto"
+                              ? messages.settings.appearance.accentAuto
+                              : choice.key.charAt(0).toUpperCase() + choice.key.slice(1)
+                          }
+                          onClick={() => {
+                            setAccent(choice.key)
+                            applyAccent(choice.key)
+                          }}
+                          className={cn(
+                            "relative flex size-9 items-center justify-center rounded-full border-2 transition-transform hover:scale-105",
+                            choice.value
+                              ? "border-transparent"
+                              : "border-dashed border-muted-foreground/50 bg-muted/40",
+                            activeAccent && "ring-2 ring-ring ring-offset-2 ring-offset-background"
+                          )}
+                          style={choice.value ? { backgroundColor: choice.value } : undefined}
+                        >
+                          {choice.value ? null : (
+                            <icons.rotate className="size-4 text-muted-foreground" />
+                          )}
+                          {activeAccent && (
+                            <icons.check
+                              className="size-4"
+                              style={{ color: choice.dark ?? undefined }}
+                            />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </FormField>
+
+                {/* Interface size + corner radius */}
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <FormField label={messages.settings.appearance.fontScale} hint={messages.settings.appearance.fontScaleHint}>
+                    <div
+                      role="radiogroup"
+                      aria-label={messages.settings.appearance.fontScale}
+                      className="inline-flex rounded-lg border border-border/70 bg-muted/40 p-1"
+                    >
+                      {fontScaleOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={fontScale === option.value}
+                          onClick={() => {
+                            setFontScale(option.value)
+                            applyFontScale(option.value)
+                          }}
+                          className={cn(
+                            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                            fontScale === option.value
+                              ? "bg-background text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </FormField>
+
+                  <FormField label={messages.settings.appearance.radius} hint={messages.settings.appearance.radiusHint}>
+                    <div
+                      role="radiogroup"
+                      aria-label={messages.settings.appearance.radius}
+                      className="inline-flex rounded-lg border border-border/70 bg-muted/40 p-1"
+                    >
+                      {radiusOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={radius === option.value}
+                          onClick={() => setRadius(option.value)}
+                          className={cn(
+                            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                            radius === option.value
+                              ? "bg-background text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </FormField>
+                </div>
+
+                {/* Motion */}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">{messages.settings.appearance.reduceMotion}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {messages.settings.appearance.motionHint}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={reducedMotion}
+                    onCheckedChange={(v) => {
+                      setReducedMotion(v)
+                      applyReducedMotion(v)
+                    }}
+                    aria-label={messages.settings.appearance.reduceMotion}
+                  />
+                </div>
               </CardContent>
               <CardFooter className="justify-end">
                 <Button
@@ -904,67 +1145,17 @@ export function Settings() {
                 <CardDescription>{messages.settings.devices.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {deviceList.map((device) => (
-                    <div
-                      key={device.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-[18px] ${
-                          device.isCurrent
-                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                            : "bg-muted text-muted-foreground"
-                        }`}>
-                          <icons.apple />
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{device.name}</p>
-                            {device.isCurrent && (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
-                                {messages.settings.devices.currentDevice}
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span>{device.browser}</span>
-                            <span>{device.os}</span>
-                            <span>{device.ipAddress}</span>
-                          </div>
-                          <div className="mt-1 flex gap-4 text-[11px] text-muted-foreground/70">
-                            <span>{messages.settings.devices.lastSeen}: {device.lastSeen}</span>
-                            <span>{messages.settings.devices.firstSeen}: {device.firstSeen}</span>
-                          </div>
-                        </div>
-                      </div>
-                      {!device.isCurrent && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0 text-destructive hover:text-destructive"
-                          onClick={() => toast.success(messages.settings.devices.removed)}
-                        >
-                          <icons.trash className="size-3.5" /> {messages.settings.devices.remove}
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <icons.apple className="mb-3 size-10 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">
+                    {messages.settings.devices.empty}
+                  </p>
                 </div>
               </CardContent>
             </Card>
           )}
 
           {active === "monitoring" && (() => {
-            const allServices = Object.values(serviceStates)
-
-            const statusDot = (status: ServiceEntry["status"]) =>
-              status === "operational"
-                ? "bg-emerald-500"
-                : status === "degraded"
-                  ? "bg-amber-500"
-                  : "bg-red-500"
-
             return (
               <Card className="animate-fade-rise">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -1007,7 +1198,7 @@ export function Settings() {
                       <div className="mb-4 flex justify-end">
                         <Button variant="outline" size="sm" onClick={() => {
                           const header = "Timestamp,Action,Category,Screen,Browser,Device,IP Address,Request,Details\n"
-                          const csv = logList.map((l) =>
+                          const csv = logRows.map((l) =>
                             `${l.timestamp},"${l.action}",${l.category},${l.screen},${l.browser},${l.device},${l.ipAddress},"${l.request}","${l.details}"`
                           ).join("\n")
                           const blob = new Blob([header + csv], { type: "text/csv" })
@@ -1059,6 +1250,16 @@ export function Settings() {
                                 <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{log.details}</TableCell>
                               </TableRow>
                             ))}
+                            {logRows.length === 0 && (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={8}
+                                  className="h-24 text-center text-muted-foreground"
+                                >
+                                  {messages.settings.logs.empty}
+                                </TableCell>
+                              </TableRow>
+                            )}
                           </TableBody>
                         </Table>
                       </div>
@@ -1067,8 +1268,8 @@ export function Settings() {
                         <p className="text-xs text-muted-foreground">
                           {messages.settings.logs.showingRecords(
                             (safeLogPage - 1) * logPageSize + 1,
-                            Math.min(safeLogPage * logPageSize, logList.length),
-                            logList.length
+                            Math.min(safeLogPage * logPageSize, logRows.length),
+                            logRows.length
                           )}
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
@@ -1132,67 +1333,11 @@ export function Settings() {
                   )}
 
                   {monitoringTab === "services" && (
-                    <div className="space-y-3">
-                      {allServices.map((service) => (
-                        <div
-                          key={service.id}
-                          className="rounded-xl border border-border/70 p-4"
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="flex items-start gap-3">
-                              <span className={`mt-0.5 size-2.5 shrink-0 rounded-full ${statusDot(service.status)}`} />
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium">{service.name}</p>
-                                  <Badge variant={service.status === "operational" ? "success" : service.status === "degraded" ? "warning" : "destructive"}>
-                                    {service.status === "operational"
-                                      ? messages.settings.services.operational
-                                      : service.status === "degraded"
-                                        ? messages.settings.services.degraded
-                                        : service.status === "down"
-                                          ? messages.settings.services.down
-                                          : messages.settings.services.stopped}
-                                  </Badge>
-                                </div>
-                                <p className="mt-0.5 text-xs text-muted-foreground">{service.description}</p>
-                                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
-                                  <span>{messages.settings.services.uptime}: <span className={`font-semibold ${service.uptime >= 99.9 ? "text-emerald-600 dark:text-emerald-400" : service.uptime >= 97 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>{service.uptime}%</span></span>
-                                  <span>{messages.settings.services.responseTime}: <span className="font-medium tabular-nums">{service.responseTime > 0 ? `${service.responseTime} ms` : "\u2014"}</span></span>
-                                  <span>{messages.settings.services.version}: <span className="font-medium">{service.version}</span></span>
-                                  <span>{messages.settings.services.port}: <span className="font-mono font-medium">{service.port}</span></span>
-                                </div>
-                                <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground/70">
-                                  <span>{messages.settings.services.lastChecked}: {service.lastChecked}</span>
-                                  <span>{messages.settings.services.upSince}: {service.upSince}</span>
-                                  {service.lastRestart && (
-                                    <span>{messages.settings.services.lastRestart}: {service.lastRestart}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={restartingService === service.id || service.status === "stopped"}
-                                onClick={() => handleRestartService(service.id)}
-                              >
-                                {restartingService === service.id ? (
-                                  <>
-                                    <icons.spinner className="size-3.5 animate-spin" />
-                                    {messages.settings.services.restarting}
-                                  </>
-                                ) : (
-                                  <>
-                                    <icons.retry className="size-3.5" />
-                                    {messages.settings.services.restart}
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <icons.database className="mb-3 size-10 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">
+                        {messages.settings.services.empty}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -1340,9 +1485,10 @@ export function Settings() {
         description={messages.settings.dangerZone.signOutConfirmDescription}
         confirmLabel={messages.settings.dangerZone.signOutButton}
         variant="danger"
-        onConfirm={() => {
+        onConfirm={async () => {
           setSignOutOpen(false)
-          navigate(ROUTES.login)
+          await signOut()
+          navigate(ROUTES.login, { replace: true })
         }}
       />
     </div>

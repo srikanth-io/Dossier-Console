@@ -26,8 +26,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { icons, messages, ROUTES } from "@/constants"
+import { CollectionGrid, CollectionSection } from "@/components/common/collection-page"
 import { resumeTemplates } from "@/data/resumeTemplates"
 import { RESUME_PREVIEW_CLASSES, renderLatex } from "@/lib/latexPreview"
 import { cn } from "@/lib/utils"
@@ -86,6 +93,8 @@ export function Templates() {
     setCategory("all")
   }
 
+  const hasActiveFilters = query !== "" || category !== "all"
+
   const openInCreator = (id: string) =>
     navigate(`${ROUTES.resumeCreator}?template=${id}`)
 
@@ -127,35 +136,45 @@ export function Templates() {
         query={query}
         onQueryChange={setQuery}
         placeholder={messages.templates.searchPlaceholder}
-        count={messages.templates.count(filtered.length)}
       >
-        <Tabs
+        <Select
           value={category}
           onValueChange={(value) => setCategory(value as Category)}
         >
-          <TabsList variant="line" className="w-full justify-start">
+          <SelectTrigger className="w-40" aria-label={messages.templates.filterCategory}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
             {categories.map((key) => (
-              <TabsTrigger key={key} value={key}>
+              <SelectItem key={key} value={key}>
                 {messages.templates.categories[key]}
-              </TabsTrigger>
+              </SelectItem>
             ))}
-          </TabsList>
-        </Tabs>
+          </SelectContent>
+        </Select>
       </SearchFilterBar>
 
+      <CollectionSection
+        title={messages.templates.title}
+        description={messages.templates.count(filtered.length)}
+      >
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<icons.templates />}
-          title={messages.templates.emptyResult}
-          description={messages.templates.emptyFiltered}
+          icon={hasActiveFilters ? <icons.search /> : <icons.templates />}
+          title={
+            hasActiveFilters
+              ? messages.templates.emptyFiltered
+              : messages.templates.emptyResult
+          }
+          description={undefined}
           action={
             <Button variant="outline" onClick={clearFilters}>
-              {messages.dossiers.clearFilters}
+              <icons.close /> {messages.dossiers.clearFilters}
             </Button>
           }
         />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <CollectionGrid>
           {filtered.map((template) => {
             const categoryKey = categoryByTemplate[template.id]
             return (
@@ -261,8 +280,9 @@ export function Templates() {
               </Card>
             )
           })}
-        </div>
+        </CollectionGrid>
       )}
+      </CollectionSection>
 
       <Dialog
         open={previewingId !== null}
