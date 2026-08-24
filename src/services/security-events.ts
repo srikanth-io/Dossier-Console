@@ -2,6 +2,7 @@ import { errorCodes, errorMessages } from "@/constants/messages/errors"
 import { safeAsync } from "@/lib/async"
 import { AppError } from "@/lib/errors"
 import { getSupabase } from "@/lib/supabase"
+import { sendEmail, emailTemplates } from "@/lib/email"
 
 /** Audit event types persisted in public.security_events (spec §38). */
 export const securityEventTypes = {
@@ -14,6 +15,7 @@ export const securityEventTypes = {
   passwordResetCompleted: "PASSWORD_RESET_COMPLETED",
   mfaVerified: "MFA_VERIFIED",
   mfaFailed: "MFA_FAILED",
+  newDeviceLogin: "NEW_DEVICE_LOGIN",
 } as const
 
 export type SecurityEventType =
@@ -43,4 +45,99 @@ export async function recordSecurityEvent(
     },
     { context: `securityEvents.record(${eventType})` }
   )
+}
+
+/**
+ * Send new device login notification email
+ */
+export async function sendNewDeviceLoginEmail(
+  userEmail: string,
+  userName: string,
+  deviceInfo: {
+    device: string
+    ip: string
+    location: string
+    browser?: string
+    os?: string
+  }
+): Promise<void> {
+  const loginTime = new Date().toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  })
+
+  const template = emailTemplates.newDeviceLogin(
+    userName,
+    deviceInfo.device,
+    deviceInfo.ip,
+    deviceInfo.location,
+    loginTime
+  )
+
+  await sendEmail({
+    to: userEmail,
+    subject: template.subject,
+    html: template.html,
+  })
+}
+
+/**
+ * Send workspace invite email
+ */
+export async function sendWorkspaceInviteEmail(
+  toEmail: string,
+  inviterName: string,
+  workspaceName: string,
+  inviteUrl: string,
+  accessLevel: string
+): Promise<void> {
+  const template = emailTemplates.workspaceInvite(
+    inviterName,
+    workspaceName,
+    inviteUrl,
+    accessLevel
+  )
+
+  await sendEmail({
+    to: toEmail,
+    subject: template.subject,
+    html: template.html,
+  })
+}
+
+/**
+ * Send password changed notification email
+ */
+export async function sendPasswordChangedEmail(
+  userEmail: string,
+  userName: string,
+  device: string,
+  ip: string
+): Promise<void> {
+  const template = emailTemplates.passwordChanged(userName, device, ip)
+
+  await sendEmail({
+    to: userEmail,
+    subject: template.subject,
+    html: template.html,
+  })
+}
+
+/**
+ * Send MFA status change notification email
+ */
+export async function sendMfaStatusEmail(
+  userEmail: string,
+  userName: string,
+  enabled: boolean,
+  device: string,
+  ip: string
+): Promise<void> {
+  const template = emailTemplates.mfaStatusChanged(userName, enabled, device, ip)
+
+  await sendEmail({
+    to: userEmail,
+    subject: template.subject,
+    html: template.html,
+  })
 }

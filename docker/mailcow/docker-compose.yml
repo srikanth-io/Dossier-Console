@@ -1,0 +1,174 @@
+version: "3.8"
+
+# Mailcow Docker Compose - Email Service for Dossier Admin
+# This configuration sets up a local mail server for development.
+# For production, see https://docs.mailcow.email/
+
+services:
+  # Redis - Mailcow dependency
+  mailcow-redis:
+    image: redis:7-alpine
+    container_name: mailcow_redis
+    restart: unless-stopped
+    volumes:
+      - mailcow_redis_data:/data
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.252
+
+  # MySQL/MariaDB - Mailcow database
+  mailcow-mysql:
+    image: mariadb:10.11
+    container_name: mailcow_mysql
+    restart: unless-stopped
+    command: --innodb-large-pages=OFF --innodb-buffer-pool-size=256M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DBROOTPASS:-mailcow_root_pass}
+      MYSQL_DATABASE: mailcow
+      MYSQL_USER: mailcow
+      MYSQL_PASSWORD: ${DBPASS:-mailcow_db_pass}
+    volumes:
+      - mailcow_mysql_data:/var/lib/mysql
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.253
+
+  # Postfix - SMTP server
+  mailcow-postfix:
+    image: ghcr.io/mailcow/mailcow-dockerized:postfix
+    container_name: mailcow_postfix
+    restart: unless-stopped
+    depends_on:
+      - mailcow-redis
+      - mailcow-mysql
+    environment:
+      TZ: UTC
+      SKIP_CLAMD: "y"
+      SKIP_SOLR: "y"
+      REDIS_1_ADDR: mailcow-redis
+      REDIS_1_PORT: 6379
+      DBHOST: mailcow-mysql
+      DBNAME: mailcow
+      DBUSER: mailcow
+      DBPASS: ${DBPASS:-mailcow_db_pass}
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+    volumes:
+      - mailcow_postfix_data:/var/spool/postfix
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.254
+
+  # Dovecot - IMAP/POP3 server
+  mailcow-dovecot:
+    image: ghcr.io/mailcow/mailcow-dockerized:dovecot
+    container_name: mailcow_dovecot
+    restart: unless-stopped
+    depends_on:
+      - mailcow-redis
+      - mailcow-mysql
+      - mailcow-postfix
+    environment:
+      TZ: UTC
+      SKIP_SOLR: "y"
+      REDIS_1_ADDR: mailcow-redis
+      REDIS_1_PORT: 6379
+      DBHOST: mailcow-mysql
+      DBNAME: mailcow
+      DBUSER: mailcow
+      DBPASS: ${DBPASS:-mailcow_db_pass}
+    ports:
+      - "143:143"
+      - "993:993"
+    volumes:
+      - mailcow_dovecot_data:/var/vmail
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.251
+
+  # Rspamd - Antispam
+  mailcow-rspamd:
+    image: ghcr.io/mailcow/mailcow-dockerized:rspamd
+    container_name: mailcow_rspamd
+    restart: unless-stopped
+    depends_on:
+      - mailcow-redis
+    environment:
+      TZ: UTC
+      REDIS_1_ADDR: mailcow-redis
+      REDIS_1_PORT: 6379
+    volumes:
+      - mailcow_rspamd_data:/var/lib/rspamd
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.250
+
+  # Webmail (SOGo) - Optional web interface
+  mailcow-sogo:
+    image: ghcr.io/mailcow/mailcow-dockerized:sogo
+    container_name: mailcow_sogo
+    restart: unless-stopped
+    depends_on:
+      - mailcow-redis
+      - mailcow-mysql
+      - mailcow-dovecot
+    environment:
+      TZ: UTC
+      REDIS_1_ADDR: mailcow-redis
+      REDIS_1_PORT: 6379
+      DBHOST: mailcow-mysql
+      DBNAME: mailcow
+      DBUSER: mailcow
+      DBPASS: ${DBPASS:-mailcow_db_pass}
+    ports:
+      - "8080:80"
+    volumes:
+      - mailcow_sogo_data:/srv
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.249
+
+  # Mailcow Admin UI
+  mailcow-ui:
+    image: ghcr.io/mailcow/mailcow-dockerized:ui
+    container_name: mailcow_ui
+    restart: unless-stopped
+    depends_on:
+      - mailcow-redis
+      - mailcow-mysql
+    environment:
+      TZ: UTC
+      REDIS_1_ADDR: mailcow-redis
+      REDIS_1_PORT: 6379
+      DBHOST: mailcow-mysql
+      DBNAME: mailcow
+      DBUSER: mailcow
+      DBPASS: ${DBPASS:-mailcow_db_pass}
+      MAILCOW_ADMIN_PW: ${MAILCOW_ADMIN_PW:-admin}
+      MAILCOW_ADMIN_USER: ${MAILCOW_ADMIN_USER:-admin}
+    ports:
+      - "8443:443"
+    volumes:
+      - mailcow_ui_data:/app
+    networks:
+      mailcow-network:
+        ipv4_address: 172.22.1.248
+
+volumes:
+  mailcow_redis_data:
+  mailcow_mysql_data:
+  mailcow_postfix_data:
+  mailcow_dovecot_data:
+  mailcow_rspamd_data:
+  mailcow_sogo_data:
+  mailcow_ui_data:
+
+networks:
+  mailcow-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.1.0/24

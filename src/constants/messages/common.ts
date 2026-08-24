@@ -59,11 +59,10 @@ export const relativeTime = {
   daysAgo: (d: number): string => `${d} days ago`,
 } as const
 
-export const roleLabels = {
-  admin: "Admin",
-  reviewer: "Reviewer",
-  editor: "Editor",
-  viewer: "Viewer",
+export const accessLabels = {
+  owner: "Owner",
+  editable: "Can edit",
+  viewer: "Can view",
 } as const
 
 export const departmentLabels = {

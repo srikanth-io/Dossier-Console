@@ -1,6 +1,6 @@
 import type { CvssVersion, SeverityBand } from "@/domain/cvss"
 
-export type WorkspaceRole = "owner" | "admin" | "lead" | "analyst" | "read_only"
+export type WorkspaceAccess = "owner" | "editable" | "viewer"
 
 export type UserStatus = "active" | "suspended" | "invited"
 
@@ -25,7 +25,7 @@ export interface User {
 export interface Membership {
   userId: string
   workspaceId: string
-  role: WorkspaceRole
+  access: WorkspaceAccess
   createdAt: string
 }
 

@@ -62,6 +62,7 @@ import { useAuth } from "@/store/auth"
 import { ProfilePhotoDialog } from "@/components/settings/profile-photo-dialog"
 import { DevicesPanel } from "@/components/settings/devices-panel"
 import { ServicesPanel } from "@/components/settings/services-panel"
+import { InviteDialog } from "@/components/settings/invite-dialog"
 import { safeAsync } from "@/lib/async"
 import { AppError } from "@/lib/errors"
 import { getSupabase } from "@/lib/supabase"
@@ -345,6 +346,7 @@ export function Settings() {
   const [wsRenameTarget, setWsRenameTarget] = useState<{ id: string; name: string } | null>(null)
   const [wsRenameName, setWsRenameName] = useState("")
   const [wsDeleteTarget, setWsDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   useEffect(() => {
     applyThemePreset(themePreset)
@@ -867,37 +869,29 @@ export function Settings() {
                 </Card>
 
                 <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
-                  <CardHeader>
-                    <CardTitle>{messages.settings.workspace.members}</CardTitle>
-                    <CardDescription>
-                      {messages.settings.workspace.membersDescription}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder={messages.settings.workspace.invitePlaceholder}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={() => toast.success(messages.settings.workspace.inviteSent)}
-                      >
-                        <icons.mail /> {messages.settings.workspace.invite}
-                      </Button>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                    <div>
+                      <CardTitle>{messages.settings.workspace.members}</CardTitle>
+                      <CardDescription>
+                        {messages.settings.workspace.membersDescription}
+                      </CardDescription>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between rounded-xl border border-border/70 p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-8">
-                            <AvatarFallback>{accountInitials}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">{user?.name || commonMessages.none}</p>
-                            <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
-                          </div>
+                    <Button size="sm" onClick={() => setInviteOpen(true)}>
+                      <icons.inviteUser /> {messages.settings.workspace.invite}
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center justify-between rounded-xl border border-border/70 p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-8">
+                          <AvatarFallback>{accountInitials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{user?.name || commonMessages.none}</p>
+                          <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
                         </div>
-                        <Badge>{messages.settings.workspace.roleAdmin}</Badge>
                       </div>
+                      <Badge>{messages.settings.workspace.accessEditable}</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -1014,6 +1008,8 @@ export function Settings() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
           {active === "appearance" && (
             <Card className="animate-fade-rise">

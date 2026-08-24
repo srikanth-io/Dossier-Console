@@ -40,9 +40,11 @@ import { MoonIcon } from "@/components/icons/moon"
 import { PlugIcon } from "@/components/icons/plug"
 import { PlayIcon } from "@/components/icons/play"
 import { PlusIcon } from "@/components/icons/plus"
+import { QrCodeIcon } from "@/components/icons/qr-code"
 import { RedoIcon } from "@/components/icons/redo"
 import { RefreshCWIcon } from "@/components/icons/refresh-cw"
 import { SearchIcon } from "@/components/icons/search"
+import { SendIcon } from "@/components/icons/send"
 import { SettingsIcon } from "@/components/icons/settings"
 import { ShieldCheckIcon } from "@/components/icons/shield-check"
 import { SmartphoneNfcIcon } from "@/components/icons/smartphone-nfc"
@@ -118,6 +120,7 @@ export const icons = {
   reports: ChartColumnIncreasingIcon,
   settings: SettingsIcon,
   search: SearchIcon,
+  send: SendIcon,
   notifications: BellIcon,
   chevronDown: ChevronDownIcon,
   signOut: LogoutIcon,
@@ -219,6 +222,7 @@ export const icons = {
   layoutList: LayoutListIcon,
   messageCircle: MessageCircleIcon,
   plug: PlugIcon,
+  qrCode: QrCodeIcon,
   camera: CameraIcon,
 } as const
 

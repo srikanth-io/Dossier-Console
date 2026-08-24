@@ -4,7 +4,7 @@ import { messages } from "@/constants/messages"
 import {
   commonMessages,
   departmentLabels,
-  roleLabels,
+  accessLabels,
   statusLabels,
 } from "@/constants/messages/common"
 import { theme } from "@/constants/theme"
@@ -22,6 +22,6 @@ export {
   theme,
   commonMessages,
   departmentLabels,
-  roleLabels,
+  accessLabels,
   statusLabels,
 }

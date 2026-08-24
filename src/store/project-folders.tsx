@@ -10,7 +10,7 @@ import {
 
 import { useAuth } from "@/store/auth"
 
-export type FolderPermission = "viewer" | "editor"
+export type FolderPermission = "viewer" | "editable"
 
 export type ProjectFolder = {
   id: string

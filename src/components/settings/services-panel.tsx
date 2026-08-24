@@ -7,7 +7,7 @@ import { icons, messages } from "@/constants"
 import { formatTimestamp } from "@/lib/time"
 import { cn } from "@/lib/utils"
 
-type ServiceKey = "database" | "auth" | "restApi" | "storage" | "realtime" | "edgeFunctions"
+type ServiceKey = "database" | "auth" | "restApi" | "storage" | "realtime" | "edgeFunctions" | "smtp" | "imap"
 
 type ServiceStatus = "operational" | "down"
 
@@ -26,6 +26,8 @@ const SERVICE_ENDPOINTS: Record<ServiceKey, string> = {
   storage: "/storage/v1/status",
   realtime: "/realtime/v1/api/ping",
   edgeFunctions: "/functions/v1/",
+  smtp: "localhost:587",
+  imap: "localhost:993",
 }
 
 /** Any HTTP response means the service is up; only network errors mean down. */

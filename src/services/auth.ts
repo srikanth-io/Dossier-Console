@@ -5,6 +5,7 @@ import { getSupabase } from "@/lib/supabase"
 import {
   recordSecurityEvent,
   securityEventTypes,
+  sendNewDeviceLoginEmail,
 } from "@/services/security-events"
 
 export type AuthUser = {
@@ -110,6 +111,113 @@ export function toAuthUser(metadata: {
   }
 }
 
+/**
+ * Detect device information from user agent
+ */
+function detectDeviceInfo(): { device: string; browser: string; os: string } {
+  if (typeof navigator === "undefined") {
+    return { device: "Unknown Device", browser: "Unknown", os: "Unknown" }
+  }
+
+  const ua = navigator.userAgent
+  let browser = "Unknown Browser"
+  let os = "Unknown OS"
+  let device = "Desktop"
+
+  // Browser detection
+  if (ua.includes("Chrome") && !ua.includes("Edg")) {
+    browser = "Chrome"
+  } else if (ua.includes("Firefox")) {
+    browser = "Firefox"
+  } else if (ua.includes("Safari") && !ua.includes("Chrome")) {
+    browser = "Safari"
+  } else if (ua.includes("Edg")) {
+    browser = "Edge"
+  } else if (ua.includes("Opera") || ua.includes("OPR")) {
+    browser = "Opera"
+  }
+
+  // OS detection
+  if (ua.includes("Windows")) {
+    os = "Windows"
+  } else if (ua.includes("Mac")) {
+    os = "macOS"
+  } else if (ua.includes("Linux")) {
+    os = "Linux"
+  } else if (ua.includes("Android")) {
+    os = "Android"
+    device = "Mobile"
+  } else if (ua.includes("iPhone") || ua.includes("iPad")) {
+    os = "iOS"
+    device = ua.includes("iPad") ? "Tablet" : "Mobile"
+  }
+
+  return { device: `${device} (${os})`, browser, os }
+}
+
+/**
+ * Get user's IP address using a public API
+ */
+async function getUserIp(): Promise<string> {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json")
+    const data = await response.json()
+    return data.ip || "Unknown"
+  } catch {
+    return "Unknown"
+  }
+}
+
+/**
+ * Check if this is a new device and send notification email
+ */
+export async function checkAndNotifyNewDevice(user: AuthUser): Promise<void> {
+  try {
+    const deviceInfo = detectDeviceInfo()
+    const ip = await getUserIp()
+    
+    // Get existing devices from localStorage
+    const devicesKey = `dossier.devices.${user.id}`
+    const storedDevices = localStorage.getItem(devicesKey)
+    const knownDevices: Array<{ ip: string; device: string }> = storedDevices 
+      ? JSON.parse(storedDevices) 
+      : []
+
+    // Check if this is a new device
+    const isNewDevice = !knownDevices.some(
+      (d) => d.ip === ip && d.device === deviceInfo.device
+    )
+
+    if (isNewDevice) {
+      // Add to known devices
+      knownDevices.push({ ip, device: deviceInfo.device })
+      localStorage.setItem(devicesKey, JSON.stringify(knownDevices))
+
+      // Send notification email
+      await sendNewDeviceLoginEmail(user.email, user.name, {
+        device: deviceInfo.device,
+        ip,
+        location: "Local Network",
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+      })
+
+      // Record security event
+      void recordSecurityEvent(securityEventTypes.newDeviceLogin, {
+        metadata: {
+          device: deviceInfo.device,
+          browser: deviceInfo.browser,
+          os: deviceInfo.os,
+          ip,
+        },
+      })
+    }
+  } catch (error) {
+    // Don't let device notification failure break login
+    console.error("[Auth] Failed to send new device notification:", error)
+  }
+}
+
 export async function getSessionUser(): Promise<AuthUser | null> {
   return assertAsync(async () => {
     const { data, error } = await getSupabase().auth.getSession()
@@ -142,7 +250,12 @@ export async function signIn(
     }
 
     void recordSecurityEvent(securityEventTypes.loginSuccess)
-    return toAuthUser(data.user)
+    
+    // Check for new device and send notification
+    const user = toAuthUser(data.user)
+    void checkAndNotifyNewDevice(user)
+    
+    return user
   }, "auth.signIn")
 }
 

@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { icons, messages, roleLabels } from "@/constants"
+import { icons, messages, accessLabels } from "@/constants"
 import { toast } from "sonner"
 import {
   useProjectFolders,
@@ -33,7 +33,7 @@ import {
   type ProjectFolder,
 } from "@/store/project-folders"
 
-const permissionOptions: FolderPermission[] = ["viewer", "editor"]
+const permissionOptions: FolderPermission[] = ["viewer", "editable"]
 
 type FolderShareDialogProps = {
   open: boolean
@@ -121,7 +121,7 @@ export function FolderShareDialog({ open, onOpenChange, folder }: FolderShareDia
                 <SelectContent>
                   {permissionOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {roleLabels[option]}
+                      {accessLabels[option]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -183,7 +183,7 @@ export function FolderShareDialog({ open, onOpenChange, folder }: FolderShareDia
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-xs">
-                        {roleLabels[share.permission]}
+                        {accessLabels[share.permission]}
                         <icons.chevronDown className="size-3" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -194,7 +194,7 @@ export function FolderShareDialog({ open, onOpenChange, folder }: FolderShareDia
                           onClick={() => updateSharePermission(share.id, option)}
                         >
                           <icons.check className="size-3.5" />
-                          {roleLabels[option]}
+                          {accessLabels[option]}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
