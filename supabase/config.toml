@@ -236,14 +236,14 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+[auth.email.smtp]
+enabled = true
+host = "127.0.0.1"
+port = 587
+user = "admin@dossier.local"
+pass = "admin"
+admin_email = "admin@dossier.local"
+sender_name = "Dossier Admin"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -377,9 +377,9 @@ allow_dynamic_registration = false
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
-# `per_worker` (default) — enables hot reload during local development.
-# `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
-policy = "per_worker"
+# `oneshot` — more stable for local development, no hot reload.
+# `per_worker` — enables hot reload but can be unstable on Windows.
+policy = "oneshot"
 # Port to attach the Chrome inspector for debugging edge functions.
 inspector_port = 8083
 # The Deno major version to use.
@@ -392,7 +392,7 @@ deno_version = 2
 # Disabled locally: vector (log shipper) hits a Windows/Docker Desktop
 # network quirk and log analytics is not needed for development.
 enabled = false
-port = 54327
+port = 19002
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
 

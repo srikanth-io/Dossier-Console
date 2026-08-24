@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backend:start": "npx supabase start",
+    "backend:stop": "npx supabase stop",
+    "backend:restart": "npx supabase stop && npx supabase start",
+    "backend:status": "npx supabase status",
+    "backend:reset": "npx supabase db reset"
   },
   "dependencies": {
     "@codemirror/language": "^6.12.4",
