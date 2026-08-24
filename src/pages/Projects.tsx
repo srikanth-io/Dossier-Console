@@ -92,7 +92,6 @@ export function Projects() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={messages.projects.eyebrow}
         title={messages.projects.title}
         description={messages.projects.subtitle}
         actions={

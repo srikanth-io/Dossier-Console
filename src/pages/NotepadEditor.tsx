@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { Fragment, useCallback, useEffect, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BlockEditor } from "@/components/common/block-editor"
-import { FolderBreadcrumb } from "@/components/common/folder-breadcrumb"
 import { GiphyPicker } from "@/components/common/giphy-picker"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -150,34 +157,31 @@ export function NotepadEditor() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4" onKeyDown={handleKeyDown}>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2"
-          onClick={() => navigate(ROUTES.notepad)}
-        >
-          <icons.arrowLeft className="size-3.5" />
-          {messages.pages.editor.back}
-        </Button>
-      </div>
-
-      <FolderBreadcrumb
-        items={breadcrumbItems.map((b) => ({
-          id: b.id,
-          type: "page" as const,
-          name: b.name,
-          parentId: null,
-          icon: b.icon,
-        }))}
-        onNavigate={(itemId) => {
-          if (itemId) {
-            navigate(`${ROUTES.notepad}/${itemId}`)
-          } else {
-            navigate(ROUTES.notepad)
-          }
-        }}
-      />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={ROUTES.notepad}>{messages.pages.title}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {breadcrumbItems.slice(0, -1).map((crumb) => (
+            <Fragment key={crumb.id}>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={`${ROUTES.notepad}/${crumb.id}`}>{crumb.name}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+            </Fragment>
+          ))}
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="font-medium text-foreground">
+              {page.title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils"
 
 export function Pages() {
   const navigate = useNavigate()
-  const { rootPages, getChildPages, addPage, deletePage, updatePage, currentWorkspace } = usePages()
+  const { rootPages, getChildPages, addPage, deletePage, updatePage } = usePages()
   const [query, setQuery] = useState("")
   const [favoriteOnly, setFavoriteOnly] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -72,7 +72,6 @@ export function Pages() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={currentWorkspace.name}
         title={messages.pages.title}
         description={messages.pages.subtitle}
         actions={

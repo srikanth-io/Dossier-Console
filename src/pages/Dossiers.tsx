@@ -391,7 +391,6 @@ export function Dossiers() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={messages.dashboard.eyebrow}
         title={messages.dossiers.title}
         description={messages.dossiers.subtitle}
         actions={

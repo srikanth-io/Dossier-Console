@@ -1,9 +1,17 @@
-import { useCallback, useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { Fragment, useCallback, useEffect, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BlockEditor } from "@/components/common/block-editor"
 import { DatabaseTable, type DatabaseRow, type PropertyDef } from "@/components/common/database-table"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -138,41 +146,44 @@ export function PageDetail() {
     )
   }
 
-  const parentPage = page.parentId ? getPage(page.parentId) : null
   const childPages = getChildPages(page.id)
+  const ancestorTrail = (() => {
+    const trail: NonNullable<typeof page>[] = []
+    let cursor = page.parentId ? getPage(page.parentId) : undefined
+    while (cursor) {
+      trail.unshift(cursor)
+      cursor = cursor.parentId ? getPage(cursor.parentId) : undefined
+    }
+    return trail
+  })()
 
   return (
     <div className="mx-auto max-w-3xl space-y-4" onKeyDown={handleKeyDown}>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2"
-          onClick={() => navigate(ROUTES.pages)}
-        >
-          <icons.arrowLeft className="size-3.5" />
-          {messages.pages.editor.back}
-        </Button>
-        {parentPage && (
-          <>
-            <span className="text-muted-foreground/50">/</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 px-2"
-              onClick={() => navigate(`${ROUTES.pages}/${parentPage.id}`)}
-            >
-              {(() => {
-                const ParentIcon = icons[parentPage.icon as IconName] ?? icons.file
-                return <ParentIcon className="size-3.5" />
-              })()}
-              {parentPage.title}
-            </Button>
-          </>
-        )}
-        <span className="text-muted-foreground/50">/</span>
-        <span className="font-medium text-foreground">{page.title}</span>
-      </div>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={ROUTES.pages}>{messages.pages.title}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {ancestorTrail.map((crumb) => (
+            <Fragment key={crumb.id}>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={`${ROUTES.pages}/${crumb.id}`}>{crumb.title}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+            </Fragment>
+          ))}
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="font-medium text-foreground">
+              {page.title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 
 import { ROUTES, icons, messages } from "@/constants"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Popover,
   PopoverContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip"
 import { usePages } from "@/store/pages"
 import { useAuth } from "@/store/auth"
+import { getStoredAvatar, onAvatarChanged } from "@/lib/avatar"
 import { cn } from "@/lib/utils"
 
 function initialsOf(name: string, fallback: string): string {
@@ -124,6 +125,14 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   const displayName = user?.name || messages.layout.userName
   const displayInitials = initialsOf(displayName, messages.layout.userInitials)
 
+  const [avatar, setAvatar] = useState<string | null>(() => getStoredAvatar(user?.id))
+
+  useEffect(() => {
+    const sync = () => setAvatar(getStoredAvatar(user?.id))
+    sync()
+    return onAvatarChanged(sync)
+  }, [user?.id])
+
   if (collapsed) {
     return (
       <Tooltip>
@@ -149,6 +158,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
           className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-2.5 py-2.5 transition-colors hover:bg-sidebar-accent"
         >
           <Avatar className="size-8 shrink-0">
+            {avatar && <AvatarImage src={avatar} alt={displayName} />}
             <AvatarFallback>{displayInitials}</AvatarFallback>
           </Avatar>
           <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
@@ -222,14 +232,22 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  className?: string
+  /** Renders as a floating panel (no sticky column, no right border). */
+  floating?: boolean
+}
+
+export function AppSidebar({ className, floating = false }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200",
-        collapsed ? "w-16" : "w-64"
+        "flex shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+        collapsed ? "w-16" : "w-64",
+        floating ? "h-full" : "sticky top-0 h-svh border-r border-sidebar-border",
+        className
       )}
     >
       <div className="group/logo flex h-14 shrink-0 items-center gap-2.5 px-4">

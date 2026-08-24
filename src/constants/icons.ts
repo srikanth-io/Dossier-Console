@@ -1,4 +1,5 @@
 import { ActivityIcon } from "@/components/icons/activity"
+import { CameraIcon } from "@/components/icons/camera"
 import { ArrowLeftIcon } from "@/components/icons/arrow-left"
 import { ArrowRightIcon } from "@/components/icons/arrow-right"
 import { ArrowUpRightIcon } from "@/components/icons/arrow-up-right"
@@ -218,6 +219,7 @@ export const icons = {
   layoutList: LayoutListIcon,
   messageCircle: MessageCircleIcon,
   plug: PlugIcon,
+  camera: CameraIcon,
 } as const
 
 export type IconName = keyof typeof icons

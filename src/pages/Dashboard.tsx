@@ -157,7 +157,6 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={messages.dashboard.eyebrow}
         title={messages.dashboard.title}
         description={messages.dashboard.subtitle}
         actions={

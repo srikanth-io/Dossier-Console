@@ -43,7 +43,7 @@ type FilterTab = "all" | "favorites" | "recent"
 
 export function Notepad() {
   const navigate = useNavigate()
-  const { pages, getPage, addPage, updatePage, deletePage, currentWorkspace } = usePages()
+  const { pages, getPage, addPage, updatePage, deletePage } = usePages()
   const [query, setQuery] = useState("")
   const [view, setView] = useState<ViewMode>("grid")
   const [filter, setFilter] = useState<FilterTab>("all")
@@ -116,49 +116,40 @@ export function Notepad() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-rise">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href={ROUTES.notepad} onClick={(e) => { e.preventDefault(); setCurrentFolderId(null) }}>
-                {currentWorkspace.name}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              {folderTrail.length === 0 ? (
-                <BreadcrumbPage>{messages.pages.title}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink href={ROUTES.notepad} onClick={(e) => { e.preventDefault(); setCurrentFolderId(null) }}>
-                  {messages.pages.title}
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {folderTrail.map((crumb, index) => {
-              const last = index === folderTrail.length - 1
-              return (
-                <Fragment key={crumb.id}>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    {last ? (
-                      <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink
-                        href={ROUTES.notepad}
-                        onClick={(e) => { e.preventDefault(); setCurrentFolderId(crumb.id) }}
-                      >
-                        {crumb.title}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </Fragment>
-              )
-            })}
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-
       <PageHeader
+        breadcrumb={
+          currentFolderId ? (
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href={ROUTES.notepad} onClick={(e) => { e.preventDefault(); setCurrentFolderId(null) }}>
+                    {messages.pages.title}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {folderTrail.map((crumb, index) => {
+                  const last = index === folderTrail.length - 1
+                  return (
+                    <Fragment key={crumb.id}>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        {last ? (
+                          <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink
+                            href={ROUTES.notepad}
+                            onClick={(e) => { e.preventDefault(); setCurrentFolderId(crumb.id) }}
+                          >
+                            {crumb.title}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </Fragment>
+                  )
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          ) : undefined
+        }
         title={messages.pages.title}
         description={messages.pages.subtitle}
         actions={

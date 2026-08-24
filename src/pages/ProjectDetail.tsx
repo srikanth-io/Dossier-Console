@@ -4,9 +4,18 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { PageHeader } from "@/components/common/page-header"
 import { DateField } from "@/components/common/date-field"
 import { EmptyState } from "@/components/common/empty-state"
+import { ProjectFolderManager } from "@/components/projects/project-folder-manager"
 import { ProjectFormDialog } from "@/components/projects/project-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Card,
   CardContent,
@@ -183,30 +192,39 @@ export function ProjectDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-rise">
-        <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
-          <Link to={ROUTES.projects}>
-            <icons.arrowLeft className="size-4" /> {messages.projects.detail.back}
-          </Link>
-        </Button>
-        <PageHeader
-          title={project.name}
-          description={project.description}
-          actions={
-            <div className="flex items-center gap-2">
-              <Badge variant={statusVariant[project.status]}>
-                {messages.projects.status[project.status]}
-              </Badge>
-              <Button variant="outline" onClick={() => setFormOpen(true)}>
-                <icons.pencil className="size-4" /> {messages.projects.detail.edit}
-              </Button>
-              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <icons.trash className="size-4" /> {messages.projects.detail.deleteProject}
-              </Button>
-            </div>
-          }
-        />
-      </div>
+      <PageHeader
+        className="animate-fade-rise"
+        breadcrumb={
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={ROUTES.projects}>{messages.projects.title}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{project.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        }
+        title={project.name}
+        description={project.description}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant={statusVariant[project.status]}>
+              {messages.projects.status[project.status]}
+            </Badge>
+            <Button variant="outline" onClick={() => setFormOpen(true)}>
+              <icons.pencil className="size-4" /> {messages.projects.detail.edit}
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <icons.trash className="size-4" /> {messages.projects.detail.deleteProject}
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -249,6 +267,8 @@ export function ProjectDetail() {
           )
         })}
       </div>
+
+      <ProjectFolderManager projectId={project.id} />
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="animate-fade-rise xl:col-span-2" style={{ animationDelay: "240ms" }}>

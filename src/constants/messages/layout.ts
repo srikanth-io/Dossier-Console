@@ -17,7 +17,20 @@ export const nav = {
 } as const
 
 export const layout = {
+  openNavigation: "Open navigation",
+  closeNavigation: "Close navigation",
   searchPlaceholder: commonMessages.searchPlaceholder,
+  searchOpen: "Search",
+  searchNoResults: "No results found.",
+  searchGroups: {
+    pages: "Pages",
+    projects: "Projects",
+    folders: "Project folders",
+    documents: "Documents",
+    notes: "Notes",
+    resumes: "Resumes",
+    settings: "Settings",
+  },
   signedInAs: commonMessages.signedInAs,
   signOut: commonMessages.signOut,
   signOutTitle: "Sign out?",

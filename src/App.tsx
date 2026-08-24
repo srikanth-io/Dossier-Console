@@ -34,6 +34,7 @@ import { DocumentLibraryProvider } from "@/store/documents"
 import { NotificationsProvider } from "@/store/notifications"
 import { PagesProvider } from "@/store/pages"
 import { ProjectsProvider } from "@/store/projects"
+import { ProjectFoldersProvider } from "@/store/project-folders"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
@@ -65,6 +66,7 @@ function App() {
               <NotificationsProvider>
                 <PagesProvider>
                   <ProjectsProvider>
+                    <ProjectFoldersProvider>
                   <Routes>
                     <Route
                       path={ROUTES.landing}
@@ -154,6 +156,7 @@ function App() {
                     </Route>
                     <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
                   </Routes>
+                  </ProjectFoldersProvider>
                   </ProjectsProvider>
                 </PagesProvider>
               </NotificationsProvider>

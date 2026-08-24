@@ -1,7 +1,6 @@
 export const dashboard = {
   title: "Dashboard",
   subtitle: "Overview of your dossier workspace.",
-  eyebrow: "Overview",
   newDossier: "New Dossier",
   actions: {
     templates: "Template library",

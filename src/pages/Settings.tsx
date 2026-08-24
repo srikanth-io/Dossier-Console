@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDialog } from "@/components/common/confirm-dialog"
@@ -33,15 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   commonMessages,
   ROUTES,
@@ -49,10 +41,6 @@ import {
   messages,
 } from "@/constants"
 import { errorCodes } from "@/constants/messages/errors"
-import {
-  securityEventCategory,
-  securityEventLabel,
-} from "@/constants/messages/security-events"
 import {
   applyMode,
   applyThemePreset,
@@ -71,11 +59,24 @@ import {
 } from "@/components/common/theme-toggle"
 import { usePages } from "@/store/pages"
 import { useAuth } from "@/store/auth"
+import { ProfilePhotoDialog } from "@/components/settings/profile-photo-dialog"
+import { DevicesPanel } from "@/components/settings/devices-panel"
+import { ServicesPanel } from "@/components/settings/services-panel"
 import { safeAsync } from "@/lib/async"
 import { AppError } from "@/lib/errors"
 import { getSupabase } from "@/lib/supabase"
-import { formatTimestamp } from "@/lib/time"
-import { browserFromUserAgent, osFromUserAgent } from "@/lib/userAgent"
+import {
+  getStoredAvatar,
+} from "@/lib/avatar"
+import {
+  EMPTY_ACCOUNT_PROFILE,
+  loadAccountProfile,
+  saveAccountProfile,
+  type AccountProfile,
+} from "@/lib/account-profile"
+import {
+  countryCodes,
+} from "@/data/country-codes"
 import { cn } from "@/lib/utils"
 
 type SecurityEventRow = {
@@ -115,8 +116,6 @@ type SectionKey =
   | "monitoring"
   | "billing"
   | "dangerZone"
-
-type MonitoringTab = "logs" | "services"
 
 const sections: { key: SectionKey; label: string; icon: (typeof icons)[keyof typeof icons] }[] = [
   { key: "account", label: messages.settings.nav.account, icon: icons.user },
@@ -159,9 +158,62 @@ function getInitialRadius(): string {
   return localStorage.getItem(RADIUS_KEY) ?? "0.75rem"
 }
 
+type SocialKey = "website" | "linkedin" | "github" | "twitter"
+
+const socialFields: {
+  key: SocialKey
+  label: string
+  placeholder: string
+}[] = [
+  { key: "website", label: messages.settings.account.website, placeholder: messages.settings.account.websitePlaceholder },
+  { key: "linkedin", label: messages.settings.account.linkedin, placeholder: messages.settings.account.linkedinPlaceholder },
+  { key: "github", label: messages.settings.account.github, placeholder: messages.settings.account.githubPlaceholder },
+  { key: "twitter", label: messages.settings.account.twitter, placeholder: messages.settings.account.twitterPlaceholder },
+]
+
+/** Small favicon + domain preview for a saved social link. */
+function LinkPreview({ url, label }: { url: string; label: string }) {
+  let host = url
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    // Not a full URL yet — fall back to the raw text.
+  }
+  const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32`
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      title={messages.settings.account.visitLink}
+      aria-label={messages.settings.account.visitLink}
+      className="flex w-fit max-w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+    >
+      <img
+        src={favicon}
+        alt=""
+        width={16}
+        height={16}
+        loading="lazy"
+        className="size-4 rounded-sm"
+        onError={(e) => {
+          e.currentTarget.style.visibility = "hidden"
+        }}
+      />
+      <span className="shrink-0 font-medium">{label}</span>
+      <span className="truncate">{host}</span>
+      <icons.arrowRight className="size-3 shrink-0 -rotate-45" />
+    </a>
+  )
+}
+
 export function Settings() {
-  const [active, setActive] = useState<SectionKey>("account")
-  const [monitoringTab, setMonitoringTab] = useState<MonitoringTab>("logs")
+  const location = useLocation()
+  const [active, setActive] = useState<SectionKey>(
+    () => (location.state as { section?: SectionKey } | null)?.section ?? "account"
+  )
+  const [sectionMenuOpen, setSectionMenuOpen] = useState(false)
+  const activeSection = sections.find((s) => s.key === active)
 
   const [themePreset, setThemePreset] = useState<ThemePreset>(getInitialTheme)
   const [radius, setRadius] = useState<string>(getInitialRadius)
@@ -189,10 +241,15 @@ export function Settings() {
   const [mfaPasskey, setMfaPasskey] = useState(false)
   const [mfaEmailOtp, setMfaEmailOtp] = useState(false)
 
-  const [logPage, setLogPage] = useState(1)
-  const [logPageSize, setLogPageSize] = useState(10)
-
   const [securityEvents, setSecurityEvents] = useState<SecurityEventRow[]>([])
+
+  const detectedTimezone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      return null
+    }
+  }, [])
 
   const [resetOpen, setResetOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -205,6 +262,57 @@ export function Settings() {
     const source = (user?.name || user?.email || "?").trim()
     return source.slice(0, 2).toUpperCase()
   }, [user])
+
+  const [avatar, setAvatar] = useState<string | null>(() => getStoredAvatar(null))
+  const [photoOpen, setPhotoOpen] = useState(false)
+  const [accountEditing, setAccountEditing] = useState(false)
+
+  const [accountForm, setAccountForm] = useState<AccountProfile>(() => ({
+    ...EMPTY_ACCOUNT_PROFILE,
+    timezone: "",
+  }))
+
+  useEffect(() => {
+    setAvatar(getStoredAvatar(user?.id))
+    const stored = loadAccountProfile(user?.id)
+    setAccountForm((current) => ({
+      ...stored,
+      name: stored.name || user?.name || "",
+      timezone:
+        stored.timezone ||
+        (detectedTimezone && timezones.includes(detectedTimezone)
+          ? detectedTimezone
+          : current.timezone),
+    }))
+    setActiveSocial(
+      new Set(socialFields.filter((f) => stored[f.key]).map((f) => f.key))
+    )
+  }, [user?.id, detectedTimezone])
+
+  const updateAccountField =
+    (field: keyof AccountProfile) =>
+    (value: string) =>
+      setAccountForm((form) => ({ ...form, [field]: value }))
+
+  const [activeSocial, setActiveSocial] = useState<Set<SocialKey>>(new Set())
+
+  const addSocialField = (key: SocialKey) => {
+    setActiveSocial((set) => new Set(set).add(key))
+  }
+
+  const removeSocialField = (key: SocialKey) => {
+    setActiveSocial((set) => {
+      const next = new Set(set)
+      next.delete(key)
+      return next
+    })
+    updateAccountField(key)("")
+  }
+
+  const handleSaveAccount = () => {
+    saveAccountProfile(accountForm, user?.id)
+    toast.success(messages.settings.account.saved)
+  }
 
   // Activity logs are the signed-in user's real audit trail (RLS-scoped).
   useEffect(() => {
@@ -266,195 +374,406 @@ export function Settings() {
     toast.success(messages.settings.security.passwordUpdated)
   }
 
-  const logRows = useMemo(
-    () =>
-      securityEvents.map((event) => {
-        const meta = event.metadata ?? {}
-        const metaString = (key: string): string | null =>
-          typeof meta[key] === "string" ? (meta[key] as string) : null
-        return {
-          id: event.id,
-          timestamp: formatTimestamp(event.created_at),
-          action: securityEventLabel(event.event_type),
-          category: securityEventCategory(event.event_type),
-          screen: metaString("screen") ?? commonMessages.none,
-          browser: browserFromUserAgent(event.user_agent),
-          device: osFromUserAgent(event.user_agent),
-          ipAddress: event.ip_address ?? commonMessages.none,
-          request: metaString("request") ?? commonMessages.none,
-          details: metaString("details") ?? commonMessages.none,
-        }
-      }),
-    [securityEvents]
+  const sectionsNav = (
+    <CardContent className="p-2">
+      <nav
+        className="flex flex-col gap-1"
+        aria-label={messages.settings.title}
+      >
+        {sections.map((section) => {
+          const Icon = section.icon
+          return (
+            <button
+              key={section.key}
+              type="button"
+              onClick={() => {
+                setActive(section.key)
+                if (!window.matchMedia("(min-width: 1024px)").matches) {
+                  setSectionMenuOpen(false)
+                }
+              }}
+              aria-current={active === section.key ? "page" : undefined}
+              className={cn(
+                "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors",
+                active === section.key
+                  ? "bg-primary-soft text-primary dark:bg-primary/15"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Icon className="size-4" />
+              {section.label}
+            </button>
+          )
+        })}
+      </nav>
+    </CardContent>
   )
-
-  const logPageCount = Math.max(1, Math.ceil(logRows.length / logPageSize))
-  const safeLogPage = Math.min(logPage, logPageCount)
-  const visibleLogs = logRows.slice(
-    (safeLogPage - 1) * logPageSize,
-    safeLogPage * logPageSize
-  )
-
-  useEffect(() => {
-    if (logPage > logPageCount) {
-      setLogPage(logPageCount)
-    }
-  }, [logPage, logPageCount])
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
-        eyebrow={messages.dashboard.eyebrow}
         title={messages.settings.title}
         description={messages.settings.subtitle}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <Card className="h-fit animate-fade-rise lg:sticky lg:top-6">
-          <CardContent className="p-2">
-            <nav
-              className="flex gap-1 overflow-x-auto py-0.5 lg:flex-col lg:overflow-visible"
-              aria-label={messages.settings.title}
-            >
-              {sections.map((section) => {
-                const Icon = section.icon
-                return (
-                  <button
-                    key={section.key}
-                    type="button"
-                    onClick={() => setActive(section.key)}
-                    aria-current={active === section.key ? "page" : undefined}
-                    className={cn(
-                      "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-                      active === section.key
-                        ? "bg-primary-soft text-primary dark:bg-primary/15"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {section.label}
-                  </button>
-                )
-              })}
-            </nav>
-          </CardContent>
-        </Card>
+      <div className="flex items-center gap-2 lg:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={messages.settings.nav.menuLabel}
+          aria-expanded={sectionMenuOpen}
+          onClick={() => setSectionMenuOpen((open) => !open)}
+        >
+          <icons.menu className="size-4" />
+          {activeSection?.label}
+          <icons.chevronDown
+            className={cn(
+              "size-3.5 text-muted-foreground transition-transform",
+              sectionMenuOpen && "rotate-180"
+            )}
+          />
+        </Button>
+      </div>
 
-        <div className="min-w-0 max-w-2xl space-y-6">
+      <div className="relative">
+        {sectionMenuOpen && (
+          <>
+            <button
+              type="button"
+              aria-hidden="true"
+              tabIndex={-1}
+              onClick={() => setSectionMenuOpen(false)}
+              className="fixed inset-0 z-30 cursor-default bg-background/60 backdrop-blur-[2px] lg:hidden"
+            />
+            <Card
+              id="settings-sections"
+              className="absolute inset-x-0 top-0 z-40 shadow-xl shadow-black/5 animate-fade-rise lg:hidden"
+            >
+              {sectionsNav}
+            </Card>
+          </>
+        )}
+
+        <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <Card className="hidden h-fit animate-fade-rise lg:sticky lg:top-6 lg:block">
+            {sectionsNav}
+          </Card>
+
+          <div className="min-w-0 max-w-2xl space-y-6">
           {active === "account" && (
             <div className="space-y-6">
               <Card className="animate-fade-rise">
-                <CardHeader>
-                  <CardTitle>{messages.settings.account.title}</CardTitle>
-                  <CardDescription>
-                    {messages.settings.account.description}
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>{messages.settings.account.title}</CardTitle>
+                    <CardDescription>
+                      {messages.settings.account.description}
+                    </CardDescription>
+                  </div>
+                  {!accountEditing && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAccountEditing(true)}
+                    >
+                      <icons.pencil className="size-3.5" /> Edit
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center gap-5">
-                    <Avatar className="size-16">
-                      <AvatarFallback className="text-lg">
-                        {accountInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{messages.settings.account.avatar}</p>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <icons.upload className="size-3.5" /> {messages.settings.account.avatarUpload}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                          {messages.settings.account.avatarRemove}
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setPhotoOpen(true)}
+                      aria-label={messages.settings.account.avatar}
+                      className="group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <Avatar className="size-28 ring-2 ring-border/60 transition-opacity group-hover:opacity-90">
+                        {avatar && (
+                          <AvatarImage src={avatar} alt={messages.settings.account.avatar} />
+                        )}
+                        <AvatarFallback className="text-3xl">
+                          {accountInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 opacity-0 transition group-hover:opacity-100">
+                        <icons.pencil className="size-6 text-primary" />
+                      </span>
+                      <span className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full border border-background bg-primary text-primary-foreground shadow-sm">
+                        <icons.camera className="size-3.5" />
+                      </span>
+                    </button>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField label={messages.settings.account.name} htmlFor="account-name">
-                      <Input
-                        id="account-name"
-                        defaultValue={user?.name ?? ""}
-                        placeholder={messages.settings.account.namePlaceholder}
-                      />
+                      {accountEditing ? (
+                        <Input
+                          id="account-name"
+                          value={accountForm.name}
+                          onChange={(e) => updateAccountField("name")(e.target.value)}
+                          placeholder={messages.settings.account.namePlaceholder}
+                        />
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {accountForm.name || <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                     <FormField label={messages.settings.account.email} htmlFor="account-email">
-                      <Input
-                        id="account-email"
-                        type="email"
-                        defaultValue={user?.email ?? ""}
-                        placeholder={messages.settings.account.emailPlaceholder}
-                      />
+                      {accountEditing ? (
+                        <Input
+                          id="account-email"
+                          type="email"
+                          defaultValue={user?.email ?? ""}
+                          placeholder={messages.settings.account.emailPlaceholder}
+                        />
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {user?.email || <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                     <FormField label={messages.settings.account.phone} htmlFor="account-phone">
-                      <Input
-                        id="account-phone"
-                        type="tel"
-                        placeholder={messages.settings.account.phonePlaceholder}
-                      />
+                      {accountEditing ? (
+                        <div className="flex gap-2">
+                          <Select
+                            value={accountForm.phoneCode}
+                            onValueChange={updateAccountField("phoneCode")}
+                          >
+                            <SelectTrigger
+                              className="w-[110px] shrink-0"
+                              aria-label={messages.settings.account.phoneCode}
+                            >
+                              <SelectValue>{accountForm.phoneCode}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countryCodes.map((entry) => (
+                                <SelectItem
+                                  key={`${entry.code}-${entry.country}`}
+                                  value={entry.code}
+                                >
+                                  {entry.code} {entry.country}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            id="account-phone"
+                            type="tel"
+                            value={accountForm.phone}
+                            onChange={(e) => updateAccountField("phone")(e.target.value)}
+                            placeholder={messages.settings.account.phonePlaceholder}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {accountForm.phone ? `${accountForm.phoneCode} ${accountForm.phone}` : <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                     <FormField label={messages.settings.account.role} htmlFor="account-role">
-                      <Input
-                        id="account-role"
-                        placeholder={messages.settings.account.rolePlaceholder}
-                      />
+                      {accountEditing ? (
+                        <Input
+                          id="account-role"
+                          value={accountForm.role}
+                          onChange={(e) => updateAccountField("role")(e.target.value)}
+                          placeholder={messages.settings.account.rolePlaceholder}
+                        />
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {accountForm.role || <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                     <FormField label={messages.settings.account.department} htmlFor="account-department">
-                      <Input
-                        id="account-department"
-                        placeholder={messages.settings.account.departmentPlaceholder}
-                      />
+                      {accountEditing ? (
+                        <Input
+                          id="account-department"
+                          value={accountForm.department}
+                          onChange={(e) => updateAccountField("department")(e.target.value)}
+                          placeholder={messages.settings.account.departmentPlaceholder}
+                        />
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {accountForm.department || <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                     <FormField label={messages.settings.account.timezone} htmlFor="account-timezone">
-                      <Select>
-                        <SelectTrigger id="account-timezone">
-                          <SelectValue placeholder={messages.settings.account.timezonePlaceholder} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timezones.map((tz) => (
-                            <SelectItem key={tz} value={tz}>
-                              {tz.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {accountEditing ? (
+                        <>
+                          <Select
+                            value={accountForm.timezone || undefined}
+                            onValueChange={updateAccountField("timezone")}
+                          >
+                            <SelectTrigger id="account-timezone">
+                              <SelectValue placeholder={messages.settings.account.timezonePlaceholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timezones.map((tz) => (
+                                <SelectItem key={tz} value={tz}>
+                                  {tz.replace(/_/g, " ")}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {detectedTimezone && (
+                            <p className="text-xs text-muted-foreground">
+                              {messages.settings.account.timezoneDetected(detectedTimezone)}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[36px] flex items-center">
+                          {accountForm.timezone?.replace(/_/g, " ") || <span className="text-muted-foreground italic">Not set</span>}
+                        </p>
+                      )}
                     </FormField>
                   </div>
 
                   <FormField label={messages.settings.account.bio} htmlFor="account-bio">
-                    <textarea
-                      id="account-bio"
-                      rows={3}
-                      placeholder={messages.settings.account.bioPlaceholder}
-                      className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
+                    {accountEditing ? (
+                      <textarea
+                        id="account-bio"
+                        rows={3}
+                        value={accountForm.bio}
+                        onChange={(e) => updateAccountField("bio")(e.target.value)}
+                        placeholder={messages.settings.account.bioPlaceholder}
+                        className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    ) : (
+                      <p className="text-sm py-2 px-3 rounded-lg border border-border/60 bg-muted/30 min-h-[60px] whitespace-pre-wrap">
+                        {accountForm.bio || <span className="text-muted-foreground italic">Not set</span>}
+                      </p>
+                    )}
                   </FormField>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">{messages.settings.account.socialHeading}</p>
+                    {accountEditing ? (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {socialFields.map((field) => {
+                            const isActive = activeSocial.has(field.key)
+                            return isActive ? (
+                              <span
+                                key={field.key}
+                                className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-1 pr-1.5 pl-3 text-xs font-medium text-primary"
+                              >
+                                {field.label}
+                                <button
+                                  type="button"
+                                  onClick={() => removeSocialField(field.key)}
+                                  aria-label={messages.settings.account.removeSocial(field.label)}
+                                  className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
+                                >
+                                  <icons.close className="size-3" />
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                key={field.key}
+                                type="button"
+                                onClick={() => addSocialField(field.key)}
+                                className="flex items-center gap-1 rounded-full border border-dashed border-border/70 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                              >
+                                <icons.plus className="size-3" /> {field.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {messages.settings.account.socialHint}
+                        </p>
+                        {activeSocial.size > 0 && (
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {socialFields
+                              .filter((field) => activeSocial.has(field.key))
+                              .map((field) => (
+                                <FormField key={field.key} label={field.label} htmlFor={`account-${field.key}`}>
+                                  <Input
+                                    id={`account-${field.key}`}
+                                    type="url"
+                                    value={accountForm[field.key]}
+                                    onChange={(e) => updateAccountField(field.key)(e.target.value)}
+                                    placeholder={field.placeholder}
+                                  />
+                                  {accountForm[field.key] && (
+                                    <LinkPreview
+                                      url={accountForm[field.key]}
+                                      label={field.label}
+                                    />
+                                  )}
+                                </FormField>
+                              ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {socialFields
+                          .filter((field) => activeSocial.has(field.key))
+                          .map((field) => (
+                            accountForm[field.key] ? (
+                              <LinkPreview
+                                key={field.key}
+                                url={accountForm[field.key]}
+                                label={field.label}
+                              />
+                            ) : null
+                          ))}
+                        {activeSocial.size === 0 && (
+                          <p className="text-sm text-muted-foreground italic">No social links added</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
-                <CardFooter className="justify-end">
-                  <Button
-                    onClick={() => toast.success(messages.settings.account.saved)}
-                  >
-                    <icons.save /> {messages.settings.account.save}
-                  </Button>
-                </CardFooter>
+                {accountEditing && (
+                  <CardFooter className="justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setAccountEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={() => {
+                      handleSaveAccount()
+                      setAccountEditing(false)
+                    }}>
+                      <icons.save /> {messages.settings.account.save}
+                    </Button>
+                  </CardFooter>
+                )}
               </Card>
 
               <Card className="animate-fade-rise" style={{ animationDelay: "60ms" }}>
-                <CardHeader>
-                  <CardTitle>{messages.settings.account.password}</CardTitle>
-                  <CardDescription>
-                    {messages.settings.account.lastChanged}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>{messages.settings.account.password}</CardTitle>
+                    <CardDescription>
+                      {messages.settings.account.lastChanged}
+                    </CardDescription>
+                  </div>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setActive("security")}
                   >
                     <icons.lock className="size-3.5" /> {messages.settings.account.changePassword}
                   </Button>
-                </CardContent>
+                </CardHeader>
               </Card>
+
+              <ProfilePhotoDialog
+                open={photoOpen}
+                onOpenChange={setPhotoOpen}
+                userId={user?.id}
+                initials={accountInitials}
+                value={avatar}
+                onChange={setAvatar}
+              />
             </div>
           )}
 
@@ -1138,212 +1457,20 @@ export function Settings() {
             </div>
           )}
 
-          {active === "devices" && (
+          {active === "devices" && <DevicesPanel events={securityEvents} />}
+
+          {active === "monitoring" && (
             <Card className="animate-fade-rise">
               <CardHeader>
-                <CardTitle>{messages.settings.devices.title}</CardTitle>
-                <CardDescription>{messages.settings.devices.description}</CardDescription>
+                <CardTitle>{messages.settings.nav.monitoring}</CardTitle>
+                <CardDescription>{messages.settings.nav.monitoringDescription}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <icons.apple className="mb-3 size-10 text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">
-                    {messages.settings.devices.empty}
-                  </p>
-                </div>
+                <ServicesPanel />
               </CardContent>
             </Card>
           )}
 
-          {active === "monitoring" && (() => {
-            return (
-              <Card className="animate-fade-rise">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle>{messages.settings.nav.monitoring}</CardTitle>
-                    <CardDescription>{messages.settings.nav.monitoringDescription}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-muted/50 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setMonitoringTab("logs")}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                        monitoringTab === "logs"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <icons.activity className="size-3.5" />
-                      {messages.settings.nav.logs}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMonitoringTab("services")}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                        monitoringTab === "services"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <icons.database className="size-3.5" />
-                      {messages.settings.nav.services}
-                    </button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {monitoringTab === "logs" && (
-                    <>
-                      <div className="mb-4 flex justify-end">
-                        <Button variant="outline" size="sm" onClick={() => {
-                          const header = "Timestamp,Action,Category,Screen,Browser,Device,IP Address,Request,Details\n"
-                          const csv = logRows.map((l) =>
-                            `${l.timestamp},"${l.action}",${l.category},${l.screen},${l.browser},${l.device},${l.ipAddress},"${l.request}","${l.details}"`
-                          ).join("\n")
-                          const blob = new Blob([header + csv], { type: "text/csv" })
-                          const url = URL.createObjectURL(blob)
-                          const a = document.createElement("a")
-                          a.href = url
-                          a.download = `activity-logs-${new Date().toISOString().slice(0, 10)}.csv`
-                          a.click()
-                          URL.revokeObjectURL(url)
-                          toast.success(messages.settings.logs.exported)
-                        }}>
-                          <icons.download className="size-4" /> {messages.settings.logs.export}
-                        </Button>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead scope="col">{messages.settings.logs.timestamp}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.action}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.screen}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.browser}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.device}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.ipAddress}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.request}</TableHead>
-                              <TableHead scope="col">{messages.settings.logs.details}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {visibleLogs.map((log) => (
-                              <TableRow key={log.id}>
-                                <TableCell className="whitespace-nowrap text-xs tabular-nums">{log.timestamp}</TableCell>
-                                <TableCell>
-                                  <Badge variant={
-                                    log.category === "login" ? "success" :
-                                    log.category === "security" ? "destructive" :
-                                    log.category === "settings" ? "info" :
-                                    log.category === "timesheet" ? "warning" :
-                                    "default"
-                                  }>
-                                    {log.action}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-xs text-muted-foreground">{log.screen}</TableCell>
-                                <TableCell className="text-xs">{log.browser}</TableCell>
-                                <TableCell className="text-xs">{log.device}</TableCell>
-                                <TableCell className="whitespace-nowrap text-xs tabular-nums">{log.ipAddress}</TableCell>
-                                <TableCell className="whitespace-nowrap text-xs font-mono text-muted-foreground">{log.request}</TableCell>
-                                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{log.details}</TableCell>
-                              </TableRow>
-                            ))}
-                            {logRows.length === 0 && (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={8}
-                                  className="h-24 text-center text-muted-foreground"
-                                >
-                                  {messages.settings.logs.empty}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-foreground/5 pt-4">
-                        <p className="text-xs text-muted-foreground">
-                          {messages.settings.logs.showingRecords(
-                            (safeLogPage - 1) * logPageSize + 1,
-                            Math.min(safeLogPage * logPageSize, logRows.length),
-                            logRows.length
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {messages.settings.logs.pageSize}
-                            </span>
-                            <Select
-                              value={String(logPageSize)}
-                              onValueChange={(value) => {
-                                setLogPageSize(Number(value))
-                                setLogPage(1)
-                              }}
-                            >
-                              <SelectTrigger
-                                size="sm"
-                                className="h-8 w-16"
-                                aria-label={messages.settings.logs.pageSize}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="10">10</SelectItem>
-                                <SelectItem value="25">25</SelectItem>
-                                <SelectItem value="50">50</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="pr-1 text-xs text-muted-foreground">
-                              {messages.settings.logs.pageOf(safeLogPage, logPageCount)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={safeLogPage <= 1}
-                              aria-label={messages.settings.logs.previousPage}
-                              onClick={() =>
-                                setLogPage((p) => Math.max(1, p - 1))
-                              }
-                            >
-                              <icons.chevronLeft />
-                              {messages.settings.logs.previousPage}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={safeLogPage >= logPageCount}
-                              aria-label={messages.settings.logs.nextPage}
-                              onClick={() =>
-                                setLogPage((p) => Math.min(logPageCount, p))
-                              }
-                            >
-                              {messages.settings.logs.nextPage}
-                              <icons.chevronRight />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {monitoringTab === "services" && (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <icons.database className="mb-3 size-10 text-muted-foreground/40" />
-                      <p className="text-sm text-muted-foreground">
-                        {messages.settings.services.empty}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })()}
 
           {active === "billing" && (
             <Card className="animate-fade-rise">
@@ -1451,6 +1578,7 @@ export function Settings() {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
       </div>
 

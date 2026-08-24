@@ -3,7 +3,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 type PageHeaderProps = React.ComponentProps<"div"> & {
-  eyebrow?: string
+  breadcrumb?: React.ReactNode
   title: string
   description?: string
   actions?: React.ReactNode
@@ -12,7 +12,7 @@ type PageHeaderProps = React.ComponentProps<"div"> & {
 
 function PageHeader({
   className,
-  eyebrow,
+  breadcrumb,
   title,
   description,
   actions,
@@ -32,11 +32,7 @@ function PageHeader({
       {...props}
     >
       <div className="flex min-w-0 flex-col gap-1.5">
-        {eyebrow && (
-          <span className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
-            {eyebrow}
-          </span>
-        )}
+        {breadcrumb && <div className="mb-0.5">{breadcrumb}</div>}
         <h1 className="font-heading text-2xl font-extrabold tracking-tight text-foreground sm:text-[28px] sm:leading-9">
           {title}
         </h1>
