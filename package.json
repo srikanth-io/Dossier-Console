@@ -9,10 +9,13 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "backend:start": "npx supabase start",
+    "backend:start:bg": "cmd /c scripts\\backend-start.bat",
     "backend:stop": "npx supabase stop",
     "backend:restart": "npx supabase stop && npx supabase start",
     "backend:status": "npx supabase status",
-    "backend:reset": "npx supabase db reset"
+    "backend:reset": "npx supabase db reset",
+    "backend:watchdog:install": "powershell -ExecutionPolicy Bypass -File scripts\\install-watchdog.ps1",
+    "backend:watchdog:remove": "powershell -Command \"Unregister-ScheduledTask -TaskName 'DossierAdmin_BackendWatchdog' -Confirm:$false -ErrorAction SilentlyContinue; Write-Host 'Watchdog removed'\""
   },
   "dependencies": {
     "@codemirror/language": "^6.12.4",
