@@ -236,10 +236,16 @@ type AppSidebarProps = {
   className?: string
   /** Renders as a floating panel (no sticky column, no right border). */
   floating?: boolean
+  /** Initial collapsed state — used to force collapsed mode on tablet. */
+  defaultCollapsed?: boolean
 }
 
-export function AppSidebar({ className, floating = false }: AppSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+export function AppSidebar({ className, floating = false, defaultCollapsed = false }: AppSidebarProps) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+
+  useEffect(() => {
+    setCollapsed(defaultCollapsed)
+  }, [defaultCollapsed])
 
   return (
     <aside

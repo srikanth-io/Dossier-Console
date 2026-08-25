@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
 
 import { ROUTES, icons, messages } from "@/constants"
 import { AppSidebar } from "@/layouts/app-sidebar"
 import { NotificationBanner } from "@/components/common/notification-banner"
 import { NotificationPanel } from "@/components/common/notification-panel"
-import { ThemeToggle } from "@/components/common/theme-toggle"
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
+import { ClickSpark } from "@/components/common/click-spark"
 import { GlobalSearch } from "@/components/layout/global-search"
 import { Button } from "@/components/ui/button"
 import { useNotifications } from "@/store/notifications"
@@ -13,10 +14,20 @@ import { cn } from "@/lib/utils"
 
 export function AppLayout() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [navState, setNavState] = useState<"closed" | "hover" | "pinned">("closed")
   const { unreadCount } = useNotifications()
+  const [isTablet, setIsTablet] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px) and (max-width: 1023.98px)")
+    setIsTablet(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsTablet(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+  }, [])
 
   const navOpen = navState !== "closed"
 
@@ -52,8 +63,9 @@ export function AppLayout() {
   }, [])
 
   return (
+    <ClickSpark sparkColor="currentColor" sparkSize={8} sparkRadius={12} sparkCount={6} duration={350}>
     <div className="flex min-h-svh">
-      <AppSidebar className="hidden lg:flex" />
+      <AppSidebar className="hidden md:flex" defaultCollapsed={isTablet} />
       <NotificationBanner />
 
       {navOpen && (
@@ -61,7 +73,7 @@ export function AppLayout() {
           role="dialog"
           aria-modal="true"
           aria-label={messages.nav.brand}
-          className="fixed inset-0 z-50 lg:hidden"
+          className="fixed inset-0 z-50 md:hidden"
         >
           <div
             aria-hidden="true"
@@ -88,7 +100,7 @@ export function AppLayout() {
             size="icon-sm"
             aria-label={navOpen ? messages.layout.closeNavigation : messages.layout.openNavigation}
             aria-expanded={navOpen}
-            className="shrink-0 lg:hidden"
+            className="shrink-0 md:hidden"
             onMouseEnter={handleLogoHover}
             onClick={handleLogoClick}
           >
@@ -132,7 +144,17 @@ export function AppLayout() {
               </Button>
             </NotificationPanel>
 
-            <ThemeToggle />
+            <AnimatedThemeToggler className="size-9" />
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={messages.settings.title}
+              className="hidden shrink-0 md:flex lg:hidden"
+              onClick={() => navigate(ROUTES.settings)}
+            >
+              <icons.settings />
+            </Button>
           </div>
         </header>
 
@@ -149,5 +171,6 @@ export function AppLayout() {
         </main>
       </div>
     </div>
+    </ClickSpark>
   )
 }

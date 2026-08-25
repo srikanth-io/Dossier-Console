@@ -147,50 +147,49 @@ function applyStoredAppearance() {
   applyReducedMotion(getStoredReducedMotion())
 }
 
-/* ── Circle-spread animation ── */
-function circleSpreadAnimation(event: React.MouseEvent, callback: () => void) {
+/* ── Circle-spread transition ── */
+function circleSpreadTransition(event: React.MouseEvent, callback: () => void) {
   const root = document.documentElement
   const x = event.clientX
   const y = event.clientY
   const maxDim = Math.max(window.innerWidth, window.innerHeight)
-  const radius = maxDim * 2.5
+  const maxRadius = maxDim * 1.5
 
-  // Create the overlay circle
+  // Capture current theme colors BEFORE switching
+  const oldBg = getComputedStyle(root).getPropertyValue("background-color").trim()
+  const oldFg = getComputedStyle(root).getPropertyValue("color").trim()
+
+  // Create overlay showing OLD theme, clipped to full circle
   const overlay = document.createElement("div")
   overlay.style.cssText = `
     position: fixed;
-    top: ${y}px;
-    left: ${x}px;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
+    inset: 0;
     z-index: 99999;
-    background: ${root.classList.contains("dark") ? "#ffffff" : "#09090b"};
-    transition: width 550ms cubic-bezier(0.4, 0, 0.2, 1), height 550ms cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    background: ${oldBg};
+    color: ${oldFg};
+    clip-path: circle(${maxRadius}px at ${x}px ${y}px);
+    transition: clip-path 550ms cubic-bezier(0.4, 0, 0.2, 1);
   `
+
+  // Copy key computed styles so text/content looks identical
+  overlay.style.fontFamily = getComputedStyle(root).fontFamily
+  overlay.style.fontSize = getComputedStyle(root).fontSize
+
   document.body.appendChild(overlay)
 
-  // Force reflow, then expand
+  // Apply new theme immediately (visible underneath the overlay)
+  callback()
+
+  // Force reflow, then shrink the circle to 0 — revealing new theme
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      overlay.style.width = `${radius}px`
-      overlay.style.height = `${radius}px`
+      overlay.style.clipPath = `circle(0px at ${x}px ${y}px)`
     })
   })
 
-  // Apply the mode change halfway through the animation
-  setTimeout(() => {
-    callback()
-  }, 220)
-
-  // Remove overlay after animation
-  setTimeout(() => {
-    overlay.style.opacity = "0"
-    overlay.style.transition = "opacity 300ms ease-out"
-    setTimeout(() => overlay.remove(), 300)
-  }, 550)
+  // Clean up after animation
+  setTimeout(() => overlay.remove(), 600)
 }
 
 /* ── ThemeToggle component ── */
@@ -213,7 +212,7 @@ function ThemeToggle({ className }: { className?: string }) {
 
   const handleModeChange = useCallback(
     (newMode: ThemeMode, event: React.MouseEvent) => {
-      circleSpreadAnimation(event, () => {
+      circleSpreadTransition(event, () => {
         setMode(newMode)
         applyMode(newMode)
       })

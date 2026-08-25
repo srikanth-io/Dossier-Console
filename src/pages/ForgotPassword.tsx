@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Meteors } from "@/components/ui/meteors"
 import { APP, ROUTES, icons, messages } from "@/constants"
 import { getErrorMessage, safeAsync } from "@/lib/async"
 import { requestPasswordReset, updatePassword } from "@/services/auth"
@@ -120,6 +121,7 @@ export function ForgotPassword() {
           <div className="absolute -top-40 -left-32 size-[480px] rounded-full bg-white/10 blur-[120px]" />
           <div className="absolute -right-24 -bottom-32 size-[420px] rounded-full bg-white/10 blur-[110px]" />
         </div>
+        <Meteors number={20} />
         <div className="relative flex flex-1 flex-col justify-between p-12 xl:p-16">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25 backdrop-blur">

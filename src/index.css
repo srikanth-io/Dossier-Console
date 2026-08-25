@@ -23,6 +23,11 @@
   --animate-splash-scale-in: splash-scale-in 0.7s cubic-bezier(0.22, 1, 0.36, 1)
     both;
   --animate-splash-bar: splash-bar-grow 1.4s ease-in-out 0.35s both;
+  --animate-marquee: marquee 25s linear infinite;
+  --animate-beam: beam 2s linear infinite;
+  --animate-meteor: meteor 5s linear infinite;
+  --animate-shiny-text: shiny-text 3s linear infinite;
+  --animate-ripple: ripple 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -985,4 +990,51 @@ input[type="number"] {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
+}
+
+/* View Transitions — animated theme toggler */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* Click spark */
+@keyframes click-spark-fade {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+}
+
+/* Marquee */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Animated beam */
+@keyframes beam {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Meteor */
+@keyframes meteor {
+  0% { transform: rotate(var(--angle)) translateX(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateX(-500px); opacity: 0; }
+}
+
+/* Shiny text */
+@keyframes shiny-text {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Ripple */
+@keyframes ripple {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
 }

@@ -9,13 +9,10 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "backend:start": "npx supabase start",
-    "backend:start:bg": "cmd /c scripts\\backend-start.bat",
     "backend:stop": "npx supabase stop",
     "backend:restart": "npx supabase stop && npx supabase start",
     "backend:status": "npx supabase status",
-    "backend:reset": "npx supabase db reset",
-    "backend:watchdog:install": "powershell -ExecutionPolicy Bypass -File scripts\\install-watchdog.ps1",
-    "backend:watchdog:remove": "powershell -Command \"Unregister-ScheduledTask -TaskName 'DossierAdmin_BackendWatchdog' -Confirm:$false -ErrorAction SilentlyContinue; Write-Host 'Watchdog removed'\""
+    "backend:reset": "npx supabase db reset"
   },
   "dependencies": {
     "@codemirror/language": "^6.12.4",
@@ -27,6 +24,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cobe": "^2.0.1",
     "codemirror": "^6.0.1",
     "date-fns": "^4.4.0",
     "dompurify": "^3.4.13",
@@ -40,6 +38,8 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
+    "react-tweet": "^3.3.1",
+    "rough-notation": "^0.5.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",

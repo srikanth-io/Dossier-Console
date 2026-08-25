@@ -2,16 +2,14 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 
 import { PageHeader } from "@/components/common/page-header"
-import { StatCard } from "@/components/common/stat-card"
+import { AnimatedListDemo } from "@/components/common/animated-list-demo"
+import { AnimatedBeamDemo } from "@/components/common/animated-beam-demo"
 import { StatusPill, type StatusKey } from "@/components/domain/status-pill"
+import { BlurFade } from "@/components/ui/blur-fade"
+import { BentoGrid, BentoCard } from "@/components/ui/bento-grid"
+import { Marquee } from "@/components/ui/marquee"
+import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -33,10 +31,7 @@ import { formatRelative } from "@/lib/time"
 import { useAuth } from "@/store/auth"
 import { useDocumentLibrary } from "@/store/documents"
 import { useProjects } from "@/store/projects"
-
-const statTones = ["primary", "info", "warning", "success"] as const
-
-const weekDayKeys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
+import { cn } from "@/lib/utils"
 
 const typeLabel: Record<Exclude<TemplateCategory, "all">, string> = {
   resume: messages.dashboard.charts.typeResume,
@@ -63,39 +58,11 @@ const documentStatusLabel = (status: string): string =>
       ? statusLabels.archived
       : statusLabels.draft
 
-const quickActions = [
-  {
-    icon: icons.templates,
-    title: messages.dashboard.quickActions.templates.title,
-    description: messages.dashboard.quickActions.templates.description,
-    to: ROUTES.templates,
-  },
-  {
-    icon: icons.dossiers,
-    title: messages.dashboard.quickActions.documents.title,
-    description: messages.dashboard.quickActions.documents.description,
-    to: ROUTES.documents,
-  },
-  {
-    icon: icons.fileCode,
-    title: messages.dashboard.quickActions.resumeCreator.title,
-    description: messages.dashboard.quickActions.resumeCreator.description,
-    to: ROUTES.resumeCreator,
-  },
-  {
-    icon: icons.settings,
-    title: messages.dashboard.quickActions.settings.title,
-    description: messages.dashboard.quickActions.settings.description,
-    to: ROUTES.settings,
-  },
-]
-
 export function Dashboard() {
   const { user } = useAuth()
   const { documents } = useDocumentLibrary()
   const { projects } = useProjects()
 
-  // Every number below is derived from the signed-in user's own rows.
   const stats = useMemo(
     () => [
       { label: messages.dashboard.stats.totalDossiers, value: String(documents.length), hint: messages.dashboard.stats.hints.totalDossiers },
@@ -105,29 +72,6 @@ export function Dashboard() {
     ],
     [documents, projects]
   )
-
-  // Documents created per day of the current week (Mon..Sun).
-  const weeklyCreated = useMemo(() => {
-    const now = new Date()
-    const monday = new Date(now)
-    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-    monday.setHours(0, 0, 0, 0)
-
-    return weekDayKeys.map((_, index) => {
-      const start = new Date(monday)
-      start.setDate(monday.getDate() + index)
-      const end = new Date(start)
-      end.setDate(start.getDate() + 1)
-      return documents.filter((doc) => {
-        const created = new Date(doc.createdAt).getTime()
-        return (
-          !Number.isNaN(created) &&
-          created >= start.getTime() &&
-          created < end.getTime()
-        )
-      }).length
-    })
-  }, [documents])
 
   const documentTypes = useMemo(() => {
     const counts = new Map<Exclude<TemplateCategory, "all">, number>()
@@ -152,8 +96,8 @@ export function Dashboard() {
     [documents, user]
   )
 
-  const maxWeekly = Math.max(...weeklyCreated, 1)
   const typesTotal = documentTypes.reduce((sum, item) => sum + item.value, 0)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -175,169 +119,132 @@ export function Dashboard() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, index) => {
-          const tone = statTones[index % statTones.length]
-          const statIcons = [icons.dossiers, icons.fileCode, icons.checkCircle, icons.activity]
-          const Icon = statIcons[index % statIcons.length]
-          return (
-            <div
-              key={stat.label}
-              className="animate-fade-rise"
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
-              <StatCard
-                title={stat.label}
-                value={stat.value}
-                hint={stat.hint}
-                icon={<Icon />}
-                iconTone={tone}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="animate-fade-rise lg:col-span-2" style={{ animationDelay: "120ms" }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle>{messages.dashboard.charts.weekly.title}</CardTitle>
-              <CardDescription>
-                {messages.dashboard.charts.weekly.description}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="flex items-end gap-3"
-              role="img"
-              aria-label={messages.dashboard.charts.weekly.title}
-            >
-              {weeklyCreated.map((value, index) => (
-                <div
-                  key={index}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-2"
-                >
-                  <span className="text-xs font-semibold tabular-nums">
-                    {value}
-                  </span>
-                  <div className="flex h-36 w-full items-end rounded-lg bg-muted/40 px-1 dark:bg-input/20">
-                    <div
-                      className="w-full rounded-t-md transition-[height] duration-500"
-                      style={{
-                        height: `${Math.max(
-                          8,
-                          Math.round((value / maxWeekly) * 100)
-                        )}%`,
-                        background: theme.chartColors[0],
-                        opacity: value === maxWeekly ? 1 : 0.72,
-                      }}
-                    />
+      {/* Bento Grid */}
+      <BlurFade delay={0.1} inView>
+        <BentoGrid>
+        {/* Stats Card — spans 1 col */}
+        <BentoCard
+          name="Overview"
+          description={`${stats[0].value} total dossiers`}
+          Icon={icons.dossiers}
+          className="col-span-3 md:col-span-1"
+          background={
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              {stats.map((stat, index) => {
+                const statIcons = [icons.dossiers, icons.fileCode, icons.checkCircle, icons.activity]
+                const StatIcon = statIcons[index % statIcons.length]
+                return (
+                  <div
+                    key={stat.label}
+                    className="rounded-lg border border-border/50 bg-muted/30 p-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <StatIcon className="size-3.5 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">{stat.label}</span>
+                    </div>
+                    <p className="mt-1 font-heading text-xl font-extrabold">{stat.value}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {messages.dashboard.charts.weekDays[index]}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
-            <div className="mt-4 flex items-center justify-center gap-2 border-t border-foreground/5 pt-4">
-              <span
-                className="size-2.5 rounded-sm"
-                style={{ background: theme.chartColors[0] }}
-              />
-              <span className="text-xs text-muted-foreground">
-                {messages.dashboard.charts.weeklyCreated}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          }
+        />
 
-        <Card className="animate-fade-rise" style={{ animationDelay: "180ms" }}>
-          <CardHeader>
-            <CardTitle>{messages.dashboard.charts.types.title}</CardTitle>
-            <CardDescription>
-              {messages.dashboard.charts.types.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
-              <div className="relative size-32 shrink-0">
-                <svg
-                  viewBox="0 0 120 120"
-                  className="size-full -rotate-90"
-                  role="img"
-                  aria-label={messages.dashboard.charts.types.title}
+        {/* Activity List — spans 2 cols */}
+        <BentoCard
+          name="Recent Activity"
+          description="Latest document updates"
+          Icon={icons.notifications}
+          className="col-span-3 md:col-span-2"
+          background={
+            <div className="absolute inset-0 top-4 overflow-hidden [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)]">
+              <AnimatedListDemo className="scale-90" />
+            </div>
+          }
+        />
+
+        {/* Quick Actions — spans 2 cols */}
+        <BentoCard
+          name="Quick Actions"
+          description="Jump to any workspace"
+          Icon={icons.sparkles}
+          className="col-span-3 md:col-span-2"
+          background={<AnimatedBeamDemo className="absolute top-6 right-4 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)]" />}
+        />
+
+        {/* Calendar — spans 1 col */}
+        <BentoCard
+          name="Calendar"
+          description="Schedule overview"
+          Icon={icons.pendingReviews}
+          className="col-span-3 md:col-span-1"
+          background={
+            <Calendar
+              mode="single"
+              selected={new Date()}
+              className="absolute top-8 right-0 origin-top scale-75 rounded-md border [mask-image:linear-gradient(to_top,transparent_40%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-90"
+            />
+          }
+        />
+
+        {/* Document Types Marquee — spans 2 cols */}
+        <BentoCard
+          name="Document Types"
+          description={`${typesTotal} documents across ${documentTypes.length} categories`}
+          Icon={icons.openFile}
+          className="col-span-3 md:col-span-2"
+          background={
+            <Marquee
+              pauseOnHover
+              className="absolute top-10 [mask-image:linear-gradient(to_top,transparent_40%,#000_100%)] [--duration:20s]"
+            >
+              {documentTypes.map((item, idx) => (
+                <figure
+                  key={item.key}
+                  className={cn(
+                    "relative w-36 cursor-pointer overflow-hidden rounded-xl border p-4",
+                    "border-border/50 bg-muted/20 hover:bg-muted/40",
+                    "transform-gpu blur-[0.5px] transition-all duration-300 ease-out hover:blur-none"
+                  )}
                 >
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="44"
-                    fill="none"
-                    stroke="var(--color-muted)"
-                    strokeWidth="18"
-                  />
-                  {(() => {
-                    const circumference = 2 * Math.PI * 44
-                    let offset = 0
-                    return documentTypes.map((item, index) => {
-                      const length = (item.value / typesTotal) * circumference
-                      const circle = (
-                        <circle
-                          key={item.key}
-                          cx="60"
-                          cy="60"
-                          r="44"
-                          fill="none"
-                          stroke={theme.chartColors[index % theme.chartColors.length]}
-                          strokeWidth="18"
-                          strokeDasharray={`${length} ${circumference - length}`}
-                          strokeDashoffset={-offset}
-                        />
-                      )
-                      offset += length
-                      return circle
-                    })
-                  })()}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-heading text-2xl font-extrabold tabular-nums">
-                    {typesTotal}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {messages.dashboard.charts.typesTotal(typesTotal)}
-                  </span>
-                </div>
-              </div>
-              <ul className="w-full space-y-2.5">
-                {documentTypes.map((item, index) => (
-                  <li key={item.key} className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2">
                     <span
                       className="size-2.5 shrink-0 rounded-sm"
-                      style={{
-                        background:
-                          theme.chartColors[index % theme.chartColors.length],
-                      }}
+                      style={{ background: theme.chartColors[idx % theme.chartColors.length] }}
                     />
-                    <span className="flex-1 text-sm text-muted-foreground">
-                      {typeLabel[item.key]}
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {item.value}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                    <span className="text-sm font-medium">{typeLabel[item.key]}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.value} documents</p>
+                </figure>
+              ))}
+            </Marquee>
+          }
+        />
 
-      <Card className="animate-fade-rise" style={{ animationDelay: "240ms" }}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        {/* Projects — spans 1 col */}
+        <BentoCard
+          name="Projects"
+          description={`${projects.length} active projects`}
+          Icon={icons.dossiers}
+          className="col-span-3 md:col-span-1"
+          background={
+            <div className="absolute top-10 right-4">
+              <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10">
+                <span className="font-heading text-3xl font-extrabold text-primary">{projects.length}</span>
+              </div>
+            </div>
+          }
+        />
+      </BentoGrid>
+      </BlurFade>
+
+      {/* Recent Documents Table */}
+      <BlurFade delay={0.2} inView>
+      <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <CardTitle>{messages.dashboard.recent.title}</CardTitle>
-            <CardDescription>{messages.dashboard.recent.description}</CardDescription>
+            <h3 className="font-heading text-base font-bold">{messages.dashboard.recent.title}</h3>
+            <p className="text-sm text-muted-foreground">{messages.dashboard.recent.description}</p>
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link to={ROUTES.documents}>
@@ -345,96 +252,42 @@ export function Dashboard() {
               <icons.arrowRight />
             </Link>
           </Button>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">{commonMessages.id}</TableHead>
-                <TableHead scope="col">{commonMessages.subject}</TableHead>
-                <TableHead scope="col">{commonMessages.owner}</TableHead>
-                <TableHead scope="col">{commonMessages.status}</TableHead>
-                <TableHead scope="col" className="text-right">
-                  {commonMessages.updated}
-                </TableHead>
-                <TableHead scope="col" className="w-12">
-                  <span className="sr-only">{messages.dashboard.recentView}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentDossiers.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-medium">{d.id}</TableCell>
-                  <TableCell>{d.subject}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {d.owner}
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill
-                      status={statusKeyFor(d.status)}
-                      label={d.status}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {d.updated}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={messages.dashboard.recentView}
-                    >
-                      <Link to={ROUTES.documents}>
-                        <icons.eye />
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {recentDossiers.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    {messages.dashboard.emptyRecent}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="animate-fade-rise" style={{ animationDelay: "300ms" }}>
-        <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
-          {messages.dashboard.quickActions.label}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map((action) => {
-            const Icon = action.icon
-            return (
-              <Link
-                key={action.to}
-                to={action.to}
-                className="group rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
-              >
-                <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-hover:scale-105 [&_svg]:size-5">
-                  <Icon />
-                </span>
-                <h3 className="mt-3 font-heading text-sm font-bold">
-                  {action.title}
-                </h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {action.description}
-                </p>
-              </Link>
-            )
-          })}
         </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">{commonMessages.id}</TableHead>
+              <TableHead scope="col">{commonMessages.subject}</TableHead>
+              <TableHead scope="col">{commonMessages.owner}</TableHead>
+              <TableHead scope="col">{commonMessages.status}</TableHead>
+              <TableHead scope="col" className="text-right">
+                {commonMessages.updated}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recentDossiers.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell className="font-medium">{d.id}</TableCell>
+                <TableCell>{d.subject}</TableCell>
+                <TableCell className="text-muted-foreground">{d.owner}</TableCell>
+                <TableCell>
+                  <StatusPill status={statusKeyFor(d.status)} label={d.status} />
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">{d.updated}</TableCell>
+              </TableRow>
+            ))}
+            {recentDossiers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  {messages.dashboard.emptyRecent}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+      </BlurFade>
     </div>
   )
 }

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { RadiusScrubber } from "@/components/ui/elastic-slider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   commonMessages,
@@ -42,9 +43,7 @@ import {
 } from "@/constants"
 import { errorCodes } from "@/constants/messages/errors"
 import {
-  applyMode,
   applyThemePreset,
-  getStoredMode,
   getStoredThemePreset,
   accentChoices,
   applyAccent,
@@ -53,7 +52,6 @@ import {
   getStoredFontScale,
   applyReducedMotion,
   getStoredReducedMotion,
-  type ThemeMode,
   type ThemePreset,
   type FontScale,
 } from "@/components/common/theme-toggle"
@@ -143,20 +141,15 @@ const themePresets: {
   { key: "github", label: messages.settings.appearance.github, hint: messages.settings.appearance.githubHint, previewColors: ["#0d1117", "#21262d", "#58a6ff", "#c9d1d9"] },
 ]
 
-const radiusOptions = [
-  { value: "0.5rem", label: messages.settings.appearance.radiusSm },
-  { value: "0.625rem", label: messages.settings.appearance.radiusMd },
-  { value: "0.75rem", label: messages.settings.appearance.radiusLg },
-  { value: "1rem", label: messages.settings.appearance.radiusXl },
-]
 
 function getInitialTheme(): ThemePreset {
   return getStoredThemePreset()
 }
 
-function getInitialRadius(): string {
-  if (typeof window === "undefined") return "0.75rem"
-  return localStorage.getItem(RADIUS_KEY) ?? "0.75rem"
+function getInitialRadius(): number {
+  if (typeof window === "undefined") return 0.75
+  const stored = localStorage.getItem(RADIUS_KEY)
+  return stored ? parseFloat(stored) : 0.75
 }
 
 type SocialKey = "website" | "linkedin" | "github" | "twitter"
@@ -217,17 +210,10 @@ export function Settings() {
   const activeSection = sections.find((s) => s.key === active)
 
   const [themePreset, setThemePreset] = useState<ThemePreset>(getInitialTheme)
-  const [radius, setRadius] = useState<string>(getInitialRadius)
-  const [mode, setMode] = useState<ThemeMode>(getStoredMode)
+  const [radius, setRadius] = useState<number>(getInitialRadius)
   const [accent, setAccent] = useState<string | null>(getStoredAccent)
   const [fontScale, setFontScale] = useState<FontScale>(getStoredFontScale)
   const [reducedMotion, setReducedMotion] = useState<boolean>(getStoredReducedMotion)
-
-  const modeOptions: { value: ThemeMode; label: string; icon: (typeof icons)["sun"] }[] = [
-    { value: "light", label: messages.settings.appearance.modeLight, icon: icons.sun },
-    { value: "dark", label: messages.settings.appearance.modeDark, icon: icons.moon },
-    { value: "system", label: messages.settings.appearance.modeSystem, icon: icons.monitor },
-  ]
 
   const [reviewRequired, setReviewRequired] = useState(true)
   const [notifications, setNotifications] = useState(true)
@@ -353,8 +339,9 @@ export function Settings() {
   }, [themePreset])
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--radius", radius)
-    localStorage.setItem(RADIUS_KEY, radius)
+    const radiusRem = `${radius}rem`
+    document.documentElement.style.setProperty("--radius", radiusRem)
+    localStorage.setItem(RADIUS_KEY, radiusRem)
   }, [radius])
 
   const fontScaleOptions: { value: FontScale; label: string }[] = [
@@ -390,7 +377,7 @@ export function Settings() {
               type="button"
               onClick={() => {
                 setActive(section.key)
-                if (!window.matchMedia("(min-width: 1024px)").matches) {
+                if (!window.matchMedia("(min-width: 768px)").matches) {
                   setSectionMenuOpen(false)
                 }
               }}
@@ -412,13 +399,13 @@ export function Settings() {
   )
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full space-y-6">
       <PageHeader
         title={messages.settings.title}
         description={messages.settings.subtitle}
       />
 
-      <div className="flex items-center gap-2 lg:hidden">
+      <div className="sticky top-14 z-20 flex items-center gap-2 bg-background/95 backdrop-blur py-2 md:hidden">
         <Button
           variant="outline"
           size="sm"
@@ -445,23 +432,23 @@ export function Settings() {
               aria-hidden="true"
               tabIndex={-1}
               onClick={() => setSectionMenuOpen(false)}
-              className="fixed inset-0 z-30 cursor-default bg-background/60 backdrop-blur-[2px] lg:hidden"
+              className="fixed inset-0 z-30 cursor-default bg-background/60 backdrop-blur-[2px] md:hidden"
             />
             <Card
               id="settings-sections"
-              className="absolute inset-x-0 top-0 z-40 shadow-xl shadow-black/5 animate-fade-rise lg:hidden"
+              className="fixed left-4 right-4 top-[4.5rem] z-40 max-h-[60vh] overflow-y-auto shadow-xl shadow-black/5 animate-fade-rise md:hidden"
             >
               {sectionsNav}
             </Card>
           </>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <Card className="hidden h-fit animate-fade-rise lg:sticky lg:top-6 lg:block">
+        <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
+          <Card className="hidden h-fit animate-fade-rise md:sticky md:top-6 md:block">
             {sectionsNav}
           </Card>
 
-          <div className="min-w-0 max-w-2xl space-y-6">
+          <div className="min-w-0 space-y-6">
           {active === "account" && (
             <div className="space-y-6">
               <Card className="animate-fade-rise">
@@ -1051,44 +1038,6 @@ export function Settings() {
                   </div>
                 </div>
 
-                {/* Colour mode */}
-                <FormField
-                  label={messages.settings.appearance.mode}
-                  hint={messages.settings.appearance.modeHint}
-                >
-                  <div
-                    role="radiogroup"
-                    aria-label={messages.settings.appearance.mode}
-                    className="grid grid-cols-3 gap-3"
-                  >
-                    {modeOptions.map((option) => {
-                      const ModeIcon = option.icon
-                      const activeMode = mode === option.value
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={activeMode}
-                          onClick={() => {
-                            setMode(option.value)
-                            applyMode(option.value)
-                          }}
-                          className={cn(
-                            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors",
-                            activeMode
-                              ? "border-primary bg-primary-soft text-primary shadow-sm"
-                              : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                          )}
-                        >
-                          <ModeIcon className="size-5" />
-                          <span className="text-sm font-medium">{option.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </FormField>
-
                 {/* Theme preset swatches */}
                 <FormField label={messages.settings.appearance.theme} hint={messages.settings.appearance.themeHint}>
                   <div
@@ -1211,29 +1160,12 @@ export function Settings() {
                   </FormField>
 
                   <FormField label={messages.settings.appearance.radius} hint={messages.settings.appearance.radiusHint}>
-                    <div
-                      role="radiogroup"
-                      aria-label={messages.settings.appearance.radius}
-                      className="inline-flex rounded-lg border border-border/70 bg-muted/40 p-1"
-                    >
-                      {radiusOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={radius === option.value}
-                          onClick={() => setRadius(option.value)}
-                          className={cn(
-                            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                            radius === option.value
-                              ? "bg-background text-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                    <RadiusScrubber
+                      value={radius}
+                      onValueChange={setRadius}
+                      min={0.25}
+                      max={1.5}
+                    />
                   </FormField>
                 </div>
 

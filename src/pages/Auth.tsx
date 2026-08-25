@@ -3,10 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { FormField } from "@/components/common/form-field"
+import { BlurFade } from "@/components/ui/blur-fade"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Meteors } from "@/components/ui/meteors"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { APP, ROUTES, icons, messages } from "@/constants"
@@ -34,6 +36,7 @@ function BrandPanel() {
         <div className="absolute -top-40 -left-32 size-[480px] rounded-full bg-white/10 blur-[120px]" />
         <div className="absolute -right-24 -bottom-32 size-[420px] rounded-full bg-white/10 blur-[110px]" />
       </div>
+      <Meteors number={20} />
 
       <div className="relative flex flex-1 flex-col justify-between p-12 xl:p-16">
         <div className="flex items-center gap-3">
@@ -307,6 +310,7 @@ export function Auth() {
               <p className="mt-3 font-heading text-xl font-bold">{APP.name}</p>
             </div>
 
+            <BlurFade delay={0.2} inView>
             <div className="w-full rounded-3xl border border-border/80 bg-card p-8 shadow-lg">
               <div className="mb-6 text-center">
                 <h1 className="font-heading text-2xl font-bold tracking-tight">
@@ -681,6 +685,7 @@ export function Auth() {
               )}
 
             </div>
+            </BlurFade>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               {isSignIn ? messages.login.noAccount : messages.login.haveAccount}{" "}
