@@ -84,3 +84,67 @@ export const landingSteps: LandingStep[] = [
     icon: "reports",
   },
 ]
+
+export type TestimonialQuote = {
+  text: string
+  title: string
+  author: string
+  role: string
+  image: string
+}
+
+export const testimonialQuotes: TestimonialQuote[] = [
+  {
+    text: "Dossier cut our compliance review time in half. The workflow automation alone is worth it.",
+    title: "Compliance",
+    author: "Sarah Chen",
+    role: "Compliance Director",
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=300&fit=crop",
+  },
+  {
+    text: "We replaced three separate tools with Dossier. Everything is in one place now — finally.",
+    title: "Consolidation",
+    author: "Marcus Rivera",
+    role: "Operations Manager",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
+  },
+  {
+    text: "The audit trail feature means we're always exam-ready. No more last-minute scrambles.",
+    title: "Audit Ready",
+    author: "Priya Sharma",
+    role: "Legal Counsel",
+    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=300&fit=crop",
+  },
+  {
+    text: "Our team onboarding went from two weeks to two days. Dossier just works.",
+    title: "Onboarding",
+    author: "James O'Brien",
+    role: "HR Director",
+    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=300&fit=crop",
+  },
+  {
+    text: "The template system saved us hundreds of hours on repetitive document creation.",
+    title: "Templates",
+    author: "Aisha Patel",
+    role: "Project Lead",
+    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=300&fit=crop",
+  },
+  {
+    text: "Real-time collaboration on sensitive documents? Dossier nails it with granular permissions.",
+    title: "Collaboration",
+    author: "David Kim",
+    role: "Security Analyst",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=300&fit=crop",
+  },
+]
+
+export const appIcons = [
+  { name: "Docs", color: "#4285F4" },
+  { name: "Slack", color: "#4A154B" },
+  { name: "Notion", color: "#000000" },
+  { name: "Teams", color: "#6264A7" },
+  { name: "Zoom", color: "#2D8CFF" },
+  { name: "Figma", color: "#F24E1E" },
+  { name: "GitHub", color: "#181717" },
+  { name: "Jira", color: "#0052CC" },
+]
