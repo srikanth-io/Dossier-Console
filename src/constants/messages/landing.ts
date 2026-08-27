@@ -11,12 +11,25 @@ export const landing = {
   },
   hero: {
     badge: "Trusted by 200+ teams worldwide",
+    eyebrow: "Dossier Network",
     titleLine1: "Every dossier.",
     titleLine2: "One console.",
     subtitle:
       "A single, secure home for your records, reviews, and reports — so nothing falls through the cracks.",
     primaryCta: "Get started free",
     secondaryCta: "See how it works",
+  },
+  telemetry: [
+    { label: "Active nodes", value: "12,840" },
+    { label: "Median latency", value: "24 ms" },
+    { label: "Throughput", value: "1.2M / day" },
+    { label: "Network uptime", value: "99.99%" },
+  ],
+  network: {
+    eyebrow: "Connected fabric",
+    title: "One console for every signal",
+    subtitle:
+      "Records, reviews, and reports flow through a single encrypted mesh — so your whole team always sees the complete picture.",
   },
   logos: {
     title: "Trusted by compliance teams and legal departments everywhere",

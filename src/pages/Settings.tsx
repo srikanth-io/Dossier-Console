@@ -113,7 +113,6 @@ type SectionKey =
   | "security"
   | "devices"
   | "monitoring"
-  | "billing"
   | "dangerZone"
 
 const sections: { key: SectionKey; label: string; icon: (typeof icons)[keyof typeof icons] }[] = [
@@ -124,7 +123,6 @@ const sections: { key: SectionKey; label: string; icon: (typeof icons)[keyof typ
   { key: "security", label: messages.settings.nav.security, icon: icons.lock },
   { key: "devices", label: messages.settings.nav.devices, icon: icons.apple },
   { key: "monitoring", label: messages.settings.nav.monitoring, icon: icons.activity },
-  { key: "billing", label: messages.settings.nav.billing, icon: icons.reports },
   { key: "dangerZone", label: messages.settings.nav.dangerZone, icon: icons.alertCircle },
 ]
 
@@ -133,12 +131,13 @@ const themePresets: {
   label: string
   hint: string
   previewColors: string[]
+  description: string
 }[] = [
-  { key: "monochrome", label: messages.settings.appearance.monochrome, hint: messages.settings.appearance.monochromeHint, previewColors: ["#09090b", "#27272a", "#a1a1aa", "#fafafa"] },
-  { key: "dracula", label: messages.settings.appearance.dracula, hint: messages.settings.appearance.draculaHint, previewColors: ["#282a36", "#44475a", "#bd93f9", "#f8f8f2"] },
-  { key: "catppuccin", label: messages.settings.appearance.catppuccin, hint: messages.settings.appearance.catppuccinHint, previewColors: ["#1e1e2e", "#313244", "#cba6f7", "#cdd6f4"] },
-  { key: "vercel", label: messages.settings.appearance.vercel, hint: messages.settings.appearance.vercelHint, previewColors: ["#000000", "#171717", "#ededed", "#666666"] },
-  { key: "github", label: messages.settings.appearance.github, hint: messages.settings.appearance.githubHint, previewColors: ["#0d1117", "#21262d", "#58a6ff", "#c9d1d9"] },
+  { key: "monochrome", label: messages.settings.appearance.monochrome, hint: messages.settings.appearance.monochromeHint, previewColors: ["#09090b", "#27272a", "#a1a1aa", "#fafafa"], description: messages.settings.appearance.monochromeDesc },
+  { key: "dracula", label: messages.settings.appearance.dracula, hint: messages.settings.appearance.draculaHint, previewColors: ["#282a36", "#44475a", "#bd93f9", "#f8f8f2"], description: messages.settings.appearance.draculaDesc },
+  { key: "catppuccin", label: messages.settings.appearance.catppuccin, hint: messages.settings.appearance.catppuccinHint, previewColors: ["#1e1e2e", "#313244", "#cba6f7", "#cdd6f4"], description: messages.settings.appearance.catppuccinDesc },
+  { key: "vercel", label: messages.settings.appearance.vercel, hint: messages.settings.appearance.vercelHint, previewColors: ["#000000", "#171717", "#ededed", "#666666"], description: messages.settings.appearance.vercelDesc },
+  { key: "github", label: messages.settings.appearance.github, hint: messages.settings.appearance.githubHint, previewColors: ["#0d1117", "#21262d", "#58a6ff", "#c9d1d9"], description: messages.settings.appearance.githubDesc },
 ]
 
 
@@ -244,6 +243,7 @@ export function Settings() {
   const navigate = useNavigate()
   const { signOut, status, user } = useAuth()
   const authenticated = status === "authenticated"
+  const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace, renameWorkspace, deleteWorkspace } = usePages()
 
   const accountInitials = useMemo(() => {
     const source = (user?.name || user?.email || "?").trim()
@@ -425,26 +425,8 @@ export function Settings() {
       </div>
 
       <div className="relative">
-        {sectionMenuOpen && (
-          <>
-            <button
-              type="button"
-              aria-hidden="true"
-              tabIndex={-1}
-              onClick={() => setSectionMenuOpen(false)}
-              className="fixed inset-0 z-30 cursor-default bg-background/60 backdrop-blur-[2px] md:hidden"
-            />
-            <Card
-              id="settings-sections"
-              className="fixed left-4 right-4 top-[4.5rem] z-40 max-h-[60vh] overflow-y-auto shadow-xl shadow-black/5 animate-fade-rise md:hidden"
-            >
-              {sectionsNav}
-            </Card>
-          </>
-        )}
-
-        <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
-          <Card className="hidden h-fit animate-fade-rise md:sticky md:top-6 md:block">
+        <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:items-start">
+          <Card className="hidden animate-fade-rise md:sticky md:top-6 md:block">
             {sectionsNav}
           </Card>
 
@@ -766,10 +748,8 @@ export function Settings() {
             </div>
           )}
 
-          {active === "workspace" && (() => {
-            const { workspaces, currentWorkspace, setCurrentWorkspace } = usePages()
-            return (
-              <div className="space-y-6">
+          {active === "workspace" && (
+            <div className="space-y-6">
                 <Card className="animate-fade-rise">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <div>
@@ -883,8 +863,7 @@ export function Settings() {
                   </CardContent>
                 </Card>
               </div>
-            )
-          })()}
+          )}
 
           {/* Workspace Create Dialog */}
           <Dialog open={wsCreateOpen} onOpenChange={setWsCreateOpen}>
@@ -921,6 +900,7 @@ export function Settings() {
                 <Button
                   disabled={!wsCreateName.trim()}
                   onClick={() => {
+                    createWorkspace({ name: wsCreateName, icon: wsCreateIcon })
                     toast.success(`${messages.settings.workspace.createSuccess}: ${wsCreateName}`)
                     setWsCreateName("")
                     setWsCreateIcon("W")
@@ -959,6 +939,7 @@ export function Settings() {
                 <Button
                   disabled={!wsRenameName.trim() || wsRenameName === wsRenameTarget?.name}
                   onClick={() => {
+                    if (wsRenameTarget) renameWorkspace(wsRenameTarget.id, wsRenameName)
                     toast.success(`${messages.settings.workspace.renameSuccess}: ${wsRenameName}`)
                     setWsRenameTarget(null)
                     setWsRenameName("")
@@ -986,6 +967,7 @@ export function Settings() {
                 <Button
                   variant="destructive"
                   onClick={() => {
+                    if (wsDeleteTarget) deleteWorkspace(wsDeleteTarget.id)
                     toast.success(`${messages.settings.workspace.deleteSuccess}: ${wsDeleteTarget?.name}`)
                     setWsDeleteTarget(null)
                   }}
@@ -1038,43 +1020,47 @@ export function Settings() {
                   </div>
                 </div>
 
-                {/* Theme preset swatches */}
+                {/* Theme presets — visual grid */}
                 <FormField label={messages.settings.appearance.theme} hint={messages.settings.appearance.themeHint}>
-                  <div
-                    role="radiogroup"
-                    aria-label={messages.settings.appearance.theme}
-                    className="grid grid-cols-2 gap-3 sm:grid-cols-5"
-                  >
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {themePresets.map((preset) => {
-                      const activePreset = themePreset === preset.key
+                      const selected = themePreset === preset.key
                       return (
                         <button
                           key={preset.key}
                           type="button"
-                          role="radio"
-                          aria-checked={activePreset}
-                          title={preset.hint}
                           onClick={() => setThemePreset(preset.key)}
+                          aria-pressed={selected}
                           className={cn(
-                            "group relative overflow-hidden rounded-xl border text-left transition-colors",
-                            activePreset
-                              ? "border-primary ring-2 ring-primary/30"
-                              : "border-border/70 hover:border-border"
+                            "relative flex flex-col gap-3 rounded-xl border p-3 text-left transition-all",
+                            selected
+                              ? "border-primary bg-primary-soft ring-1 ring-primary"
+                              : "border-border/70 hover:border-foreground/20 hover:bg-muted/40"
                           )}
                         >
-                          <span className="flex h-12">
+                          <div className="flex h-10 w-full overflow-hidden rounded-md border border-border/60">
                             {preset.previewColors.map((color, i) => (
                               <span key={i} className="h-full flex-1" style={{ backgroundColor: color }} />
                             ))}
-                          </span>
-                          <span className="flex items-center justify-between gap-1 px-2.5 py-2">
-                            <span className="truncate text-xs font-medium">{preset.label}</span>
-                            {activePreset && <icons.check className="size-3.5 shrink-0 text-primary" />}
-                          </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{preset.label}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{preset.hint}</p>
+                          </div>
+                          {selected && (
+                            <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                              <icons.check className="size-3" />
+                            </span>
+                          )}
                         </button>
                       )
                     })}
                   </div>
+                  {themePresets.find((p) => p.key === themePreset) && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {themePresets.find((p) => p.key === themePreset)!.description}
+                    </p>
+                  )}
                 </FormField>
 
                 {/* Accent colour */}
@@ -1400,50 +1386,6 @@ export function Settings() {
           )}
 
 
-          {active === "billing" && (
-            <Card className="animate-fade-rise">
-              <CardHeader>
-                <CardTitle>{messages.settings.billing.title}</CardTitle>
-                <CardDescription>
-                  {messages.settings.billing.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/70 bg-primary/5 p-5">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm [&_svg]:size-5">
-                      <icons.sparkles />
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {messages.settings.billing.currentPlan}
-                      </p>
-                      <p className="font-heading text-lg font-extrabold">
-                        {messages.settings.billing.planPro}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {messages.settings.billing.planProDescription}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline">
-                      {messages.settings.billing.manage}
-                    </Button>
-                    <Button
-                      variant="default"
-                      onClick={() =>
-                        toast.success(messages.settings.billing.upgraded)
-                      }
-                    >
-                      {messages.settings.billing.upgrade}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {active === "dangerZone" && (
             <Card className="animate-fade-rise border-destructive/30">
               <CardHeader>
@@ -1506,10 +1448,11 @@ export function Settings() {
               </CardContent>
             </Card>
           )}
-          </div>
         </div>
       </div>
+    </div>
 
+    <>
       <ConfirmDialog
         open={resetOpen}
         onOpenChange={setResetOpen}
@@ -1547,6 +1490,7 @@ export function Settings() {
           navigate(ROUTES.login, { replace: true })
         }}
       />
-    </div>
+    </>
+  </div>
   )
 }

@@ -86,12 +86,15 @@ type PagesValue = {
   workspaces: WorkspaceEntry[]
   currentWorkspace: WorkspaceEntry
   setCurrentWorkspace: (id: string) => void
+  createWorkspace: (input: { name: string; icon: string }) => void
+  renameWorkspace: (id: string, name: string) => void
+  deleteWorkspace: (id: string) => void
   loading: boolean
   pages: PageEntry[]
   rootPages: PageEntry[]
   getChildPages: (parentId: string) => PageEntry[]
   getPage: (id: string) => PageEntry | undefined
-  updatePage: (id: string, updates: Partial<Pick<PageEntry, "title" | "content" | "icon" | "favorite">>) => void
+  updatePage: (id: string, updates: Partial<Pick<PageEntry, "title" | "content" | "icon" | "favorite" | "parentId">>) => void
   addPage: (title: string, options?: { parentId?: string | null; kind?: PageKind }) => PageEntry
   deletePage: (id: string) => void
 }
@@ -111,6 +114,15 @@ export function PagesProvider({ children }: { children: ReactNode }) {
 
   const [allPages, setAllPages] = useState<PageEntry[]>([])
   const [loading, setLoading] = useState(false)
+  const [workspaces, setWorkspaces] = useState<WorkspaceEntry[]>(() => {
+    if (typeof window === "undefined") return [fallbackWorkspace]
+    try {
+      const raw = localStorage.getItem("dossier-workspaces")
+      const parsed = raw ? (JSON.parse(raw) as WorkspaceEntry[]) : null
+      if (parsed && parsed.length) return parsed
+    } catch {}
+    return [fallbackWorkspace]
+  })
 
   useEffect(() => {
     if (!authenticated) {
@@ -137,15 +149,38 @@ export function PagesProvider({ children }: { children: ReactNode }) {
     }
   }, [authenticated])
 
-  const currentWorkspaceId = DEFAULT_WORKSPACE_ID
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>(() => {
+    if (typeof window === "undefined") return DEFAULT_WORKSPACE_ID
+    const stored = localStorage.getItem("dossier-current-workspace")
+    if (stored && workspaces.some((w) => w.id === stored)) return stored
+    return DEFAULT_WORKSPACE_ID
+  })
+
+  const workspacesWithCounts = useMemo<WorkspaceEntry[]>(
+    () =>
+      workspaces.map((w) => ({
+        ...w,
+        pageCount: allPages.filter((p) => p.workspaceId === w.id).length,
+      })),
+    [workspaces, allPages]
+  )
 
   const currentWorkspace = useMemo<WorkspaceEntry>(
-    () => ({
-      ...fallbackWorkspace,
-      pageCount: allPages.filter((p) => p.workspaceId === currentWorkspaceId).length,
-    }),
-    [allPages, currentWorkspaceId]
+    () => workspacesWithCounts.find((w) => w.id === currentWorkspaceId) ?? workspacesWithCounts[0],
+    [workspacesWithCounts, currentWorkspaceId]
   )
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dossier-workspaces", JSON.stringify(workspaces))
+    }
+  }, [workspaces])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dossier-current-workspace", currentWorkspaceId)
+    }
+  }, [currentWorkspaceId])
 
   const pages = useMemo(
     () => allPages.filter((p) => p.workspaceId === currentWorkspaceId),
@@ -168,17 +203,24 @@ export function PagesProvider({ children }: { children: ReactNode }) {
   )
 
   const updatePage = useCallback(
-    (id: string, updates: Partial<Pick<PageEntry, "title" | "content" | "icon" | "favorite">>) => {
+    (id: string, updates: Partial<Pick<PageEntry, "title" | "content" | "icon" | "favorite" | "parentId">>) => {
       setAllPages((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? { ...p, ...updates, updatedAt: formatRelative(new Date().toISOString()) }
-            : p
+        withChildren(
+          prev.map((p) =>
+            p.id === id
+              ? { ...p, ...updates, updatedAt: formatRelative(new Date().toISOString()) }
+              : p
+          )
         )
       )
 
       void safeAsync(async () => {
-        const row = { id, ...updates }
+        const row: Record<string, unknown> = { id }
+        if ("title" in updates) row.title = updates.title
+        if ("content" in updates) row.content = updates.content
+        if ("icon" in updates) row.icon = updates.icon
+        if ("favorite" in updates) row.favorite = updates.favorite
+        if ("parentId" in updates) row.parent_id = updates.parentId
         await persistOrQueue(
           { kind: "upsert", table: "notepad_pages", row, context: "Pages.updatePage" },
           () => getSupabase().from("notepad_pages").update(row).eq("id", id)
@@ -197,7 +239,7 @@ export function PagesProvider({ children }: { children: ReactNode }) {
         id: crypto.randomUUID(),
         title,
         icon: kind === "folder" ? "dossiers" : "file",
-        content: `# ${title}\n\nStart writing here...`,
+        content: kind === "folder" ? "" : `# ${title}\n\nStart writing here...`,
         parentId,
         children: [],
         workspaceId: currentWorkspaceId,
@@ -269,11 +311,33 @@ export function PagesProvider({ children }: { children: ReactNode }) {
     }, { context: "Pages.deletePage" })
   }, [])
 
+  const setCurrentWorkspace = useCallback((id: string) => {
+    setCurrentWorkspaceId(id)
+  }, [])
+
+  const createWorkspace = useCallback(({ name, icon }: { name: string; icon: string }) => {
+    const id = crypto.randomUUID()
+    setWorkspaces((prev) => [...prev, { id, name, icon: icon || "W", pageCount: 0 }])
+    setCurrentWorkspaceId(id)
+  }, [])
+
+  const renameWorkspace = useCallback((id: string, name: string) => {
+    setWorkspaces((prev) => prev.map((w) => (w.id === id ? { ...w, name } : w)))
+  }, [])
+
+  const deleteWorkspace = useCallback((id: string) => {
+    setWorkspaces((prev) => (prev.length > 1 ? prev.filter((w) => w.id !== id) : prev))
+    setCurrentWorkspaceId((prev) => (prev === id ? DEFAULT_WORKSPACE_ID : prev))
+  }, [])
+
   const value = useMemo<PagesValue>(
     () => ({
-      workspaces: [currentWorkspace],
+      workspaces: workspacesWithCounts,
       currentWorkspace,
-      setCurrentWorkspace: () => {},
+      setCurrentWorkspace,
+      createWorkspace,
+      renameWorkspace,
+      deleteWorkspace,
       loading,
       pages,
       rootPages,
@@ -283,7 +347,7 @@ export function PagesProvider({ children }: { children: ReactNode }) {
       addPage,
       deletePage,
     }),
-    [currentWorkspace, loading, pages, rootPages, getChildPages, getPage, updatePage, addPage, deletePage]
+    [workspacesWithCounts, currentWorkspace, setCurrentWorkspace, createWorkspace, renameWorkspace, deleteWorkspace, loading, pages, rootPages, getChildPages, getPage, updatePage, addPage, deletePage]
   )
 
   return <PagesContext.Provider value={value}>{children}</PagesContext.Provider>

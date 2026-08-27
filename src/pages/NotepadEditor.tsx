@@ -125,9 +125,9 @@ export function NotepadEditor() {
 
   const handleMoveToFolder = (folderId: string | null) => {
     if (!id) return
-    updatePage(id, { parentId: folderId } as never)
+    updatePage(id, { parentId: folderId })
     setSaved(false)
-    toast.success("Page moved")
+    toast.success(messages.pages.actions.moved)
   }
 
   if (!page) {
@@ -152,7 +152,9 @@ export function NotepadEditor() {
     return path
   })()
 
-  const rootPages = pages.filter((p) => p.parentId === null && p.id !== id)
+  const folderTargets = pages.filter(
+    (p) => p.kind === "folder" && p.parentId === null && p.id !== id
+  )
   const childPages = getChildPages(page.id)
 
   return (
@@ -221,21 +223,18 @@ export function NotepadEditor() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
+              <DropdownMenuLabel>{messages.pages.actions.moveToFolder}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleMoveToFolder(null)}>
                 <icons.dashboard className="size-3.5" />
-                Home (root)
+                {messages.pages.actions.homeRoot}
               </DropdownMenuItem>
-              {rootPages.filter((p) => p.id !== id).map((p) => {
-                const PageIcon = icons[p.icon as IconName] ?? icons.file
-                return (
-                  <DropdownMenuItem key={p.id} onClick={() => handleMoveToFolder(p.id)}>
-                    <PageIcon className="size-3.5" />
-                    {p.title}
-                  </DropdownMenuItem>
-                )
-              })}
+              {folderTargets.map((f) => (
+                <DropdownMenuItem key={f.id} onClick={() => handleMoveToFolder(f.id)}>
+                  <icons.dossiers className="size-3.5" />
+                  {f.title}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 

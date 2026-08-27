@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useCallback } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -35,7 +35,7 @@ export function ProfilePhotoDialog({
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleFile = (file: File) => {
+const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error(messages.settings.account.photoInvalidType)
       return
@@ -60,7 +60,22 @@ export function ProfilePhotoDialog({
       toast.success(messages.settings.account.photoUpdated)
     }
     reader.readAsDataURL(file)
-  }
+  }, [userId])
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const items = e.clipboardData.items
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (file) handleFile(file)
+          break
+        }
+      }
+    },
+    [handleFile]
+  )
 
   const handleRemove = () => {
     removeStoredAvatar(userId)
@@ -82,6 +97,7 @@ export function ProfilePhotoDialog({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
+            onPaste={handlePaste}
             className="group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={messages.settings.account.avatarUpload}
           >
@@ -107,6 +123,9 @@ export function ProfilePhotoDialog({
             }}
           />
         </div>
+        <p className="text-center text-xs text-muted-foreground">
+          {messages.settings.account.photoPasteHint}
+        </p>
         <DialogFooter className="justify-center gap-2 sm:justify-center">
           <Button variant="outline" onClick={() => inputRef.current?.click()}>
             <icons.upload className="size-3.5" /> {messages.settings.account.avatarUpload}
