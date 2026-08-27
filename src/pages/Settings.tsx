@@ -575,7 +575,7 @@ export function Settings() {
                       {accountEditing ? (
                         <>
                           <Select
-                            value={accountForm.timezone || undefined}
+                            value={accountForm.timezone || ""}
                             onValueChange={updateAccountField("timezone")}
                           >
                             <SelectTrigger id="account-timezone">

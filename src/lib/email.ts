@@ -316,28 +316,40 @@ export const emailTemplates = {
 }
 
 /**
- * Send email using the configured SMTP server
- * Note: In a browser environment, this would typically be handled by a backend API.
- * For local development with Mailcow, we use a simple fetch to the SMTP relay.
+ * Send email using the send-email edge function → SMTP relay (Mailpit in local dev).
  */
 export async function sendEmail(message: EmailMessage): Promise<{ success: boolean; error?: string }> {
   try {
-    // In a real implementation, this would call a backend API endpoint
-    // that handles SMTP sending (e.g., /api/email/send)
-    console.log("[Email Service] Sending email:", {
-      to: message.to,
-      subject: message.subject,
-      from: message.from || emailDefaults.from,
+    const url = `${import.meta.env.VITE_SUPABASE_URL?.trim()}/functions/v1/send-email`
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || "",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || ""}`,
+      },
+      body: JSON.stringify({
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        from: message.from || emailDefaults.from,
+        replyTo: message.replyTo || emailDefaults.replyTo,
+      }),
     })
 
-    // For development, we'll use the window.open approach for mailto links
-    // In production, this should be replaced with an actual API call
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}))
+      return { success: false, error: body.error || `HTTP ${response.status}` }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[Email Service] Failed to send email:", error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }

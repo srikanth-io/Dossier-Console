@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { useEffect, useState, useCallback } from "react"
+import { NavLink, useNavigate, useParams } from "react-router-dom"
 
 import { ROUTES, icons, messages } from "@/constants"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,8 +13,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { usePages } from "@/store/pages"
 import { useAuth } from "@/store/auth"
+import { useProjects } from "@/store/projects"
 import { getStoredAvatar, onAvatarChanged } from "@/lib/avatar"
 import { cn } from "@/lib/utils"
 
@@ -31,29 +31,6 @@ type NavItem = {
   icon: keyof typeof icons
   end?: boolean
 }
-
-type NavSection = {
-  label: string
-  items: NavItem[]
-}
-
-const navSections: NavSection[] = [
-  {
-    label: messages.nav.sections.general,
-    items: [
-      { label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true },
-      { label: messages.nav.items.templates, to: ROUTES.templates, icon: "fileCode" },
-    ],
-  },
-  {
-    label: messages.nav.sections.content,
-    items: [
-      { label: messages.nav.items.projects, to: ROUTES.projects, icon: "dossiers" },
-      { label: messages.nav.items.files, to: ROUTES.documents, icon: "openFile" },
-      { label: messages.nav.items.notepad, to: ROUTES.notepad, icon: "file" },
-    ],
-  },
-]
 
 function NavItem({
   item,
@@ -117,8 +94,173 @@ function NavItem({
   return <li>{link}</li>
 }
 
+function ProjectTree({ collapsed }: { collapsed: boolean }) {
+  const { id: activeProjectId } = useParams<{ id: string }>()
+  const { projects } = useProjects()
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const navigate = useNavigate()
+
+  // Auto-expand the active project
+  useEffect(() => {
+    if (activeProjectId) {
+      setExpanded((prev) => new Set([...prev, activeProjectId]))
+    }
+  }, [activeProjectId])
+
+  const toggleExpand = useCallback((projectId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }, [])
+
+  if (collapsed) {
+    return (
+      <li>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <NavLink
+              to={ROUTES.projects}
+              end
+              className={({ isActive }) =>
+                cn(
+                  "flex h-9 items-center justify-center rounded-lg px-0 transition-all duration-150 hover:bg-sidebar-accent",
+                  isActive
+                    ? "bg-primary-soft/70 font-semibold text-primary dark:bg-primary/15 dark:text-zinc-300"
+                    : "text-sidebar-foreground/75"
+                )
+              }
+            >
+              <icons.dossiers className="size-4 shrink-0" />
+            </NavLink>
+          </TooltipTrigger>
+          <TooltipContent side="right">Projects</TooltipContent>
+        </Tooltip>
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <NavLink
+        to={ROUTES.projects}
+        end
+        className={({ isActive }) =>
+          cn(
+            "relative flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            isActive
+              ? "bg-primary-soft/70 font-semibold text-primary dark:bg-primary/15 dark:text-zinc-300"
+              : "text-sidebar-foreground/75"
+          )
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-foreground to-muted-foreground transition-opacity duration-150",
+                isActive ? "opacity-100" : "opacity-0"
+              )}
+            />
+            <icons.dossiers className={cn(
+              "size-4 shrink-0 transition-colors",
+              isActive ? "text-primary dark:text-zinc-300" : "text-sidebar-foreground/60"
+            )} />
+            <span className="flex-1">Projects</span>
+          </>
+        )}
+      </NavLink>
+
+      {projects.length > 0 && (
+        <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-sidebar-border/50 pl-3">
+          {projects.slice(0, 10).map((project) => {
+            const isExpanded = expanded.has(project.id)
+            const isProjectActive = activeProjectId === project.id
+            const ProjectIcon = icons[project.icon]
+
+            return (
+              <li key={project.id}>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(project.id)}
+                    className="flex size-5 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
+                  >
+                    <icons.chevronRight
+                      className={cn(
+                        "size-3 transition-transform duration-150",
+                        isExpanded && "rotate-90"
+                      )}
+                    />
+                  </button>
+                  <NavLink
+                    to={`${ROUTES.projects}/${project.id}`}
+                    className={cn(
+                      "flex flex-1 items-center gap-2 rounded-md px-2 py-1 text-[13px] transition-colors hover:bg-sidebar-accent",
+                      isProjectActive
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-sidebar-foreground/70"
+                    )}
+                  >
+                    <ProjectIcon className="size-3.5 shrink-0" />
+                    <span className="truncate">{project.name}</span>
+                  </NavLink>
+                </div>
+
+                {isExpanded && (
+                  <ul className="ml-4 space-y-0.5 border-l border-sidebar-border/50 pl-3">
+                    {[
+                      { label: messages.nav.projectTree.documents, icon: "fileCode" as const, path: `${ROUTES.projects}/${project.id}/documents` },
+                      { label: messages.nav.projectTree.notes, icon: "file" as const, path: `${ROUTES.projects}/${project.id}/notes` },
+                      { label: messages.nav.projectTree.timesheet, icon: "pendingReviews" as const, path: `${ROUTES.projects}/${project.id}/timesheet` },
+                    ].map((sub) => (
+                      <li key={sub.path}>
+                        <NavLink
+                          to={sub.path}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors hover:bg-sidebar-accent",
+                              isActive
+                                ? "bg-primary/10 font-medium text-primary"
+                                : "text-sidebar-foreground/60"
+                            )
+                          }
+                        >
+                          {(() => {
+                            const SubIcon = icons[sub.icon]
+                            return <SubIcon className="size-3 shrink-0" />
+                          })()}
+                          <span>{sub.label}</span>
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <button
+        type="button"
+        onClick={() => navigate(ROUTES.projects)}
+        className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground/75"
+      >
+        <icons.plus className="size-3" />
+        {messages.nav.projectTree.newProject}
+      </button>
+    </li>
+  )
+}
+
 function UserCard({ collapsed }: { collapsed: boolean }) {
-  const { workspaces, currentWorkspace, setCurrentWorkspace } = usePages()
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -142,10 +284,10 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
             className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold"
             onClick={() => setOpen(true)}
           >
-            {currentWorkspace.icon}
+            {displayInitials}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">{currentWorkspace.name}</TooltipContent>
+        <TooltipContent side="right">{displayName}</TooltipContent>
       </Tooltip>
     )
   }
@@ -166,54 +308,17 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
               {displayName}
             </span>
             <span className="truncate text-xs text-sidebar-foreground/60">
-              {currentWorkspace.name}
+              {user?.email || messages.layout.userEmail}
             </span>
           </span>
           <icons.chevronDown className="size-3.5 shrink-0 text-sidebar-foreground/40" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" side="top" sideOffset={4} className="w-64 p-1.5">
-        <p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          Workspace
-        </p>
-        {workspaces.map((ws) => (
-          <button
-            key={ws.id}
-            type="button"
-            onClick={() => {
-              setCurrentWorkspace(ws.id)
-              setOpen(false)
-              navigate(ROUTES.notepad)
-            }}
-            className={cn(
-              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent",
-              ws.id === currentWorkspace.id && "bg-primary/5"
-            )}
-          >
-            <span className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
-              ws.id === currentWorkspace.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            )}>
-              {ws.icon}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className={cn(
-                "text-sm font-medium truncate",
-                ws.id === currentWorkspace.id && "text-primary"
-              )}>
-                {ws.name}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {ws.pageCount} pages
-              </span>
-            </span>
-            {ws.id === currentWorkspace.id && (
-              <icons.check className="size-3.5 shrink-0 text-primary" />
-            )}
-          </button>
-        ))}
+        <div className="px-2 py-1.5">
+          <p className="text-sm font-medium">{displayName}</p>
+          <p className="text-xs text-muted-foreground">{user?.email}</p>
+        </div>
         <div className="mt-1 border-t border-border/50 pt-1">
           <button
             type="button"
@@ -234,9 +339,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 
 type AppSidebarProps = {
   className?: string
-  /** Renders as a floating panel (no sticky column, no right border). */
   floating?: boolean
-  /** Initial collapsed state — used to force collapsed mode on tablet. */
   defaultCollapsed?: boolean
 }
 
@@ -278,23 +381,38 @@ export function AppSidebar({ className, floating = false, defaultCollapsed = fal
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {navSections.map((section, sIdx) => (
-          <div key={section.label} className={cn(sIdx > 0 && "mt-4")}>
-            {!collapsed && (
-              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                {section.label}
-              </p>
-            )}
-            {collapsed && sIdx > 0 && (
-              <div className="mx-auto my-2 h-px w-4 bg-sidebar-border/50" />
-            )}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavItem key={item.to + item.label} item={item} collapsed={collapsed} />
-              ))}
-            </ul>
-          </div>
-        ))}
+        {!collapsed && (
+          <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+            {messages.nav.sections.main}
+          </p>
+        )}
+        <ul className="space-y-0.5">
+          <NavItem
+            item={{ label: messages.nav.items.dashboard, to: ROUTES.dashboard, icon: "dashboard", end: true }}
+            collapsed={collapsed}
+          />
+          <ProjectTree collapsed={collapsed} />
+        </ul>
+
+        {!collapsed && (
+          <>
+            <div className="mx-auto my-3 h-px w-4 bg-sidebar-border/50" />
+            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+              {messages.nav.sections.work}
+            </p>
+          </>
+        )}
+        {collapsed && <div className="mx-auto my-2 h-px w-4 bg-sidebar-border/50" />}
+        <ul className="space-y-0.5">
+          <NavItem
+            item={{ label: messages.nav.items.manager, to: ROUTES.resumes, icon: "openFile" }}
+            collapsed={collapsed}
+          />
+          <NavItem
+            item={{ label: messages.nav.items.builder, to: ROUTES.resumeBuilder, icon: "fileCode" }}
+            collapsed={collapsed}
+          />
+        </ul>
       </nav>
 
       <div className="p-3">

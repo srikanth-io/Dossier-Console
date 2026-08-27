@@ -119,7 +119,23 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
+# Local storage buckets
+[storage.buckets.evidence]
+public = false
+file_size_limit = "50MiB"
+allowed_mime_types = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/html",
+  "application/json"
+]
+
 # [storage.buckets.images]
 # public = false
 # file_size_limit = "50MiB"

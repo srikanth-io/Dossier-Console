@@ -35,10 +35,9 @@ type GroupedResults = {
 
 const staticResults: SearchResult[] = [
   { id: "page-dashboard", label: messages.nav.items.dashboard, group: "pages", icon: icons.dashboard, to: ROUTES.dashboard },
-  { id: "page-templates", label: messages.nav.items.templates, group: "pages", icon: icons.fileCode, to: ROUTES.templates },
   { id: "page-projects", label: messages.nav.items.projects, group: "pages", icon: icons.dossiers, to: ROUTES.projects },
-  { id: "page-files", label: messages.nav.items.files, group: "pages", icon: icons.openFile, to: ROUTES.documents },
-  { id: "page-notepad", label: messages.nav.items.notepad, group: "pages", icon: icons.file, to: ROUTES.notepad },
+  { id: "page-resumes", label: "Resume Manager", group: "resumes", icon: icons.openFile, to: ROUTES.resumes },
+  { id: "page-builder", label: "Resume Builder", group: "resumes", icon: icons.fileCode, to: ROUTES.resumeBuilder },
 ]
 
 const settingsResults: SearchResult[] = [
@@ -123,7 +122,7 @@ export function GlobalSearch({
         hint: doc.category,
         group: "documents",
         icon: icons.openFile,
-        to: ROUTES.documents,
+        to: doc.projectId ? `/app/projects/${doc.projectId}/documents/${doc.id}` : ROUTES.resumes,
       })
     }
 
@@ -134,7 +133,7 @@ export function GlobalSearch({
         label: entry.title || commonMessages.none,
         group: "notes",
         icon: icons.file,
-        to: `${ROUTES.notepad}/${entry.id}`,
+        to: entry.projectId ? `/app/projects/${entry.projectId}/notes/${entry.id}` : ROUTES.projects,
       })
     }
 
@@ -145,7 +144,7 @@ export function GlobalSearch({
         hint: resume.type,
         group: "resumes",
         icon: icons.fileCode,
-        to: ROUTES.dossiers,
+        to: ROUTES.resumes,
       })
     }
 

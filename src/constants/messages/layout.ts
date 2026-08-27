@@ -4,15 +4,21 @@ export const nav = {
   brand: "Dossier",
   console: "Admin Console",
   sections: {
-    general: "General",
-    content: "Content",
+    main: "Main",
+    work: "Work",
   },
   items: {
     dashboard: "Dashboard",
-    templates: "Templates",
     projects: "Projects",
-    files: "Files",
-    notepad: "Notepad",
+    resumes: "Resumes",
+    manager: "Manager",
+    builder: "Builder",
+  },
+  projectTree: {
+    documents: "Documents",
+    notes: "Notes",
+    timesheet: "Timesheet",
+    newProject: "New Project",
   },
 } as const
 

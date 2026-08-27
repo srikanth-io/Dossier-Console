@@ -1,6 +1,7 @@
 import { assertAsync } from "@/lib/async"
 import { errorCodes, errorMessages } from "@/constants/messages/errors"
 import { AppError } from "@/lib/errors"
+import { getSupabase } from "@/lib/supabase"
 
 export type UploadProgress = {
   percent: number
@@ -28,10 +29,6 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 function isPdf(name: string, type: string): boolean {
   return type === "application/pdf" || name.toLowerCase().endsWith(".pdf")
 }
@@ -54,29 +51,109 @@ export function validateResume(file: File): void {
   }
 }
 
+export interface UploadResult {
+  path: string
+  url: string
+  size: number
+  type: string
+}
+
 export async function uploadResume(
   file: File,
   onProgress: (progress: UploadProgress) => void
-): Promise<void> {
+): Promise<UploadResult> {
   return assertAsync(async () => {
     validateResume(file)
 
-    const steps = 40
-    const stepMs = 60
-    let failures = 0
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      throw new AppError(errorCodes.unauthorized, errorMessages.unauthorized)
+    }
 
-    for (let step = 1; step <= steps; step += 1) {
-      await delay(stepMs)
-      const percent = Math.round((step / steps) * 100)
+    // Simulate progress while the real upload happens
+    const progressInterval = setInterval(() => {
       onProgress({
-        percent,
-        bytesLoaded: Math.round((percent / 100) * file.size),
+        percent: Math.min(90, Math.round((file.size / MAX_UPLOAD_BYTES) * 50)),
+        bytesLoaded: Math.round(file.size * 0.5),
         bytesTotal: file.size,
       })
-      if (Math.random() < 0.08) failures += 1
-      if (failures > 1) {
+    }, 200)
+
+    try {
+      const filePath = `resumes/${session.user.id}/${crypto.randomUUID()}/${file.name}`
+      const { data, error } = await supabase.storage
+        .from("evidence")
+        .upload(filePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        })
+
+      clearInterval(progressInterval)
+
+      if (error) {
         throw new AppError(errorCodes.network, errorMessages.uploadFailed)
       }
+
+      onProgress({ percent: 100, bytesLoaded: file.size, bytesTotal: file.size })
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("evidence").getPublicUrl(data.path)
+
+      return { path: data.path, url: publicUrl, size: file.size, type: file.type }
+    } catch (err) {
+      clearInterval(progressInterval)
+      throw err
     }
   }, "uploadResume")
+}
+
+export async function uploadEvidence(
+  findingId: string,
+  file: File,
+  onProgress: (progress: UploadProgress) => void
+): Promise<UploadResult> {
+  return assertAsync(async () => {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      throw new AppError(errorCodes.unauthorized, errorMessages.unauthorized)
+    }
+
+    const progressInterval = setInterval(() => {
+      onProgress({
+        percent: Math.min(90, Math.round((file.size / MAX_UPLOAD_BYTES) * 50)),
+        bytesLoaded: Math.round(file.size * 0.5),
+        bytesTotal: file.size,
+      })
+    }, 200)
+
+    try {
+      const filePath = `evidence/${session.user.id}/${findingId}/${crypto.randomUUID()}/${file.name}`
+      const { data, error } = await supabase.storage
+        .from("evidence")
+        .upload(filePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        })
+
+      clearInterval(progressInterval)
+
+      if (error) {
+        throw new AppError(errorCodes.network, errorMessages.uploadFailed)
+      }
+
+      onProgress({ percent: 100, bytesLoaded: file.size, bytesTotal: file.size })
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("evidence").getPublicUrl(data.path)
+
+      return { path: data.path, url: publicUrl, size: file.size, type: file.type }
+    } catch (err) {
+      clearInterval(progressInterval)
+      throw err
+    }
+  }, "uploadEvidence")
 }

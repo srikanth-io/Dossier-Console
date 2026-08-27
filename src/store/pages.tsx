@@ -26,6 +26,7 @@ export type PageEntry = {
   parentId: string | null
   children: string[]
   workspaceId: string
+  projectId: string | null
   createdAt: string
   updatedAt: string
   favorite: boolean
@@ -46,6 +47,7 @@ type PageRow = {
   id: string
   user_id: string
   workspace_id: string
+  project_id: string | null
   parent_id: string | null
   title: string
   icon: string
@@ -66,6 +68,7 @@ function rowToPage(row: PageRow): PageEntry {
     parentId: row.parent_id,
     children: [],
     workspaceId: row.workspace_id,
+    projectId: row.project_id,
     createdAt: formatRelative(row.created_at),
     updatedAt: formatRelative(row.updated_at),
     favorite: row.favorite,
@@ -92,10 +95,11 @@ type PagesValue = {
   loading: boolean
   pages: PageEntry[]
   rootPages: PageEntry[]
+  getPagesByProject: (projectId: string) => PageEntry[]
   getChildPages: (parentId: string) => PageEntry[]
   getPage: (id: string) => PageEntry | undefined
   updatePage: (id: string, updates: Partial<Pick<PageEntry, "title" | "content" | "icon" | "favorite" | "parentId">>) => void
-  addPage: (title: string, options?: { parentId?: string | null; kind?: PageKind }) => PageEntry
+  addPage: (title: string, options?: { parentId?: string | null; kind?: PageKind; projectId?: string }) => PageEntry
   deletePage: (id: string) => void
 }
 
@@ -192,6 +196,11 @@ export function PagesProvider({ children }: { children: ReactNode }) {
     [pages]
   )
 
+  const getPagesByProject = useCallback(
+    (projectId: string) => allPages.filter((p) => p.projectId === projectId),
+    [allPages]
+  )
+
   const getChildPages = useCallback(
     (parentId: string) => pages.filter((p) => p.parentId === parentId),
     [pages]
@@ -231,9 +240,10 @@ export function PagesProvider({ children }: { children: ReactNode }) {
   )
 
   const addPage = useCallback(
-    (title: string, options?: { parentId?: string | null; kind?: PageKind }) => {
+    (title: string, options?: { parentId?: string | null; kind?: PageKind; projectId?: string }) => {
       const parentId = options?.parentId ?? null
       const kind: PageKind = options?.kind ?? "note"
+      const projectId = options?.projectId ?? null
       const now = new Date().toISOString()
       const newPage: PageEntry = {
         id: crypto.randomUUID(),
@@ -243,6 +253,7 @@ export function PagesProvider({ children }: { children: ReactNode }) {
         parentId,
         children: [],
         workspaceId: currentWorkspaceId,
+        projectId,
         createdAt: formatRelative(now),
         updatedAt: formatRelative(now),
         favorite: false,
@@ -261,6 +272,7 @@ export function PagesProvider({ children }: { children: ReactNode }) {
         const row = {
           id: newPage.id,
           workspace_id: newPage.workspaceId,
+          project_id: projectId,
           parent_id: parentId,
           title: newPage.title,
           icon: newPage.icon,
@@ -341,13 +353,14 @@ export function PagesProvider({ children }: { children: ReactNode }) {
       loading,
       pages,
       rootPages,
+      getPagesByProject,
       getChildPages,
       getPage,
       updatePage,
       addPage,
       deletePage,
     }),
-    [workspacesWithCounts, currentWorkspace, setCurrentWorkspace, createWorkspace, renameWorkspace, deleteWorkspace, loading, pages, rootPages, getChildPages, getPage, updatePage, addPage, deletePage]
+    [workspacesWithCounts, currentWorkspace, setCurrentWorkspace, createWorkspace, renameWorkspace, deleteWorkspace, loading, pages, rootPages, getPagesByProject, getChildPages, getPage, updatePage, addPage, deletePage]
   )
 
   return <PagesContext.Provider value={value}>{children}</PagesContext.Provider>

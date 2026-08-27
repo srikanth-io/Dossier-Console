@@ -14,19 +14,10 @@ import { ROUTES } from "@/constants"
 import { AppLayout } from "@/layouts/AppLayout"
 import { Auth } from "@/pages/Auth"
 import { Dashboard } from "@/pages/Dashboard"
-import { Dossiers } from "@/pages/Dossiers"
 import { ForgotPassword } from "@/pages/ForgotPassword"
 import { Landing } from "@/pages/Landing"
 import { MfaVerify } from "@/pages/MfaVerify"
-import { Notepad } from "@/pages/Notepad"
-import { NotepadEditor } from "@/pages/NotepadEditor"
-import { PageDetail } from "@/pages/PageDetail"
-import { Pages } from "@/pages/Pages"
-import { ProjectDetail } from "@/pages/ProjectDetail"
-import { Projects } from "@/pages/Projects"
 import { Settings } from "@/pages/Settings"
-import { Templates } from "@/pages/Templates"
-import { DocumentLibrary } from "@/pages/studio/DocumentLibrary"
 import { AuthProvider } from "@/store/auth"
 import { ConnectivityWatcher } from "@/components/common/connectivity-watcher"
 import { ResumeLibraryProvider } from "@/store/resumes"
@@ -35,6 +26,13 @@ import { NotificationsProvider } from "@/store/notifications"
 import { PagesProvider } from "@/store/pages"
 import { ProjectsProvider } from "@/store/projects"
 import { ProjectFoldersProvider } from "@/store/project-folders"
+
+import { ProjectList } from "@/pages/projects/ProjectList"
+import { ProjectOverview } from "@/pages/projects/ProjectOverview"
+import { ProjectDocuments } from "@/pages/projects/ProjectDocuments"
+import { ProjectNotes } from "@/pages/projects/ProjectNotes"
+import { ProjectTimesheet } from "@/pages/projects/ProjectTimesheet"
+import { ResumeManager } from "@/pages/resumes/ResumeManager"
 
 const ResumeCreator = lazy(() =>
   import("@/pages/ResumeCreator").then((module) => ({
@@ -45,6 +43,12 @@ const ResumeCreator = lazy(() =>
 const DocumentEditor = lazy(() =>
   import("@/pages/studio/DocumentEditor").then((module) => ({
     default: module.DocumentEditor,
+  }))
+)
+
+const NotepadEditor = lazy(() =>
+  import("@/pages/NotepadEditor").then((module) => ({
+    default: module.NotepadEditor,
   }))
 )
 
@@ -66,7 +70,7 @@ function App() {
               <NotificationsProvider>
                 <PagesProvider>
                   <ProjectsProvider>
-                    <ProjectFoldersProvider>
+                  <ProjectFoldersProvider>
                   <Routes>
                     <Route
                       path={ROUTES.landing}
@@ -122,33 +126,52 @@ function App() {
                     />
                   <Route path={ROUTES.app} element={<RequireAuth><AppLayout /></RequireAuth>}>
                       <Route index element={<Dashboard />} />
-                      <Route path="pages" element={<Pages />} />
-                      <Route path="pages/:id" element={<PageDetail />} />
-                      <Route path="projects" element={<Projects />} />
-                      <Route path="projects/:id" element={<ProjectDetail />} />
-                      <Route path="documents" element={<Dossiers />} />
-                      <Route path="dossiers" element={<Navigate to={ROUTES.documents} replace />} />
-                      <Route path="dossiers/templates" element={<Templates />} />
+
+                      {/* Projects */}
+                      <Route path="projects" element={<ProjectList />} />
+                      <Route path="projects/:id" element={<ProjectOverview />} />
+                      <Route path="projects/:id/documents" element={<ProjectDocuments />} />
                       <Route
-                        path="dossiers/creator"
-                        element={
-                          <Suspense fallback={null}>
-                            <ResumeCreator />
-                          </Suspense>
-                        }
-                      />
-                      <Route path="templates" element={<DocumentLibrary />} />
-                      <Route
-                        path="templates/editor"
+                        path="projects/:id/documents/:docId"
                         element={
                           <Suspense fallback={null}>
                             <DocumentEditor />
                           </Suspense>
                         }
                       />
+                      <Route path="projects/:id/timesheet" element={<ProjectTimesheet />} />
+                      <Route path="projects/:id/notes" element={<ProjectNotes />} />
+                      <Route
+                        path="projects/:id/notes/:noteId"
+                        element={
+                          <Suspense fallback={null}>
+                            <NotepadEditor />
+                          </Suspense>
+                        }
+                      />
+
+                      {/* Resumes */}
+                      <Route path="resumes" element={<ResumeManager />} />
+                      <Route
+                        path="resumes/builder"
+                        element={
+                          <Suspense fallback={null}>
+                            <ResumeCreator />
+                          </Suspense>
+                        }
+                      />
+                      <Route
+                        path="resumes/builder/:id"
+                        element={
+                          <Suspense fallback={null}>
+                            <ResumeCreator />
+                          </Suspense>
+                        }
+                      />
+
+                      {/* Settings */}
                       <Route path="settings" element={<Settings />} />
-                      <Route path="notepad" element={<Notepad />} />
-                      <Route path="notepad/:id" element={<NotepadEditor />} />
+
                       <Route
                         path="*"
                         element={<Navigate to={ROUTES.dashboard} replace />}

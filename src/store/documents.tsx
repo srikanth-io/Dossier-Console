@@ -29,6 +29,7 @@ function nowIso(): string {
 type DocumentRow = {
   id: string
   user_id: string
+  project_id: string | null
   name: string
   description: string
   category: string
@@ -52,7 +53,8 @@ interface DocumentLibraryValue {
   documents: LibraryDocument[]
   loading: boolean
   getDocument: (id: string) => LibraryDocument | undefined
-  saveDocument: (doc: DocDocument) => LibraryDocument
+  getDocumentsByProject: (projectId: string) => LibraryDocument[]
+  saveDocument: (doc: DocDocument, projectId?: string) => LibraryDocument
   updateMeta: (
     id: string,
     patch: Partial<Pick<DocDocument, "name" | "description" | "category" | "author" | "version" | "status">>
@@ -76,6 +78,7 @@ const DocumentLibraryContext = createContext<DocumentLibraryValue | null>(null)
 function documentRow(record: LibraryDocument) {
   return {
     id: record.id,
+    project_id: record.projectId ?? null,
     name: record.name,
     description: record.description,
     category: record.category,
@@ -131,7 +134,10 @@ export function DocumentLibraryProvider({
       }
 
       if (!cancelled) {
-        setDocuments(((docs.data ?? []) as DocumentRow[]).map((row) => row.data))
+        setDocuments(((docs.data ?? []) as DocumentRow[]).map((row) => ({
+          ...row.data,
+          projectId: row.project_id ?? undefined,
+        })))
         setComponents(
           ((comps.data ?? []) as ComponentRow[]).map((row) => ({
             id: row.id,
@@ -155,11 +161,17 @@ export function DocumentLibraryProvider({
     [documents]
   )
 
+  const getDocumentsByProject = useCallback(
+    (projectId: string) => documents.filter((doc) => doc.projectId === projectId),
+    [documents]
+  )
+
   const saveDocument = useCallback(
-    (doc: DocDocument): LibraryDocument => {
+    (doc: DocDocument, projectId?: string): LibraryDocument => {
       const existing = documents.find((item) => item.id === doc.id)
       const record: LibraryDocument = {
         ...doc,
+        projectId: projectId ?? existing?.projectId,
         updatedAt: nowIso(),
         versions: existing?.versions ?? [],
       }
@@ -336,6 +348,7 @@ export function DocumentLibraryProvider({
       documents,
       loading,
       getDocument,
+      getDocumentsByProject,
       saveDocument,
       updateMeta,
       duplicateDocument,
@@ -350,6 +363,7 @@ export function DocumentLibraryProvider({
       documents,
       loading,
       getDocument,
+      getDocumentsByProject,
       saveDocument,
       updateMeta,
       duplicateDocument,

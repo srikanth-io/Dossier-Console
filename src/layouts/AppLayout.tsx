@@ -42,7 +42,8 @@ export function AppLayout() {
   const closeNav = () => setNavState("closed")
 
   const isFullscreen =
-    pathname === ROUTES.resumeCreator || pathname === ROUTES.studioEditor
+    /\/projects\/[^/]+\/documents\/[^/]+$/.test(pathname) ||
+    /\/resumes\/builder(\/[^/]+)?$/.test(pathname)
 
   // Close the floating navigation when the route changes or Escape is pressed.
   useEffect(() => {

@@ -108,6 +108,7 @@ export interface VersionSnapshot {
 
 export interface LibraryDocument extends DocDocument {
   versions: VersionSnapshot[]
+  projectId?: string
 }
 
 export interface RenderContext {
