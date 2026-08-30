@@ -1,8 +1,6 @@
 import { useParams, Link } from "react-router-dom"
 
-import { PageHeader } from "@/components/common/page-header"
 import { EmptyState } from "@/components/common/empty-state"
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -15,14 +13,6 @@ import { useProjects } from "@/store/projects"
 import { useDocumentLibrary } from "@/store/documents"
 import { usePages } from "@/store/pages"
 
-const statusVariant: Record<string, "success" | "warning" | "info" | "default" | "destructive"> = {
-  active: "success",
-  completed: "info",
-  onHold: "warning",
-  cancelled: "destructive",
-  planning: "default",
-}
-
 export function ProjectOverview() {
   const { id } = useParams<{ id: string }>()
   const { getProject } = useProjects()
@@ -33,13 +23,11 @@ export function ProjectOverview() {
 
   if (!project) {
     return (
-      <div className="space-y-6">
-        <EmptyState
-          icon={<icons.dossiers />}
-          title="Project not found"
-          description="This project may have been deleted."
-        />
-      </div>
+      <EmptyState
+        icon={<icons.dossiers />}
+        title={messages.projects.detail.notFoundTitle}
+        description={messages.projects.detail.notFoundDescription}
+      />
     )
   }
 
@@ -52,22 +40,11 @@ export function ProjectOverview() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={project.name}
-        description={project.description || `Client: ${project.client}`}
-        actions={
-          <div className="flex gap-2">
-            <Badge variant={statusVariant[project.status]}>
-              {messages.projects.status[project.status]}
-            </Badge>
-          </div>
-        }
-      />
-
+      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Progress</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{messages.projects.detail.progress}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
@@ -82,7 +59,7 @@ export function ProjectOverview() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Hours</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{messages.projects.detail.totalHours}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
@@ -100,7 +77,7 @@ export function ProjectOverview() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Team</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{messages.projects.detail.teamSize}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
@@ -111,6 +88,7 @@ export function ProjectOverview() {
         </Card>
       </div>
 
+      {/* Quick Access */}
       <h3 className="text-lg font-semibold">Quick Access</h3>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -160,19 +138,25 @@ export function ProjectOverview() {
         </Link>
       </div>
 
-      {(project.startDate || project.dueDate) && (
+      {/* Project Info */}
+      {(project.description || project.startDate || project.dueDate) && (
         <Card>
-          <CardContent className="flex items-center gap-6 p-4 text-sm">
-            {project.startDate && (
-              <span className="text-muted-foreground">
-                Start: <span className="font-medium text-foreground">{project.startDate}</span>
-              </span>
+          <CardContent className="space-y-3 p-4">
+            {project.description && (
+              <p className="text-sm text-muted-foreground">{project.description}</p>
             )}
-            {project.dueDate && (
-              <span className="text-muted-foreground">
-                Due: <span className="font-medium text-foreground">{project.dueDate}</span>
-              </span>
-            )}
+            <div className="flex items-center gap-6 text-sm">
+              {project.startDate && (
+                <span className="text-muted-foreground">
+                  {messages.projects.detail.startedOn}: <span className="font-medium text-foreground">{project.startDate}</span>
+                </span>
+              )}
+              {project.dueDate && (
+                <span className="text-muted-foreground">
+                  {messages.projects.card.dueDate}: <span className="font-medium text-foreground">{project.dueDate}</span>
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

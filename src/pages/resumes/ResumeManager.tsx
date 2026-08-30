@@ -141,7 +141,7 @@ export function ResumeManager() {
     const template = resumeTemplates.find((t) => t.id === resumeTemplateId)
     if (!template) return
 
-    addResume({
+    const newResume = addResume({
       name: resumeName.trim(),
       type: "TEX",
       size: "New",
@@ -153,7 +153,7 @@ export function ResumeManager() {
     setResumeSetupOpen(false)
     setResumeName("")
     toast("Resume created")
-    navigate(ROUTES.resumeBuilder)
+    navigate(`${ROUTES.resumeBuilder}/${newResume.id}`)
   }, [resumeName, resumeTemplateId, addResume, navigate])
 
   return (
@@ -270,7 +270,7 @@ export function ResumeManager() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(ROUTES.resumeBuilder)}>
+                        <DropdownMenuItem onClick={() => navigate(`${ROUTES.resumeBuilder}/${resume.id}`)}>
                           <icons.pencil className="size-4" />
                           Edit
                         </DropdownMenuItem>

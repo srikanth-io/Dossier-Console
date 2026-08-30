@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { commonMessages, ROUTES, icons, messages } from "@/constants"
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/store/projects"
-import { useProjectFolders } from "@/store/project-folders"
 import { useDocumentLibrary } from "@/store/documents"
 import { usePages } from "@/store/pages"
 import { useResumeLibrary } from "@/store/resumes"
@@ -55,7 +54,6 @@ const settingsResults: SearchResult[] = [
 const GROUP_ORDER = [
   "pages",
   "projects",
-  "folders",
   "documents",
   "notes",
   "resumes",
@@ -71,7 +69,6 @@ export function GlobalSearch({
 }) {
   const navigate = useNavigate()
   const { projects } = useProjects()
-  const { getProjectFolders } = useProjectFolders()
   const { documents } = useDocumentLibrary()
   const { pages } = usePages()
   const { resumes } = useResumeLibrary()
@@ -99,20 +96,6 @@ export function GlobalSearch({
         icon: icons.dossiers,
         to: `/app/projects/${project.id}`,
       })
-    }
-
-    for (const project of projects) {
-      for (const folder of getProjectFolders(project.id)) {
-        results.push({
-          id: `folder-${folder.id}`,
-          label: folder.name,
-          hint: project.name,
-          group: "folders",
-          icon: icons.openFile,
-          to: `/app/projects/${project.id}`,
-          state: { folderId: folder.id },
-        })
-      }
     }
 
     for (const doc of documents) {
@@ -149,7 +132,7 @@ export function GlobalSearch({
     }
 
     return results
-  }, [projects, getProjectFolders, documents, pages, resumes])
+  }, [projects, documents, pages, resumes])
 
   const grouped = useMemo<GroupedResults[]>(() => {
     const q = query.trim().toLowerCase()

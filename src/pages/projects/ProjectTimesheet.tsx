@@ -1,14 +1,12 @@
 import { useCallback, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 
-import { PageHeader } from "@/components/common/page-header"
 import { DateField } from "@/components/common/date-field"
 import { EmptyState } from "@/components/common/empty-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -24,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/common/time-picker"
 import { icons } from "@/constants"
+import { messages } from "@/constants"
 import { taskTypes } from "@/data/projects"
 import { toast } from "sonner"
 import { useProjects, type TimeEntry } from "@/store/projects"
@@ -47,14 +46,12 @@ function recalcHours(entry: TimeEntry): TimeEntry {
 
 export function ProjectTimesheet() {
   const { id: projectId } = useParams<{ id: string }>()
-  const { getProject, getTimeEntries, upsertTimeEntry } =
-    useProjects()
+  const { getProject, getTimeEntries, upsertTimeEntry, removeTimeEntry } = useProjects()
 
   const project = getProject(projectId ?? "")
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [remarks, setRemarks] = useState("")
-  const [dailyEntries, setDailyEntries] = useState<TimeEntry[]>([])
 
   const dateKey = toDateKey(selectedDate)
 
@@ -69,9 +66,10 @@ export function ProjectTimesheet() {
   )
 
   const addEntry = useCallback(() => {
+    if (!projectId) return
     const newEntry: TimeEntry = {
       id: crypto.randomUUID(),
-      projectId: projectId ?? "",
+      projectId,
       date: dateKey,
       task: taskTypes[0],
       description: "",
@@ -82,54 +80,49 @@ export function ProjectTimesheet() {
       status: "inProgress",
       priority: "medium",
     }
-    setDailyEntries((prev) => [...prev, recalcHours(newEntry)])
-  }, [projectId, dateKey])
+    upsertTimeEntry(recalcHours(newEntry))
+  }, [projectId, dateKey, upsertTimeEntry])
 
   const updateEntry = useCallback((id: string, patch: Partial<TimeEntry>) => {
-    setDailyEntries((prev) =>
-      prev.map((e) => (e.id === id ? recalcHours({ ...e, ...patch }) : e))
-    )
-  }, [])
+    const existing = dayEntries.find((e) => e.id === id)
+    if (existing) {
+      upsertTimeEntry(recalcHours({ ...existing, ...patch }))
+    }
+  }, [dayEntries, upsertTimeEntry])
 
   const removeEntry = useCallback((id: string) => {
-    setDailyEntries((prev) => prev.filter((e) => e.id !== id))
-  }, [])
+    removeTimeEntry(id)
+  }, [removeTimeEntry])
 
   const saveDraft = useCallback(() => {
     if (!projectId) return
-    dailyEntries.forEach((entry) => {
+    dayEntries.forEach((entry) => {
       upsertTimeEntry({ ...entry, status: "inProgress" })
     })
-    toast("Draft saved")
-  }, [dailyEntries, upsertTimeEntry])
+    toast(messages.projects.timesheet.draftSavedToast)
+  }, [projectId, dayEntries, upsertTimeEntry])
 
   const submitDay = useCallback(() => {
     if (!projectId) return
-    dailyEntries.forEach((entry) => {
+    dayEntries.forEach((entry) => {
       upsertTimeEntry({ ...entry, status: "completed" })
     })
-    toast("Timesheet submitted")
-  }, [dailyEntries, upsertTimeEntry])
+    toast(messages.projects.timesheet.submitToast)
+  }, [projectId, dayEntries, upsertTimeEntry])
 
   if (!project) {
     return (
-      <div className="space-y-6">
-        <EmptyState
-          icon={<icons.dossiers />}
-          title="Project not found"
-          description="This project may have been deleted."
-        />
-      </div>
+      <EmptyState
+        icon={<icons.dossiers />}
+        title={messages.projects.detail.notFoundTitle}
+        description={messages.projects.detail.notFoundDescription}
+      />
     )
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${project.name} — Timesheet`}
-        description={`Track time for ${project.name}`}
-      />
-
+      {/* Toolbar */}
       <div className="flex items-center gap-4">
         <DateField
           value={selectedDate}
@@ -137,28 +130,22 @@ export function ProjectTimesheet() {
         />
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Total: <span className="font-semibold tabular-nums">{totalHours.toFixed(1)}h</span>
+            {messages.projects.timesheet.totalHours}:{" "}
+            <span className="font-semibold tabular-nums">{totalHours.toFixed(1)}h</span>
           </span>
           <Button variant="outline" size="sm" onClick={saveDraft}>
-            Save Draft
+            {messages.projects.timesheet.saveDraft}
           </Button>
           <Button size="sm" onClick={submitDay}>
-            Submit
+            {messages.projects.timesheet.submit}
           </Button>
         </div>
       </div>
 
+      {/* Daily Entries */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Daily Entries</CardTitle>
-          <CardDescription>
-            {selectedDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </CardDescription>
+          <CardTitle className="text-base">{messages.projects.timesheet.title}</CardTitle>
         </CardHeader>
         <CardContent>
           {dayEntries.length === 0 ? (
@@ -173,7 +160,7 @@ export function ProjectTimesheet() {
                   className="grid grid-cols-1 gap-3 rounded-lg border p-4 md:grid-cols-[1fr_1fr_1fr_auto_auto_auto_auto]"
                 >
                   <div>
-                    <Label className="text-xs">Task Type</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.task}</Label>
                     <Select
                       value={entry.task}
                       onValueChange={(v) => updateEntry(entry.id, { task: v })}
@@ -190,17 +177,17 @@ export function ProjectTimesheet() {
                   </div>
 
                   <div>
-                    <Label className="text-xs">Description</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.description}</Label>
                     <Input
                       value={entry.description}
                       onChange={(e) => updateEntry(entry.id, { description: e.target.value })}
-                      placeholder="What did you work on?"
+                      placeholder={messages.projects.detail.descriptionPlaceholder}
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <Label className="text-xs">Priority</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.priority}</Label>
                     <Select
                       value={entry.priority}
                       onValueChange={(v) => updateEntry(entry.id, { priority: v as TimeEntry["priority"] })}
@@ -209,15 +196,15 @@ export function ProjectTimesheet() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="high">{messages.projects.timesheet.high}</SelectItem>
+                        <SelectItem value="medium">{messages.projects.timesheet.medium}</SelectItem>
+                        <SelectItem value="low">{messages.projects.timesheet.low}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <Label className="text-xs">Start</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.startTime}</Label>
                     <TimePicker
                       value={entry.startTime}
                       onChange={(v) => updateEntry(entry.id, { startTime: v })}
@@ -225,7 +212,7 @@ export function ProjectTimesheet() {
                   </div>
 
                   <div>
-                    <Label className="text-xs">End</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.endTime}</Label>
                     <TimePicker
                       value={entry.endTime}
                       onChange={(v) => updateEntry(entry.id, { endTime: v })}
@@ -233,7 +220,7 @@ export function ProjectTimesheet() {
                   </div>
 
                   <div>
-                    <Label className="text-xs">Break (min)</Label>
+                    <Label className="text-xs">{messages.projects.timesheet.breakMinutes}</Label>
                     <Input
                       type="number"
                       value={entry.breakMinutes}
@@ -262,20 +249,21 @@ export function ProjectTimesheet() {
           )}
 
           <Button variant="outline" size="sm" className="mt-4" onClick={addEntry}>
-            <icons.plus className="size-4" /> Add Task
+            <icons.plus className="size-4" /> {messages.projects.timesheet.addTask}
           </Button>
         </CardContent>
       </Card>
 
+      {/* Remarks */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Remarks</CardTitle>
+          <CardTitle className="text-base">{messages.projects.timesheet.remarks}</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Any notes for this day..."
+            placeholder={messages.projects.detail.remarksPlaceholder}
             rows={3}
           />
         </CardContent>

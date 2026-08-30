@@ -26,17 +26,6 @@ export const ROUTES = {
   resumeBuilder: "/app/resumes/builder",
   resumeBuilderEdit: "/app/resumes/builder/:id",
   settings: "/app/settings",
-  // Legacy aliases (kept for backward compat with old pages)
-  documents: "/app/resumes",
-  templates: "/app/resumes",
-  studio: "/app/resumes",
-  studioEditor: "/app/resumes/builder",
-  dossiers: "/app/resumes",
-  resumeCreator: "/app/resumes/builder",
-  pages: "/app/projects",
-  pageDetail: "/app/projects",
-  notepad: "/app/projects",
-  notepadDetail: "/app/projects",
 } as const
 
 export type RouteName = keyof typeof ROUTES

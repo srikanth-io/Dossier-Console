@@ -31,7 +31,6 @@ export const layout = {
   searchGroups: {
     pages: "Pages",
     projects: "Projects",
-    folders: "Project folders",
     documents: "Documents",
     notes: "Notes",
     resumes: "Resumes",

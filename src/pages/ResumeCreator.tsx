@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
@@ -40,16 +40,16 @@ import { useResumeLibrary } from "@/store/resumes"
 
 export function ResumeCreator() {
   const navigate = useNavigate()
+  const { resumeId } = useParams<{ resumeId: string }>()
   const [searchParams] = useSearchParams()
-  const editId = searchParams.get("edit")
   const templateParam = searchParams.get("template")
   const nameParam = searchParams.get("name")
   const { resumes, addResume, updateResume } = useResumeLibrary()
   const isLg = useMediaQuery("(min-width: 1024px)")
 
   const editing = useMemo(
-    () => resumes.find((r) => r.id === editId) ?? null,
-    [resumes, editId]
+    () => resumes.find((r) => r.id === resumeId) ?? null,
+    [resumes, resumeId]
   )
 
   const [templateId, setTemplateId] = useState(
@@ -90,7 +90,7 @@ export function ResumeCreator() {
       setSource(resume.source)
       setFileName(resume.name)
       setSaved(false)
-      navigate(`${ROUTES.resumeCreator}?edit=${id}`, { replace: true })
+      navigate(`${ROUTES.resumeBuilder}/${id}`, { replace: true })
     },
     [resumes, navigate]
   )
@@ -104,20 +104,20 @@ export function ResumeCreator() {
   }, [editing])
 
   useEffect(() => {
-    if (!editId && templateParam) {
+    if (!resumeId && templateParam) {
       loadTemplate(templateParam)
     }
-    if (!editId && nameParam?.trim()) {
+    if (!resumeId && nameParam?.trim()) {
       const base = nameParam.trim().replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_")
       if (base) setFileName(`${base}.tex`)
     }
-  }, [editId, templateParam, nameParam, loadTemplate])
+  }, [resumeId, templateParam, nameParam, loadTemplate])
 
   useEffect(() => {
-    if (!editId && !templateParam && !templateId) {
+    if (!resumeId && !templateParam && !templateId) {
       loadTemplate(resumeTemplates[0]?.id ?? "")
     }
-  }, [editId, templateParam, templateId, loadTemplate])
+  }, [resumeId, templateParam, templateId, loadTemplate])
 
   const previewHtml = useMemo(() => renderLatex(source), [source])
 
@@ -270,7 +270,7 @@ export function ResumeCreator() {
           size="sm"
           className="h-8 px-2"
           aria-label={messages.resume.back}
-          onClick={() => navigate(ROUTES.documents)}
+          onClick={() => navigate(ROUTES.resumes)}
         >
           <icons.arrowLeft className="size-4" />
           <span className="hidden md:inline">{messages.resume.back}</span>

@@ -106,12 +106,12 @@ export function Dashboard() {
         actions={
           <>
             <Button asChild variant="outline">
-              <Link to={ROUTES.templates}>
+              <Link to={ROUTES.resumes}>
                 {messages.dashboard.actions.templates}
               </Link>
             </Button>
             <Button asChild variant="default">
-              <Link to={ROUTES.resumeCreator}>
+              <Link to={ROUTES.resumeBuilder}>
                 <icons.newDossier /> {messages.dashboard.newDossier}
               </Link>
             </Button>
@@ -247,7 +247,7 @@ export function Dashboard() {
             <p className="text-sm text-muted-foreground">{messages.dashboard.recent.description}</p>
           </div>
           <Button asChild variant="ghost" size="sm">
-            <Link to={ROUTES.documents}>
+            <Link to={ROUTES.resumes}>
               {messages.dashboard.recent.viewAll}
               <icons.arrowRight />
             </Link>

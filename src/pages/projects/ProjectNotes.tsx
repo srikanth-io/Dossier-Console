@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { PageHeader } from "@/components/common/page-header"
 import { SearchFilterBar } from "@/components/common/search-filter-bar"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,20 +25,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { icons, ROUTES } from "@/constants"
-import { CollectionGrid, CollectionSection } from "@/components/common/collection-page"
+import { icons } from "@/constants"
+import { CollectionGrid } from "@/components/common/collection-page"
 import { usePages, type PageEntry } from "@/store/pages"
-import { useProjects } from "@/store/projects"
 
 type FilterTab = "all" | "pages" | "folders" | "favorites"
 
 export function ProjectNotes() {
   const { id: projectId } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { projects } = useProjects()
   const { getPagesByProject, addPage, deletePage, updatePage } = usePages()
-
-  const project = projects.find((p) => p.id === projectId)
 
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<FilterTab>("all")
@@ -72,11 +67,12 @@ export function ProjectNotes() {
 
   const handleCreate = () => {
     if (!newPageTitle.trim() || !projectId) return
-    addPage(newPageTitle.trim(), { kind: newPageKind, projectId })
+    const created = addPage(newPageTitle.trim(), { kind: newPageKind, projectId })
     setNewPageTitle("")
     setNewPageKind("note")
     setCreateOpen(false)
     toast("Page created")
+    navigate(`../notes/${created.id}`)
   }
 
   const handleDelete = () => {
@@ -87,35 +83,19 @@ export function ProjectNotes() {
   }
 
   const openPage = (page: PageEntry) => {
-    if (projectId) {
-      navigate(`${ROUTES.projects}/${projectId}/notes/${page.id}`)
-    }
-  }
-
-  if (!project) {
-    return (
-      <div className="space-y-6">
-        <EmptyState
-          icon={<icons.dossiers />}
-          title="Project not found"
-          description="This project may have been deleted."
-        />
-      </div>
-    )
+    navigate(`../notes/${page.id}`)
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${project.name} — Notes`}
-        description={`${filtered.length} page${filtered.length !== 1 ? "s" : ""}`}
-        actions={
-          <Button size="sm" variant="default" className="h-9 px-4" onClick={() => setCreateOpen(true)}>
-            <icons.plus className="size-4" />
-            New Page
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {filtered.length} page{filtered.length !== 1 ? "s" : ""}
+        </p>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <icons.plus className="size-4" /> New Page
+        </Button>
+      </div>
 
       <SearchFilterBar
         query={query}
@@ -141,103 +121,91 @@ export function ProjectNotes() {
         </div>
       </SearchFilterBar>
 
-      <CollectionSection
-        title="Notes"
-        description={`${filtered.length} page${filtered.length !== 1 ? "s" : ""}`}
-      >
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={<icons.file />}
-            title={query ? "No pages found" : "No pages yet"}
-            description={query ? undefined : "Create your first note for this project."}
-            action={
-              query ? (
-                <Button variant="outline" onClick={() => setQuery("")}>
-                  <icons.close /> Clear search
-                </Button>
-              ) : (
-                <Button onClick={() => setCreateOpen(true)}>
-                  <icons.plus /> New Page
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <CollectionGrid>
-            {filtered.map((page, index) => (
-              <div
-                key={page.id}
-                className="group relative animate-fade-rise cursor-pointer"
-                style={{ animationDelay: `${(index + 4) * 60}ms` }}
-                onClick={() => openPage(page)}
-              >
-                <Card className="h-full transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary/25 group-hover:shadow-md">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">{page.icon === "dossiers" ? "📁" : "📄"}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{page.title}</p>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                          {page.content.slice(0, 100).replace(/[#*>-]/g, "").trim() || "Empty page"}
-                        </p>
-                        <p className="mt-2 text-[11px] text-muted-foreground">
-                          {page.updatedAt}
-                        </p>
-                      </div>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<icons.file />}
+          title={query ? "No pages found" : "No pages yet"}
+          description={query ? undefined : "Create your first note for this project."}
+          action={
+            query ? (
+              <Button variant="outline" onClick={() => setQuery("")}>
+                <icons.close /> Clear search
+              </Button>
+            ) : (
+              <Button onClick={() => setCreateOpen(true)}>
+                <icons.plus /> New Page
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <CollectionGrid>
+          {filtered.map((page, index) => (
+            <div
+              key={page.id}
+              className="group relative animate-fade-rise cursor-pointer"
+              style={{ animationDelay: `${(index + 4) * 60}ms` }}
+              onClick={() => openPage(page)}
+            >
+              <Card className="h-full transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary/25 group-hover:shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">{page.kind === "folder" ? "📁" : "📄"}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{page.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {page.content.slice(0, 100).replace(/[#*>-]/g, "").trim() || "Empty page"}
+                      </p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {page.updatedAt}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={page.title}
-                      className="absolute right-2 top-2 z-10 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <icons.moreVertical />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => openPage(page)}>
-                      <icons.pencil className="size-4" />
-                      Open
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        updatePage(page.id, { favorite: !page.favorite })
-                        toast(page.favorite ? "Removed from favorites" : "Added to favorites")
-                      }}
-                    >
-                      <icons.star className="size-4" />
-                      {page.favorite ? "Unfavorite" : "Favorite"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setDeleteId(page.id)}
-                    >
-                      <icons.trash className="size-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
-          </CollectionGrid>
-        )}
-      </CollectionSection>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={page.title}
+                    className="absolute right-2 top-2 z-10 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <icons.moreVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => openPage(page)}>
+                    <icons.pencil className="size-4" /> Open
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      updatePage(page.id, { favorite: !page.favorite })
+                      toast(page.favorite ? "Removed from favorites" : "Added to favorites")
+                    }}
+                  >
+                    <icons.star className="size-4" />
+                    {page.favorite ? "Unfavorite" : "Favorite"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => setDeleteId(page.id)}>
+                    <icons.trash className="size-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </CollectionGrid>
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Page</DialogTitle>
-            <DialogDescription>
-              Create a new page in this project.
-            </DialogDescription>
+            <DialogDescription>Create a new page in this project.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <input
@@ -267,12 +235,8 @@ export function ProjectNotes() {
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={!newPageTitle.trim()}>
-              Create
-            </Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!newPageTitle.trim()}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -281,14 +245,10 @@ export function ProjectNotes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete page</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this page? This action cannot be undone.
-            </DialogDescription>
+            <DialogDescription>Are you sure you want to delete this page? This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>
               <icons.trash /> Delete
             </Button>

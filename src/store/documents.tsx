@@ -13,6 +13,7 @@ import { uid } from "@/document-engine/history"
 import type {
   DocDocument,
   DocElement,
+  DocumentKind,
   LibraryDocument,
   MyComponent,
 } from "@/document-engine/types"
@@ -30,6 +31,8 @@ type DocumentRow = {
   id: string
   user_id: string
   project_id: string | null
+  parent_id: string | null
+  kind: string
   name: string
   description: string
   category: string
@@ -49,15 +52,27 @@ type ComponentRow = {
   created_at: string
 }
 
+function withChildren(docs: LibraryDocument[]): LibraryDocument[] {
+  return docs.map((doc) => ({
+    ...doc,
+    children: docs
+      .filter((d) => d.parentId === doc.id)
+      .map((child) => child.id),
+  }))
+}
+
 interface DocumentLibraryValue {
   documents: LibraryDocument[]
   loading: boolean
   getDocument: (id: string) => LibraryDocument | undefined
   getDocumentsByProject: (projectId: string) => LibraryDocument[]
-  saveDocument: (doc: DocDocument, projectId?: string) => LibraryDocument
+  getDocumentsByParent: (projectId: string, parentId: string | null) => LibraryDocument[]
+  getDocumentPath: (id: string) => LibraryDocument[]
+  saveDocument: (doc: DocDocument, projectId?: string, parentId?: string | null) => LibraryDocument
+  addFolder: (name: string, projectId: string, parentId?: string | null) => LibraryDocument
   updateMeta: (
     id: string,
-    patch: Partial<Pick<DocDocument, "name" | "description" | "category" | "author" | "version" | "status">>
+    patch: Partial<Pick<DocDocument, "name" | "description" | "category" | "author" | "version" | "status"> & { parentId: string | null }>
   ) => void
   duplicateDocument: (id: string, name?: string) => LibraryDocument | undefined
   removeDocument: (id: string) => void
@@ -79,6 +94,8 @@ function documentRow(record: LibraryDocument) {
   return {
     id: record.id,
     project_id: record.projectId ?? null,
+    parent_id: record.parentId ?? null,
+    kind: record.kind ?? "document",
     name: record.name,
     description: record.description,
     category: record.category,
@@ -134,10 +151,13 @@ export function DocumentLibraryProvider({
       }
 
       if (!cancelled) {
-        setDocuments(((docs.data ?? []) as DocumentRow[]).map((row) => ({
+        setDocuments(withChildren(((docs.data ?? []) as DocumentRow[]).map((row) => ({
           ...row.data,
           projectId: row.project_id ?? undefined,
-        })))
+          parentId: row.parent_id ?? null,
+          kind: (row.kind ?? "document") as DocumentKind,
+          children: [],
+        }))))
         setComponents(
           ((comps.data ?? []) as ComponentRow[]).map((row) => ({
             id: row.id,
@@ -166,20 +186,47 @@ export function DocumentLibraryProvider({
     [documents]
   )
 
+  const getDocumentsByParent = useCallback(
+    (projectId: string, parentId: string | null) =>
+      documents.filter(
+        (doc) => doc.projectId === projectId && (doc.parentId ?? null) === parentId
+      ),
+    [documents]
+  )
+
+  const getDocumentPath = useCallback(
+    (id: string): LibraryDocument[] => {
+      const path: LibraryDocument[] = []
+      let current = documents.find((doc) => doc.id === id)
+      while (current) {
+        path.unshift(current)
+        current = current.parentId
+          ? documents.find((doc) => doc.id === current!.parentId)
+          : undefined
+      }
+      return path
+    },
+    [documents]
+  )
+
   const saveDocument = useCallback(
-    (doc: DocDocument, projectId?: string): LibraryDocument => {
+    (doc: DocDocument, projectId?: string, parentId?: string | null): LibraryDocument => {
       const existing = documents.find((item) => item.id === doc.id)
       const record: LibraryDocument = {
         ...doc,
         projectId: projectId ?? existing?.projectId,
+        parentId: parentId !== undefined ? parentId : (existing?.parentId ?? null),
+        kind: existing?.kind ?? "document",
+        children: existing?.children ?? [],
         updatedAt: nowIso(),
         versions: existing?.versions ?? [],
       }
-      setDocuments((prev) =>
-        existing
+      setDocuments((prev) => {
+        const next = existing
           ? prev.map((item) => (item.id === doc.id ? record : item))
           : [record, ...prev]
-      )
+        return withChildren(next)
+      })
 
       void safeAsync(async () => {
         await persistOrQueue(
@@ -193,17 +240,74 @@ export function DocumentLibraryProvider({
     [documents]
   )
 
+  const addFolder = useCallback(
+    (name: string, projectId: string, parentId?: string | null): LibraryDocument => {
+      const now = nowIso()
+      const record: LibraryDocument = {
+        id: uid(),
+        name,
+        description: "",
+        category: "custom",
+        type: "folder",
+        status: "draft",
+        author: "Admin",
+        version: "1.0",
+        createdAt: now,
+        updatedAt: now,
+        mode: "freeform",
+        theme: {
+          headingFont: "Inter",
+          bodyFont: "Inter",
+          codeFont: "monospace",
+          primary: "#000000",
+          secondary: "#666666",
+          accent: "#3b82f6",
+          background: "#ffffff",
+          text: "#000000",
+          border: "#e5e7eb",
+          pageMargin: 0,
+          sectionSpacing: 0,
+          paragraphSpacing: 0,
+          componentSpacing: 0,
+          companyName: "",
+          footerText: "",
+        },
+        variables: [],
+        pages: [],
+        grid: 8,
+        snapToGrid: true,
+        versions: [],
+        projectId,
+        parentId: parentId ?? null,
+        kind: "folder",
+        children: [],
+      }
+      setDocuments((prev) => withChildren([record, ...prev]))
+
+      void safeAsync(async () => {
+        await persistOrQueue(
+          { kind: "upsert", table: "documents", row: documentRow(record), context: "DocumentLibrary.addFolder" },
+          () => getSupabase().from("documents").upsert(documentRow(record))
+        )
+      }, { context: "DocumentLibrary.addFolder" })
+
+      return record
+    },
+    []
+  )
+
   const updateMeta: DocumentLibraryValue["updateMeta"] = useCallback(
     (id, patch) => {
       const stamp = nowIso()
       let next: LibraryDocument | undefined
-      setDocuments((prev) =>
-        prev.map((item) => {
+      setDocuments((prev) => {
+        const updated = prev.map((item) => {
           if (item.id !== id) return item
           next = { ...item, ...patch, updatedAt: stamp }
           return next
         })
-      )
+        return withChildren(updated)
+      })
 
       if (next) {
         const record = next
@@ -230,7 +334,10 @@ export function DocumentLibraryProvider({
       copy.version = "1.0"
       copy.versions = []
       copy.status = "draft"
-      setDocuments((prev) => [copy, ...prev])
+      copy.parentId = source.parentId ?? null
+      copy.kind = source.kind
+      copy.children = []
+      setDocuments((prev) => withChildren([copy, ...prev]))
 
       void safeAsync(async () => {
         await persistOrQueue(
@@ -245,15 +352,23 @@ export function DocumentLibraryProvider({
   )
 
   const removeDocument = useCallback((id: string) => {
-    setDocuments((prev) => prev.filter((item) => item.id !== id))
+    const collect = (parentId: string): string[] => {
+      const children = documents.filter((doc) => doc.parentId === parentId)
+      return [parentId, ...children.flatMap((child) => collect(child.id))]
+    }
+    const ids = collect(id)
+    setDocuments((prev) => {
+      const next = prev.filter((doc) => !ids.includes(doc.id))
+      return withChildren(next)
+    })
 
     void safeAsync(async () => {
-      await persistOrQueue(
-        { kind: "delete", table: "documents", column: "id", value: id, context: "DocumentLibrary.removeDocument" },
-        () => getSupabase().from("documents").delete().eq("id", id)
-      )
+      const client = getSupabase()
+      for (const docId of ids) {
+        await client.from("documents").delete().eq("id", docId)
+      }
     }, { context: "DocumentLibrary.removeDocument" })
-  }, [])
+  }, [documents])
 
   const addVersion: DocumentLibraryValue["addVersion"] = useCallback(
     (id, version, note, snapshot) => {
@@ -349,7 +464,10 @@ export function DocumentLibraryProvider({
       loading,
       getDocument,
       getDocumentsByProject,
+      getDocumentsByParent,
+      getDocumentPath,
       saveDocument,
+      addFolder,
       updateMeta,
       duplicateDocument,
       removeDocument,
@@ -364,7 +482,10 @@ export function DocumentLibraryProvider({
       loading,
       getDocument,
       getDocumentsByProject,
+      getDocumentsByParent,
+      getDocumentPath,
       saveDocument,
+      addFolder,
       updateMeta,
       duplicateDocument,
       removeDocument,

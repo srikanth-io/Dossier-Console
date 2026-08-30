@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { icons, messages, ROUTES } from "@/constants"
+import { icons, messages } from "@/constants"
 import { useDocumentHistory, uid } from "@/document-engine/history"
 import { createPage } from "@/document-engine/defaults"
 import {
@@ -160,8 +160,8 @@ function PanelTabs({
 
 export function DocumentEditor() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const id = searchParams.get("id") ?? ""
+  const { id: projectId, docId } = useParams<{ id: string; docId: string }>()
+  const id = docId ?? ""
   const library = useDocumentLibrary()
   const libraryDoc = library.getDocument(id)
 
@@ -334,7 +334,7 @@ export function DocumentEditor() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
         <p className="text-sm text-muted-foreground">{messages.common.emptyResult}</p>
-        <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.studio)}>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/app/projects/${projectId}/documents`)}>
           <icons.arrowLeft className="size-4" />
           {messages.studio.editor.backToLibrary}
         </Button>
@@ -682,7 +682,7 @@ export function DocumentEditor() {
             <DocumentTitle name={doc.name} onRename={renameDocument} />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.studio)}>
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/app/projects/${projectId}/documents`)}>
               <icons.arrowLeft className="size-4" />
               <span className="hidden md:inline">{editor.backToLibrary}</span>
             </Button>
@@ -707,7 +707,7 @@ export function DocumentEditor() {
     <div className="flex h-[calc(100svh-3.5rem)] flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex h-12 shrink-0 items-center gap-0.5 border-b bg-card/60 px-2.5 backdrop-blur">
-        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(ROUTES.studio)}>
+        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => navigate(`/app/projects/${projectId}/documents`)}>
           <icons.arrowLeft className="size-4" />
           <span className="hidden lg:inline">{editor.backToLibrary}</span>
         </Button>

@@ -27,7 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ROUTES, icons, messages, type IconName } from "@/constants"
+import { icons, messages, type IconName } from "@/constants"
 import { usePages } from "@/store/pages"
 import { createBlock, type Block } from "@/lib/blocks"
 import { cn } from "@/lib/utils"
@@ -60,11 +60,12 @@ function parseContentToBlocks(content: string): Block[] {
 }
 
 export function NotepadEditor() {
-  const { id } = useParams<{ id: string }>()
+  const { id: projectId, noteId } = useParams<{ id: string; noteId: string }>()
+  const pageId = noteId ?? ""
   const navigate = useNavigate()
   const { getPage, updatePage, getChildPages, pages } = usePages()
 
-  const page = id ? getPage(id) : undefined
+  const page = pageId ? getPage(pageId) : undefined
   const [title, setTitle] = useState(page?.title ?? "")
   const [blocks, setBlocks] = useState<Block[]>([])
   const [saved, setSaved] = useState(true)
@@ -92,7 +93,7 @@ export function NotepadEditor() {
   }, [])
 
   const handleSave = () => {
-    if (!id) return
+    if (!pageId) return
     const content = blocks
       .map((b) => {
         const text = b.content.map((s) => s.text).join("")
@@ -106,7 +107,7 @@ export function NotepadEditor() {
         return text
       })
       .join("\n")
-    updatePage(id, { title, content, icon })
+    updatePage(pageId, { title, content, icon })
     setSaved(true)
     toast.success(messages.pages.editor.saved)
   }
@@ -124,8 +125,8 @@ export function NotepadEditor() {
   }
 
   const handleMoveToFolder = (folderId: string | null) => {
-    if (!id) return
-    updatePage(id, { parentId: folderId })
+    if (!pageId) return
+    updatePage(pageId, { parentId: folderId })
     setSaved(false)
     toast.success(messages.pages.actions.moved)
   }
@@ -135,7 +136,7 @@ export function NotepadEditor() {
       <div className="flex flex-col items-center justify-center gap-4 py-24">
         <icons.file className="size-12 text-muted-foreground/30" />
         <p className="text-lg font-medium text-muted-foreground">Page not found</p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.notepad)}>
+        <Button variant="outline" onClick={() => navigate(`/app/projects/${projectId}/notes`)}>
           <icons.arrowLeft /> {messages.pages.editor.back}
         </Button>
       </div>
@@ -153,7 +154,7 @@ export function NotepadEditor() {
   })()
 
   const folderTargets = pages.filter(
-    (p) => p.kind === "folder" && p.parentId === null && p.id !== id
+    (p) => p.kind === "folder" && p.parentId === null && p.id !== pageId
   )
   const childPages = getChildPages(page.id)
 
@@ -163,7 +164,7 @@ export function NotepadEditor() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={ROUTES.notepad}>{messages.pages.title}</Link>
+              <Link to={`/app/projects/${projectId}/notes`}>{messages.pages.title}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           {breadcrumbItems.slice(0, -1).map((crumb) => (
@@ -171,7 +172,7 @@ export function NotepadEditor() {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={`${ROUTES.notepad}/${crumb.id}`}>{crumb.name}</Link>
+                  <Link to={`/app/projects/${projectId}/notes/${crumb.id}`}>{crumb.name}</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
             </Fragment>
@@ -254,7 +255,7 @@ export function NotepadEditor() {
                   "size-8",
                   page.favorite ? "text-amber-500" : "text-muted-foreground"
                 )}
-                onClick={() => updatePage(id!, { favorite: !page.favorite })}
+                onClick={() => updatePage(pageId, { favorite: !page.favorite })}
               >
                 {page.favorite ? (
                   <icons.star className="size-4 fill-current" />
@@ -300,7 +301,7 @@ export function NotepadEditor() {
                 <button
                   key={child.id}
                   type="button"
-                  onClick={() => navigate(`${ROUTES.notepad}/${child.id}`)}
+                  onClick={() => navigate(`/app/projects/${projectId}/notes/${child.id}`)}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
                 >
                   <ChildIcon className="size-4 shrink-0 text-muted-foreground" />

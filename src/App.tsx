@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ROUTES } from "@/constants"
 import { AppLayout } from "@/layouts/AppLayout"
+import { ProjectLayout } from "@/layouts/ProjectLayout"
 import { Auth } from "@/pages/Auth"
 import { Dashboard } from "@/pages/Dashboard"
 import { ForgotPassword } from "@/pages/ForgotPassword"
@@ -25,7 +26,6 @@ import { DocumentLibraryProvider } from "@/store/documents"
 import { NotificationsProvider } from "@/store/notifications"
 import { PagesProvider } from "@/store/pages"
 import { ProjectsProvider } from "@/store/projects"
-import { ProjectFoldersProvider } from "@/store/project-folders"
 
 import { ProjectList } from "@/pages/projects/ProjectList"
 import { ProjectOverview } from "@/pages/projects/ProjectOverview"
@@ -35,21 +35,15 @@ import { ProjectTimesheet } from "@/pages/projects/ProjectTimesheet"
 import { ResumeManager } from "@/pages/resumes/ResumeManager"
 
 const ResumeCreator = lazy(() =>
-  import("@/pages/ResumeCreator").then((module) => ({
-    default: module.ResumeCreator,
-  }))
+  import("@/pages/ResumeCreator").then((m) => ({ default: m.ResumeCreator }))
 )
 
 const DocumentEditor = lazy(() =>
-  import("@/pages/studio/DocumentEditor").then((module) => ({
-    default: module.DocumentEditor,
-  }))
+  import("@/pages/studio/DocumentEditor").then((m) => ({ default: m.DocumentEditor }))
 )
 
 const NotepadEditor = lazy(() =>
-  import("@/pages/NotepadEditor").then((module) => ({
-    default: module.NotepadEditor,
-  }))
+  import("@/pages/NotepadEditor").then((m) => ({ default: m.NotepadEditor }))
 )
 
 function App() {
@@ -65,126 +59,98 @@ function App() {
       <BrowserRouter>
         <TooltipProvider>
           <AuthProvider>
-          <ResumeLibraryProvider>
-            <DocumentLibraryProvider>
-              <NotificationsProvider>
-                <PagesProvider>
-                  <ProjectsProvider>
-                  <ProjectFoldersProvider>
-                  <Routes>
-                    <Route
-                      path={ROUTES.landing}
-                      element={
-                        <PublicThemeScope>
-                          <Landing />
-                        </PublicThemeScope>
-                      }
-                    />
-                    <Route element={<RedirectIfAuthenticated />}>
-                      <Route
-                        path={ROUTES.login}
-                        element={
-                          <PublicThemeScope>
-                            <Auth />
-                          </PublicThemeScope>
-                        }
-                      />
-                      <Route
-                        path={ROUTES.register}
-                        element={
-                          <PublicThemeScope>
-                            <Auth />
-                          </PublicThemeScope>
-                        }
-                      />
-                      <Route
-                        path={ROUTES.forgotPassword}
-                        element={
-                          <PublicThemeScope>
-                            <ForgotPassword />
-                          </PublicThemeScope>
-                        }
-                      />
-                      <Route
-                        path={ROUTES.mfaVerify}
-                        element={
-                          <RequireMfaChallenge>
+            <ResumeLibraryProvider>
+              <DocumentLibraryProvider>
+                <NotificationsProvider>
+                  <PagesProvider>
+                    <ProjectsProvider>
+                      <Routes>
+                        {/* Public routes */}
+                        <Route
+                          path={ROUTES.landing}
+                          element={
                             <PublicThemeScope>
-                              <MfaVerify />
+                              <Landing />
                             </PublicThemeScope>
-                          </RequireMfaChallenge>
-                        }
-                      />
-                    </Route>
-                    <Route
-                      path={ROUTES.resetPassword}
-                      element={
-                        <PublicThemeScope>
-                          <ForgotPassword />
-                        </PublicThemeScope>
-                      }
-                    />
-                  <Route path={ROUTES.app} element={<RequireAuth><AppLayout /></RequireAuth>}>
-                      <Route index element={<Dashboard />} />
+                          }
+                        />
+                        <Route element={<RedirectIfAuthenticated />}>
+                          <Route
+                            path={ROUTES.login}
+                            element={<PublicThemeScope><Auth /></PublicThemeScope>}
+                          />
+                          <Route
+                            path={ROUTES.register}
+                            element={<PublicThemeScope><Auth /></PublicThemeScope>}
+                          />
+                          <Route
+                            path={ROUTES.forgotPassword}
+                            element={<PublicThemeScope><ForgotPassword /></PublicThemeScope>}
+                          />
+                          <Route
+                            path={ROUTES.mfaVerify}
+                            element={
+                              <RequireMfaChallenge>
+                                <PublicThemeScope><MfaVerify /></PublicThemeScope>
+                              </RequireMfaChallenge>
+                            }
+                          />
+                        </Route>
+                        <Route
+                          path={ROUTES.resetPassword}
+                          element={<PublicThemeScope><ForgotPassword /></PublicThemeScope>}
+                        />
 
-                      {/* Projects */}
-                      <Route path="projects" element={<ProjectList />} />
-                      <Route path="projects/:id" element={<ProjectOverview />} />
-                      <Route path="projects/:id/documents" element={<ProjectDocuments />} />
-                      <Route
-                        path="projects/:id/documents/:docId"
-                        element={
-                          <Suspense fallback={null}>
-                            <DocumentEditor />
-                          </Suspense>
-                        }
-                      />
-                      <Route path="projects/:id/timesheet" element={<ProjectTimesheet />} />
-                      <Route path="projects/:id/notes" element={<ProjectNotes />} />
-                      <Route
-                        path="projects/:id/notes/:noteId"
-                        element={
-                          <Suspense fallback={null}>
-                            <NotepadEditor />
-                          </Suspense>
-                        }
-                      />
+                        {/* App routes */}
+                        <Route path={ROUTES.app} element={<RequireAuth><AppLayout /></RequireAuth>}>
+                          <Route index element={<Dashboard />} />
 
-                      {/* Resumes */}
-                      <Route path="resumes" element={<ResumeManager />} />
-                      <Route
-                        path="resumes/builder"
-                        element={
-                          <Suspense fallback={null}>
-                            <ResumeCreator />
-                          </Suspense>
-                        }
-                      />
-                      <Route
-                        path="resumes/builder/:id"
-                        element={
-                          <Suspense fallback={null}>
-                            <ResumeCreator />
-                          </Suspense>
-                        }
-                      />
+                          {/* Projects — flat list */}
+                          <Route path="projects" element={<ProjectList />} />
 
-                      {/* Settings */}
-                      <Route path="settings" element={<Settings />} />
+                          {/* Resumes */}
+                          <Route path="resumes" element={<ResumeManager />} />
+                          <Route
+                            path="resumes/builder"
+                            element={<Suspense fallback={null}><ResumeCreator /></Suspense>}
+                          />
+                          <Route
+                            path="resumes/builder/:resumeId"
+                            element={<Suspense fallback={null}><ResumeCreator /></Suspense>}
+                          />
 
-                      <Route
-                        path="*"
-                        element={<Navigate to={ROUTES.dashboard} replace />}
-                      />
-                    </Route>
-                    <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
-                  </Routes>
-                  </ProjectFoldersProvider>
-                  </ProjectsProvider>
-                </PagesProvider>
-              </NotificationsProvider>
-            </DocumentLibraryProvider>
-          </ResumeLibraryProvider>
+                          {/* Settings */}
+                          <Route path="settings" element={<Settings />} />
+
+                          <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+                        </Route>
+
+                        {/* Project workspace — nested under ProjectLayout */}
+                        <Route
+                          path="/app/projects/:id"
+                          element={<RequireAuth><ProjectLayout /></RequireAuth>}
+                        >
+                          <Route index element={<ProjectOverview />} />
+                          <Route path="documents" element={<ProjectDocuments />} />
+                          <Route
+                            path="documents/:docId"
+                            element={<Suspense fallback={null}><DocumentEditor /></Suspense>}
+                          />
+                          <Route path="notes" element={<ProjectNotes />} />
+                          <Route
+                            path="notes/:noteId"
+                            element={<Suspense fallback={null}><NotepadEditor /></Suspense>}
+                          />
+                          <Route path="timesheet" element={<ProjectTimesheet />} />
+                        </Route>
+
+                        <Route path="*" element={<Navigate to={ROUTES.landing} replace />} />
+                      </Routes>
+                    </ProjectsProvider>
+                  </PagesProvider>
+                </NotificationsProvider>
+              </DocumentLibraryProvider>
+            </ResumeLibraryProvider>
           </AuthProvider>
         </TooltipProvider>
       </BrowserRouter>

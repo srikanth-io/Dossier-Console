@@ -106,9 +106,14 @@ export interface VersionSnapshot {
   snapshot: DocDocument
 }
 
+export type DocumentKind = "document" | "folder"
+
 export interface LibraryDocument extends DocDocument {
   versions: VersionSnapshot[]
   projectId?: string
+  parentId?: string | null
+  kind: DocumentKind
+  children: string[]
 }
 
 export interface RenderContext {
