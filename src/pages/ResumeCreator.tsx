@@ -37,6 +37,12 @@ import {
 import { exportPreviewToPdf } from "@/lib/pdfExport"
 import { cn } from "@/lib/utils"
 import { useResumeLibrary } from "@/store/resumes"
+import { docxToHtml } from "@/services/docxPreview"
+import { Document, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/Page/AnnotationLayer.css"
+import "react-pdf/dist/Page/TextLayer.css"
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 export function ResumeCreator() {
   const navigate = useNavigate()
@@ -65,6 +71,12 @@ export function ResumeCreator() {
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportFailed, setExportFailed] = useState(false)
+  const [uploadedFileUrl, setUploadedFileUrl] = useState(editing?.fileUrl ?? "")
+  const [uploadedFileHtml, setUploadedFileHtml] = useState<string | null>(null)
+  const [loadingFile, setLoadingFile] = useState(false)
+  const [numPages, setNumPages] = useState<number>(0)
+  const [pageNumber, setPageNumber] = useState<number>(1)
+  const [pdfScale, setPdfScale] = useState<number>(1.2)
   const editorApiRef = useRef<CodeEditorApi | null>(null)
   const previewRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -89,19 +101,60 @@ export function ResumeCreator() {
       setTemplateId("")
       setSource(resume.source)
       setFileName(resume.name)
+      setUploadedFileUrl(resume.fileUrl ?? "")
+      setUploadedFileHtml(null)
       setSaved(false)
       navigate(`${ROUTES.resumeBuilder}/${id}`, { replace: true })
     },
     [resumes, navigate]
   )
 
+  const loadUploadedFile = useCallback(async (fileUrl: string, type: string) => {
+    if (!fileUrl) return
+    setLoadingFile(true)
+    if (type === "PDF") {
+      setUploadedFileHtml(null)
+      setPageNumber(1)
+    } else if (type === "DOCX") {
+      const html = await docxToHtml(fileUrl)
+      setUploadedFileHtml(html)
+    }
+    setLoadingFile(false)
+  }, [])
+
+  const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
+    setNumPages(nextNumPages)
+    setPageNumber(1)
+    setLoadingFile(false)
+  }, [])
+
+  const goToPrevPage = useCallback(() => {
+    setPageNumber((prev) => Math.max(prev - 1, 1))
+  }, [])
+
+  const goToNextPage = useCallback(() => {
+    setPageNumber((prev) => Math.min(prev + 1, numPages))
+  }, [numPages])
+
+  const zoomIn = useCallback(() => {
+    setPdfScale((prev) => Math.min(prev + 0.2, 3))
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setPdfScale((prev) => Math.max(prev - 0.2, 0.4))
+  }, [])
+
   useEffect(() => {
     if (editing) {
       setSource(editing.source)
       setFileName(editing.name)
+      setUploadedFileUrl(editing.fileUrl ?? "")
       setTemplateId("")
+      if (editing.fileUrl && !editing.source) {
+        loadUploadedFile(editing.fileUrl, editing.type)
+      }
     }
-  }, [editing])
+  }, [editing, loadUploadedFile])
 
   useEffect(() => {
     if (!resumeId && templateParam) {
@@ -222,7 +275,7 @@ export function ResumeCreator() {
 
   const editorExtensions = useMemo(() => [StreamLanguage.define(stex)], [])
 
-  const editableResumes = resumes.filter((r) => r.source)
+  const editableResumes = resumes.filter((r) => r.source || r.fileUrl)
 
   const startResize = (event: React.PointerEvent) => {
     event.preventDefault()
@@ -377,131 +430,207 @@ export function ResumeCreator() {
         ref={containerRef}
         className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
       >
-        {/* Section outline */}
-        <aside className="hidden min-h-0 w-52 shrink-0 flex-col overflow-y-auto border-r border-b lg:border-b-0 bg-muted/20 lg:flex">
-          <div className="px-3 py-2.5">
-            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {messages.resume.sections}
-            </p>
-          </div>
-
-          {sections.length === 0 ? (
-            <p className="px-3 pb-2 text-xs text-muted-foreground">
-              {messages.resume.noSections}
-            </p>
-          ) : (
-            <nav className="space-y-0.5 px-2 pb-2">
-              {sections.map((section, index) => (
-                <button
-                  key={`${section.line}-${index}`}
-                  type="button"
-                  onClick={() => focusSection(index, section.line)}
-                  className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left text-xs transition-colors hover:bg-muted"
-                >
-                  <icons.chevronRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-                  <span
-                    className="min-w-0 flex-1 truncate"
-                    dangerouslySetInnerHTML={{ __html: renderInline(section.title) }}
-                  />
-                </button>
-              ))}
-            </nav>
-          )}
-        </aside>
-
-        {/* Editor pane */}
-        <div
-          className="flex min-h-0 min-w-0 flex-col"
-          style={{ flexGrow: isLg ? editorPct : 1, flexBasis: isLg ? 0 : "50%" }}
-        >
-          <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
-            <icons.fileCode className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">
-              {messages.resume.editor}
-            </span>
-          </div>
-          <div className="min-h-0 flex-1">
-            <CodeEditor
-              value={source}
-              extensions={editorExtensions}
-              onChange={(value) => setSource(value)}
-              apiRef={editorApiRef}
-            />
-          </div>
-        </div>
-
-        {/* Drag divider */}
-        <div
-          className={cn(
-            "hidden w-1.5 shrink-0 cursor-col-resize items-center justify-center transition-colors hover:bg-primary/10 lg:flex",
-            "focus-visible:bg-primary/20 focus-visible:outline-none"
-          )}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={messages.resume.resizePanes}
-          tabIndex={0}
-          onPointerDown={startResize}
-          onKeyDown={onDividerKeyDown}
-        >
-          <span className="h-8 w-0.5 rounded-full bg-border" />
-        </div>
-
-        {/* Preview pane */}
-        <div
-          className="flex min-h-0 min-w-0 flex-col"
-          style={{ flexGrow: isLg ? 100 - editorPct : 1, flexBasis: isLg ? 0 : "50%" }}
-        >
-          <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
-            <icons.split className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">
-              {messages.resume.preview}
-            </span>
-          </div>
-          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto px-8 pt-8 pb-12" style={{ background: "linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.3))" }}>
-            <div className="flex flex-col items-center gap-10">
-              {source.trim() ? (
-                <>
-                  <div
-                    ref={previewRef}
-                    className={RESUME_PREVIEW_CLASSES}
-                    aria-hidden
-                    style={{ position: "absolute", visibility: "hidden", pointerEvents: "none" }}
-                  />
-                  {previewPages.map((pageHtml, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Page {i + 1} of {previewPages.length}
-                      </span>
-                      <div
-                        data-preview-page
-                        className="shrink-0 rounded-xl"
-                        style={{
-                          width: `${scaledDims.width}px`,
-                          height: `${scaledDims.height}px`,
-                          padding: `${A4_PADDING}px`,
-                          overflow: "hidden",
-                          background: "#fefefe",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)",
-                        }}
-                      >
-                        <div
-                          className={RESUME_PREVIEW_CLASSES}
-                          dangerouslySetInnerHTML={{ __html: pageHtml }}
-                        />
+        {uploadedFileUrl && !source.trim() ? (
+          /* Uploaded file - fullscreen preview */
+          <div className="relative min-h-0 min-w-0 flex-1 flex flex-col">
+            {/* Floating PDF Controls */}
+            {editing?.type === "PDF" && numPages > 0 && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 rounded-xl border bg-background/90 backdrop-blur px-4 py-2 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon-sm" onClick={goToPrevPage} disabled={pageNumber <= 1}>
+                    <icons.chevronLeft className="size-4" />
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {pageNumber} / {numPages}
+                  </span>
+                  <Button variant="ghost" size="icon-sm" onClick={goToNextPage} disabled={pageNumber >= numPages}>
+                    <icons.chevronRight className="size-4" />
+                  </Button>
+                </div>
+                <div className="h-4 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon-sm" onClick={zoomOut}>
+                    <icons.zoomOut className="size-4" />
+                  </Button>
+                  <span className="text-sm font-medium w-12 text-center">{Math.round(pdfScale * 100)}%</span>
+                  <Button variant="ghost" size="icon-sm" onClick={zoomIn}>
+                    <icons.zoomIn className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="flex-1 overflow-auto" style={{ background: "var(--muted)" }}>
+              {loadingFile ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <icons.spinner className="size-4 animate-spin" />
+                    <span className="text-sm">Loading file...</span>
+                  </div>
+                </div>
+              ) : editing?.type === "PDF" ? (
+                <div className="flex justify-center py-4">
+                  <Document
+                    file={uploadedFileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={() => setLoadingFile(false)}
+                    loading={
+                      <div className="flex items-center justify-center p-12">
+                        <icons.spinner className="size-6 animate-spin text-muted-foreground" />
                       </div>
-                    </div>
-                  ))}
-                </>
+                    }
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={pdfScale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                    />
+                  </Document>
+                </div>
+              ) : editing?.type === "DOCX" && uploadedFileHtml ? (
+                <div className="mx-auto max-w-4xl p-6" style={{ background: "#fefefe", minHeight: "100%" }}>
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: uploadedFileHtml }}
+                  />
+                </div>
               ) : (
-                <div className="shrink-0 rounded-xl" style={{ width: `${scaledDims.width}px`, height: `${scaledDims.height}px`, padding: `${A4_PADDING}px`, overflow: "hidden", background: "#fefefe", boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
-                  <p className="text-sm text-muted-foreground">
-                    {messages.resume.previewEmpty}
-                  </p>
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Unable to preview this file</p>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        ) : (
+          /* Editable file - editor + preview */
+          <>
+            {/* Section outline */}
+            <aside className="hidden min-h-0 w-52 shrink-0 flex-col overflow-y-auto border-r border-b lg:border-b-0 bg-muted/20 lg:flex">
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {messages.resume.sections}
+                </p>
+              </div>
+
+              {sections.length === 0 ? (
+                <p className="px-3 pb-2 text-xs text-muted-foreground">
+                  {messages.resume.noSections}
+                </p>
+              ) : (
+                <nav className="space-y-0.5 px-2 pb-2">
+                  {sections.map((section, index) => (
+                    <button
+                      key={`${section.line}-${index}`}
+                      type="button"
+                      onClick={() => focusSection(index, section.line)}
+                      className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left text-xs transition-colors hover:bg-muted"
+                    >
+                      <icons.chevronRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
+                      <span
+                        className="min-w-0 flex-1 truncate"
+                        dangerouslySetInnerHTML={{ __html: renderInline(section.title) }}
+                      />
+                    </button>
+                  ))}
+                </nav>
+              )}
+            </aside>
+
+            {/* Editor pane */}
+            <div
+              className="flex min-h-0 min-w-0 flex-col"
+              style={{ flexGrow: isLg ? editorPct : 1, flexBasis: isLg ? 0 : "50%" }}
+            >
+              <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
+                <icons.fileCode className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  {messages.resume.editor}
+                </span>
+              </div>
+              <div className="min-h-0 flex-1">
+                <CodeEditor
+                  value={source}
+                  extensions={editorExtensions}
+                  onChange={(value) => setSource(value)}
+                  apiRef={editorApiRef}
+                />
+              </div>
+            </div>
+
+            {/* Drag divider */}
+            <div
+              className={cn(
+                "hidden w-1.5 shrink-0 cursor-col-resize items-center justify-center transition-colors hover:bg-primary/10 lg:flex",
+                "focus-visible:bg-primary/20 focus-visible:outline-none"
+              )}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={messages.resume.resizePanes}
+              tabIndex={0}
+              onPointerDown={startResize}
+              onKeyDown={onDividerKeyDown}
+            >
+              <span className="h-8 w-0.5 rounded-full bg-border" />
+            </div>
+
+            {/* Preview pane */}
+            <div
+              className="flex min-h-0 min-w-0 flex-col"
+              style={{ flexGrow: isLg ? 100 - editorPct : 1, flexBasis: isLg ? 0 : "50%" }}
+            >
+              <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/20 px-3">
+                <icons.split className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  {messages.resume.preview}
+                </span>
+              </div>
+              <div className="flex min-h-0 flex-1 justify-center overflow-y-auto px-8 pt-8 pb-12" style={{ background: "linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.3))" }}>
+                <div className="flex flex-col items-center gap-10">
+                  {source.trim() ? (
+                    <>
+                      <div
+                        ref={previewRef}
+                        className={RESUME_PREVIEW_CLASSES}
+                        aria-hidden
+                        style={{ position: "absolute", visibility: "hidden", pointerEvents: "none" }}
+                      />
+                      {previewPages.map((pageHtml, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Page {i + 1} of {previewPages.length}
+                          </span>
+                          <div
+                            data-preview-page
+                            className="shrink-0 rounded-xl"
+                            style={{
+                              width: `${scaledDims.width}px`,
+                              height: `${scaledDims.height}px`,
+                              padding: `${A4_PADDING}px`,
+                              overflow: "hidden",
+                              background: "#fefefe",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)",
+                            }}
+                          >
+                            <div
+                              className={RESUME_PREVIEW_CLASSES}
+                              dangerouslySetInnerHTML={{ __html: pageHtml }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="shrink-0 rounded-xl" style={{ width: `${scaledDims.width}px`, height: `${scaledDims.height}px`, padding: `${A4_PADDING}px`, overflow: "hidden", background: "#fefefe", boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
+                      <p className="text-sm text-muted-foreground">
+                        {messages.resume.previewEmpty}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <TemplateManagerDialog

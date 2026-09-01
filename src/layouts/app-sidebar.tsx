@@ -229,64 +229,12 @@ export function AppSidebar({ className, floating = false, defaultCollapsed = fal
             item={{ label: messages.nav.items.resumes, to: ROUTES.resumes, icon: "openFile" }}
             collapsed={collapsed}
           />
-          <NavItem
-            item={{ label: messages.notifications.title, to: "/app/notifications", icon: "notifications" }}
-            collapsed={collapsed}
-          />
         </ul>
-
-        {activeProjectId && (
-          <>
-            {!collapsed && (
-              <div className="mx-auto my-3 h-px w-4 bg-sidebar-border/50" />
-            )}
-            {collapsed && <div className="mx-auto my-2 h-px w-4 bg-sidebar-border/50" />}
-
-            {!collapsed && (
-              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                Project
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              <NavItem
-                item={{
-                  label: "Documents",
-                  to: `${ROUTES.projects}/${activeProjectId}/documents`,
-                  icon: "fileCode",
-                }}
-                collapsed={collapsed}
-              />
-              <NavItem
-                item={{
-                  label: "Notes",
-                  to: `${ROUTES.projects}/${activeProjectId}/notes`,
-                  icon: "file",
-                }}
-                collapsed={collapsed}
-              />
-              <NavItem
-                item={{
-                  label: "Timesheet",
-                  to: `${ROUTES.projects}/${activeProjectId}/timesheet`,
-                  icon: "pendingReviews",
-                }}
-                collapsed={collapsed}
-              />
-            </ul>
-          </>
-        )}
 
         {!collapsed && (
           <div className="mx-auto my-3 h-px w-4 bg-sidebar-border/50" />
         )}
         {collapsed && <div className="mx-auto my-2 h-px w-4 bg-sidebar-border/50" />}
-
-        <ul className="space-y-0.5">
-          <NavItem
-            item={{ label: messages.settings.title, to: ROUTES.settings, icon: "settings" }}
-            collapsed={collapsed}
-          />
-        </ul>
       </nav>
 
       <div className="p-3">

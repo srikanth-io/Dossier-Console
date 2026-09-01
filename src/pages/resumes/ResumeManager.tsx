@@ -23,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -40,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { icons, ROUTES } from "@/constants"
-import { resumeTemplates } from "@/data/resumeTemplates"
+
 import { cn } from "@/lib/utils"
 import { useResumeLibrary } from "@/store/resumes"
 import {
@@ -67,9 +66,7 @@ export function ResumeManager() {
 
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("updated")
-  const [resumeSetupOpen, setResumeSetupOpen] = useState(false)
-  const [resumeName, setResumeName] = useState("")
-  const [resumeTemplateId, setResumeTemplateId] = useState(resumeTemplates[0]?.id ?? "")
+  const [uploadOpen, setUploadOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -127,6 +124,7 @@ export function ResumeManager() {
     }
 
     toast("Resumes uploaded")
+    setUploadOpen(false)
   }, [addResume])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -136,26 +134,6 @@ export function ResumeManager() {
     handleUpload(files)
   }, [handleUpload])
 
-  const handleCreateFromTemplate = useCallback(() => {
-    if (!resumeName.trim()) return
-    const template = resumeTemplates.find((t) => t.id === resumeTemplateId)
-    if (!template) return
-
-    const newResume = addResume({
-      name: resumeName.trim(),
-      type: "TEX",
-      size: "New",
-      updated: "Just now",
-      source: template.source,
-      fileUrl: "",
-    })
-
-    setResumeSetupOpen(false)
-    setResumeName("")
-    toast("Resume created")
-    navigate(`${ROUTES.resumeBuilder}/${newResume.id}`)
-  }, [resumeName, resumeTemplateId, addResume, navigate])
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -163,10 +141,10 @@ export function ResumeManager() {
         description="Manage your resume library"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" onClick={() => setUploadOpen(true)}>
               <icons.upload className="size-4" /> Upload
             </Button>
-            <Button variant="default" onClick={() => setResumeSetupOpen(true)}>
+            <Button variant="default" onClick={() => navigate(ROUTES.resumeBuilder)}>
               <icons.plus className="size-4" /> New Resume
             </Button>
           </div>
@@ -190,35 +168,51 @@ export function ResumeManager() {
         </Select>
       </SearchFilterBar>
 
-      <div
-        className={cn(
-          "rounded-lg border-2 border-dashed p-8 text-center transition-colors",
-          dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-        )}
-        onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={handleDrop}
-      >
-        <icons.upload className="mx-auto size-8 text-muted-foreground" />
-        <p className="mt-2 text-sm text-muted-foreground">
-          Drag & drop PDF or DOCX files here, or{" "}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="text-primary underline"
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Resume</DialogTitle>
+            <DialogDescription>
+              Drag & drop PDF or DOCX files, or browse to upload.
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            className={cn(
+              "rounded-lg border-2 border-dashed p-16 text-center transition-colors",
+              dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+            )}
+            onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleDrop}
           >
-            browse
-          </button>
-        </p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx"
-          multiple
-          className="hidden"
-          onChange={(e) => handleUpload(Array.from(e.target.files ?? []))}
-        />
-      </div>
+            <icons.upload className="mx-auto size-16 text-muted-foreground" />
+            <p className="mt-4 text-base text-muted-foreground">
+              Drag & drop PDF or DOCX files here, or{" "}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-primary underline"
+              >
+                browse
+              </button>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx"
+        multiple
+        className="hidden"
+        onChange={(e) => handleUpload(Array.from(e.target.files ?? []))}
+      />
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -231,9 +225,14 @@ export function ResumeManager() {
                 <icons.close /> Clear search
               </Button>
             ) : (
-              <Button onClick={() => setResumeSetupOpen(true)}>
-                <icons.plus /> New Resume
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setUploadOpen(true)}>
+                  <icons.upload /> Upload
+                </Button>
+                <Button onClick={() => navigate(ROUTES.resumeBuilder)}>
+                  <icons.plus /> New Resume
+                </Button>
+              </div>
             )
           }
         />
@@ -290,52 +289,6 @@ export function ResumeManager() {
           </Table>
         </div>
       )}
-
-      <Dialog open={resumeSetupOpen} onOpenChange={setResumeSetupOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Resume</DialogTitle>
-            <DialogDescription>
-              Start a new resume from a template.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-sm font-medium">Resume Name</label>
-              <Input
-                value={resumeName}
-                onChange={(e) => setResumeName(e.target.value)}
-                placeholder="e.g., Software Engineer Resume"
-                className="mt-1"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Template</label>
-              <Select value={resumeTemplateId} onValueChange={setResumeTemplateId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {resumeTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setResumeSetupOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFromTemplate} disabled={!resumeName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={deleting !== null}
